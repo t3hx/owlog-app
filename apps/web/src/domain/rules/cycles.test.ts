@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { cycles } from '@/domain/rules/cycles'
-import { creerFabrique } from '@/domain/test/fabrique'
+import { createFactory } from '@/domain/test/factory'
 
 /**
  * Rang des cycles.
@@ -16,45 +16,45 @@ import { creerFabrique } from '@/domain/test/fabrique'
  */
 describe('cycles — rang et numérotation', () => {
   it('groupe les événements par cycle_key', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('c1', '2019-05-01T20:00:00.000Z'),
       f.seen('c1'),
       f.rewatch('c2', '2026-01-01T20:00:00.000Z'),
     ]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat).toHaveLength(2)
-    expect(resultat[0]?.evenements).toHaveLength(2)
-    expect(resultat[1]?.evenements).toHaveLength(1)
+    expect(result).toHaveLength(2)
+    expect(result[0]?.events).toHaveLength(2)
+    expect(result[1]?.events).toHaveLength(1)
   })
 
   it('ordonne par date de rang, pas par ordre d écriture', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Le cycle de 2026 est écrit EN PREMIER, celui de 2019 ensuite.
-    const evenements = [
+    const events = [
       f.start('recent', '2026-01-01T20:00:00.000Z'),
       f.start('ancien', '2019-05-01T20:00:00.000Z'),
     ]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat.map((c) => c.key)).toEqual(['ancien', 'recent'])
+    expect(result.map((c) => c.key)).toEqual(['ancien', 'recent'])
   })
 
   it('numérote #N par rang chronologique, quel que soit l ordre de saisie', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Trois visionnages saisis à rebours, cas réel de la saisie de masse.
-    const evenements = [
+    const events = [
       f.start('troisieme', '2024-01-01T20:00:00.000Z'),
       f.start('deuxieme', '2021-01-01T20:00:00.000Z'),
       f.start('premier', '2019-01-01T20:00:00.000Z'),
     ]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat.map((c) => [c.key, c.rang])).toEqual([
+    expect(result.map((c) => [c.key, c.rank])).toEqual([
       ['premier', 1],
       ['deuxieme', 2],
       ['troisieme', 3],
@@ -62,34 +62,34 @@ describe('cycles — rang et numérotation', () => {
   })
 
   it('départage deux dates de rang identiques par created_at', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Deux titres rétro-datés à l'année : même occurred_at, à la seconde près.
-    const evenements = [
-      f.start('ecrit-en-premier', '2019-01-01T00:00:00.000Z', 'annee'),
-      f.start('ecrit-ensuite', '2019-01-01T00:00:00.000Z', 'annee'),
+    const events = [
+      f.start('ecrit-en-premier', '2019-01-01T00:00:00.000Z', 'year'),
+      f.start('ecrit-ensuite', '2019-01-01T00:00:00.000Z', 'year'),
     ]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat.map((c) => c.key)).toEqual(['ecrit-en-premier', 'ecrit-ensuite'])
+    expect(result.map((c) => c.key)).toEqual(['ecrit-en-premier', 'ecrit-ensuite'])
   })
 
   it('classe les cycles sans date avant tous les autres', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('date', '2019-01-01T20:00:00.000Z'),
-      f.start('sans-date', null, 'inconnu'),
+      f.start('sans-date', null, 'unknown'),
     ]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat.map((c) => c.key)).toEqual(['sans-date', 'date'])
-    expect(resultat[0]?.dateDeRang).toBeNull()
+    expect(result.map((c) => c.key)).toEqual(['sans-date', 'date'])
+    expect(result[0]?.rankDate).toBeNull()
   })
 
   it('prend l événement d ouverture comme date de rang, pas le plus récent', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('c1', '2019-05-01T20:00:00.000Z'),
       // Un commentaire écrit aujourd'hui sur un visionnage de 2019. Il ne
       // doit pas faire remonter le cycle : la date d'ouverture est la seule
@@ -98,87 +98,87 @@ describe('cycles — rang et numérotation', () => {
       f.start('c2', '2020-01-01T20:00:00.000Z'),
     ]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat.map((c) => c.key)).toEqual(['c1', 'c2'])
-    expect(resultat[0]?.dateDeRang).toBe('2019-05-01T20:00:00.000Z')
+    expect(result.map((c) => c.key)).toEqual(['c1', 'c2'])
+    expect(result[0]?.rankDate).toBe('2019-05-01T20:00:00.000Z')
   })
 
   it('tolère un cycle sans événement d ouverture', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Cas qui ne peut venir que d'une synchronisation partielle : les
     // événements du cycle sont là, son ouverture non. On ne perd pas la
     // donnée pour autant.
-    const evenements = [f.seen('orphelin', '2019-05-01T20:00:00.000Z')]
+    const events = [f.seen('orphelin', '2019-05-01T20:00:00.000Z')]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat).toHaveLength(1)
-    expect(resultat[0]?.key).toBe('orphelin')
-    expect(resultat[0]?.ouvertureManquante).toBe(true)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.key).toBe('orphelin')
+    expect(result[0]?.missingOpening).toBe(true)
   })
 
   it('ignore les événements hors cycle', () => {
-    const f = creerFabrique()
-    const evenements = [f.watch(), f.fav(), f.start('c1', '2019-01-01T20:00:00.000Z')]
+    const f = createFactory()
+    const events = [f.watch(), f.fav(), f.start('c1', '2019-01-01T20:00:00.000Z')]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat).toHaveLength(1)
-    expect(resultat[0]?.evenements).toHaveLength(1)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.events).toHaveLength(1)
   })
 
   it('ignore les types inconnus', () => {
-    const f = creerFabrique()
-    const evenements = [f.start('c1', '2019-01-01T20:00:00.000Z'), f.inconnu('LEND')]
+    const f = createFactory()
+    const events = [f.start('c1', '2019-01-01T20:00:00.000Z'), f.unknown('LEND')]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat).toHaveLength(1)
+    expect(result).toHaveLength(1)
   })
 
   it('classe un cycle ouvert par REWATCH comme n importe quel autre', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.rewatch('c2', '2026-01-01T20:00:00.000Z'),
       f.start('c1', '2019-01-01T20:00:00.000Z'),
     ]
 
-    const resultat = cycles(evenements)
+    const result = cycles(events)
 
-    expect(resultat.map((c) => c.rang)).toEqual([1, 2])
-    expect(resultat[1]?.key).toBe('c2')
+    expect(result.map((c) => c.rank)).toEqual([1, 2])
+    expect(result[1]?.key).toBe('c2')
   })
 })
 
 describe('cycles — état terminal', () => {
   it('reconnaît un cycle termine par SEEN', () => {
-    const f = creerFabrique()
-    const resultat = cycles([f.start('c1', '2019-01-01T20:00:00.000Z'), f.seen('c1')])
+    const f = createFactory()
+    const result = cycles([f.start('c1', '2019-01-01T20:00:00.000Z'), f.seen('c1')])
 
-    expect(resultat[0]?.aSeen).toBe(true)
-    expect(resultat[0]?.aDrop).toBe(false)
+    expect(result[0]?.hasSeen).toBe(true)
+    expect(result[0]?.hasDrop).toBe(false)
   })
 
   it('reconnaît un cycle abandonné', () => {
-    const f = creerFabrique()
-    const resultat = cycles([f.start('c1', '2019-01-01T20:00:00.000Z'), f.drop('c1')])
+    const f = createFactory()
+    const result = cycles([f.start('c1', '2019-01-01T20:00:00.000Z'), f.drop('c1')])
 
-    expect(resultat[0]?.aDrop).toBe(true)
+    expect(result[0]?.hasDrop).toBe(true)
   })
 
   it('reconnaît un cycle vu PUIS abandonné', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Le mis-tap sur la pastille : un DROP atterrit sur un cycle qui porte
     // déjà son SEEN. Les deux drapeaux sont vrais, et c'est ce qui permet
     // à seenCount de ne pas le compter.
-    const resultat = cycles([
+    const result = cycles([
       f.start('c1', '2019-01-01T20:00:00.000Z'),
       f.seen('c1'),
       f.drop('c1'),
     ])
 
-    expect(resultat[0]?.aSeen).toBe(true)
-    expect(resultat[0]?.aDrop).toBe(true)
+    expect(result[0]?.hasSeen).toBe(true)
+    expect(result[0]?.hasDrop).toBe(true)
   })
 })

@@ -1,17 +1,17 @@
 import { db } from '@/adapters/dexie/db'
-import { etatMedia, type LigneEtat } from '@/domain/reducers/etatMedia'
-import type { EventId, Evenement, EvenementStocke, MediaRef } from '@/domain/types'
+import { mediaState, type MediaStateRow } from '@/domain/reducers/mediaState'
+import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
 import type { EventStore } from '@/ports/EventStore'
 
 /**
  * Implémentation Dexie du port EventStore.
  *
  * L'adaptateur **stocke, il ne calcule pas**. La ligne `media_state` est
- * produite par `etatMedia`, dans le domaine. Si le calcul vivait ici, la
+ * produite par `mediaState`, dans le domaine. Si le calcul vivait ici, la
  * règle de dérivation du statut existerait à deux endroits — et au temps 2,
  * `PostgresEventStore` devrait la réimplémenter.
  */
-export function creerEventStore(): EventStore {
+export function createEventStore(): EventStore {
   return {
     /**
      * Écrit les événements et rafraîchit les lignes dérivées qu'ils
@@ -22,25 +22,25 @@ export function creerEventStore(): EventStore {
      * deux, l'app afficherait alors deux statuts différents pour le même
      * titre, sans que rien ne le signale.
      */
-    async append(evenements: readonly Evenement[]): Promise<void> {
-      if (evenements.length === 0) return
+    async append(events: readonly DomainEvent[]): Promise<void> {
+      if (events.length === 0) return
 
-      const refsTouchees = [...new Set(evenements.map((e) => e.media_ref))]
+      const touchedRefs = [...new Set(events.map((e) => e.media_ref))]
 
       await db.transaction('rw', db.events, db.media_state, async () => {
-        await db.events.bulkAdd([...evenements])
+        await db.events.bulkAdd([...events])
 
-        for (const ref of refsTouchees) {
-          await rafraichirEtat(ref)
+        for (const ref of touchedRefs) {
+          await refreshMediaState(ref)
         }
       })
     },
 
-    async eventsForMedia(ref: MediaRef): Promise<readonly EvenementStocke[]> {
+    async eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]> {
       return db.events.where('media_ref').equals(ref).toArray()
     },
 
-    async allMediaStates(): Promise<readonly LigneEtat[]> {
+    async allMediaStates(): Promise<readonly MediaStateRow[]> {
       return db.media_state.toArray()
     },
 
@@ -51,13 +51,13 @@ export function creerEventStore(): EventStore {
      * un ordre chronologique stable sans index supplémentaire.
      */
     async eventsSince(
-      curseur: EventId | null,
-      limite: number,
-    ): Promise<readonly EvenementStocke[]> {
+      cursor: EventId | null,
+      limit: number,
+    ): Promise<readonly StoredEvent[]> {
       const collection =
-        curseur === null ? db.events.orderBy('id') : db.events.where('id').above(curseur)
+        cursor === null ? db.events.orderBy('id') : db.events.where('id').above(cursor)
 
-      return collection.limit(limite).toArray()
+      return collection.limit(limit).toArray()
     },
 
     /**
@@ -73,12 +73,12 @@ export function creerEventStore(): EventStore {
         await db.media_state.clear()
 
         const refs = new Set<MediaRef>()
-        await db.events.each((evenement) => {
-          refs.add(evenement.media_ref)
+        await db.events.each((event) => {
+          refs.add(event.media_ref)
         })
 
         for (const ref of refs) {
-          await rafraichirEtat(ref)
+          await refreshMediaState(ref)
         }
       })
     },
@@ -92,10 +92,10 @@ export function creerEventStore(): EventStore {
  * `media_state` : la lecture des événements et l'écriture de la ligne
  * doivent voir le même instantané.
  */
-async function rafraichirEtat(ref: MediaRef): Promise<void> {
-  const evenements = await db.events.where('media_ref').equals(ref).toArray()
-  await db.media_state.put(etatMedia(evenements, ref))
+async function refreshMediaState(ref: MediaRef): Promise<void> {
+  const events = await db.events.where('media_ref').equals(ref).toArray()
+  await db.media_state.put(mediaState(events, ref))
 }
 
 /** Instance partagée par l'application. */
-export const eventStore = creerEventStore()
+export const eventStore = createEventStore()

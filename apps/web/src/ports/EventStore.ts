@@ -1,5 +1,5 @@
-import type { LigneEtat } from '@/domain/reducers/etatMedia'
-import type { EventId, Evenement, EvenementStocke, MediaRef } from '@/domain/types'
+import type { MediaStateRow } from '@/domain/reducers/mediaState'
+import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
 
 /**
  * Port du store d'événements.
@@ -26,13 +26,13 @@ export interface EventStore {
    * journal, et comme la page média et la bibliothèque la lisent toutes les
    * deux, l'app afficherait deux statuts différents pour le même titre.
    */
-  append(evenements: readonly Evenement[]): Promise<void>
+  append(events: readonly DomainEvent[]): Promise<void>
 
   /** Tous les événements d'un média, pour sa fiche et son journal. */
-  eventsForMedia(ref: MediaRef): Promise<readonly EvenementStocke[]>
+  eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]>
 
   /** Les lignes dérivées, pour la bibliothèque et l'accueil. */
-  allMediaStates(): Promise<readonly LigneEtat[]>
+  allMediaStates(): Promise<readonly MediaStateRow[]>
 
   /**
    * Page d'événements après un curseur, par identifiant croissant.
@@ -41,7 +41,7 @@ export interface EventStore {
    * synchronisation du temps 2. Les UUIDv7 étant ordonnables par le temps,
    * le curseur est stable.
    */
-  eventsSince(curseur: EventId | null, limite: number): Promise<readonly EvenementStocke[]>
+  eventsSince(cursor: EventId | null, limit: number): Promise<readonly StoredEvent[]>
 
   /**
    * Reconstruit intégralement `media_state` depuis les événements.

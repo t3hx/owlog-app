@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { statutCourant } from '@/domain/rules/statut'
-import { creerFabrique } from '@/domain/test/fabrique'
+import { currentStatus } from '@/domain/rules/status'
+import { createFactory } from '@/domain/test/factory'
 
 /**
  * Règle centrale : dérivation du statut.
@@ -17,128 +17,128 @@ import { creerFabrique } from '@/domain/test/fabrique'
  */
 describe('statutCourant — cycle de la pastille', () => {
   it('rend absent pour un média sans aucun événement', () => {
-    expect(statutCourant([])).toBe('absent')
+    expect(currentStatus([])).toBe('absent')
   })
 
   it('rend à voir après un WATCH', () => {
-    const f = creerFabrique()
-    expect(statutCourant([f.watch()])).toBe('a-voir')
+    const f = createFactory()
+    expect(currentStatus([f.watch()])).toBe('to-watch')
   })
 
   it('rend en cours après un START', () => {
-    const f = creerFabrique()
-    expect(statutCourant([f.watch(), f.start('c1', '2026-01-01T20:00:00.000Z')])).toBe(
-      'en-cours',
+    const f = createFactory()
+    expect(currentStatus([f.watch(), f.start('c1', '2026-01-01T20:00:00.000Z')])).toBe(
+      'watching',
     )
   })
 
   it('rend vu après un SEEN', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     expect(
-      statutCourant([f.watch(), f.start('c1', '2026-01-01T20:00:00.000Z'), f.seen('c1')]),
-    ).toBe('vu')
+      currentStatus([f.watch(), f.start('c1', '2026-01-01T20:00:00.000Z'), f.seen('c1')]),
+    ).toBe('seen')
   })
 
   it('rend abandonné après un DROP', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     expect(
-      statutCourant([f.watch(), f.start('c1', '2026-01-01T20:00:00.000Z'), f.drop('c1')]),
-    ).toBe('abandonne')
+      currentStatus([f.watch(), f.start('c1', '2026-01-01T20:00:00.000Z'), f.drop('c1')]),
+    ).toBe('dropped')
   })
 
   it('reboucle vers à voir après un WATCH hors cycle', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Le quatrième tap sur la pastille : depuis « abandonné », on revient à
     // « à voir » sans ouvrir de cycle.
-    const evenements = [
+    const events = [
       f.watch(),
       f.start('c1', '2026-01-01T20:00:00.000Z'),
       f.drop('c1'),
       f.watch(),
     ]
 
-    expect(statutCourant(evenements)).toBe('a-voir')
+    expect(currentStatus(events)).toBe('to-watch')
   })
 
   it('donne priorité à DROP sur SEEN dans un même cycle', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('c1', '2026-01-01T20:00:00.000Z'),
       f.seen('c1'),
       f.drop('c1'),
     ]
 
-    expect(statutCourant(evenements)).toBe('abandonne')
+    expect(currentStatus(events)).toBe('dropped')
   })
 })
 
 describe('statutCourant — rétro-datage, le piège', () => {
   it('un SEEN rétro-daté en 2019 ne change pas un titre en cours depuis 2026', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Cas 1 du plan. Le cycle de 2019 est écrit EN DERNIER, donc il porte le
     // created_at le plus récent. Trié par created_at → « vu », ce qui est
     // FAUX. Trié par rang → le cycle de 2026 reste courant.
-    const evenements = [
+    const events = [
       f.watch(),
-      f.start('en-cours', '2026-01-01T20:00:00.000Z'),
+      f.start('watching', '2026-01-01T20:00:00.000Z'),
       f.start('souvenir', '2019-05-01T20:00:00.000Z'),
       f.seen('souvenir', '2019-05-01T22:00:00.000Z'),
     ]
 
-    expect(statutCourant(evenements)).toBe('en-cours')
+    expect(currentStatus(events)).toBe('watching')
   })
 
   it('un SEEN sur le cycle courant le clôt', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Cas 2 du plan : « en fait je l'ai fini la semaine dernière ». La
     // commande rattache le SEEN au cycle ouvert plutôt que d'en minter un
     // second ; du point de vue du réducteur, le cycle courant est clos.
-    const evenements = [
+    const events = [
       f.watch(),
-      f.start('en-cours', '2026-01-01T20:00:00.000Z'),
-      f.seen('en-cours', '2026-07-20T20:00:00.000Z'),
+      f.start('watching', '2026-01-01T20:00:00.000Z'),
+      f.seen('watching', '2026-07-20T20:00:00.000Z'),
     ]
 
-    expect(statutCourant(evenements)).toBe('vu')
+    expect(currentStatus(events)).toBe('seen')
   })
 
   it('un cycle rétro-daté POSTÉRIEUR au cycle en cours devient le courant', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Si aucun cycle ouvert ne précède la date saisie, un cycle neuf est
     // minté ; son rang est le plus élevé, donc il porte le statut.
-    const evenements = [
+    const events = [
       f.start('ancien', '2019-01-01T20:00:00.000Z'),
       f.seen('ancien', '2019-01-02T20:00:00.000Z'),
       f.start('recent', '2026-01-01T20:00:00.000Z'),
       f.seen('recent', '2026-01-02T20:00:00.000Z'),
     ]
 
-    expect(statutCourant(evenements)).toBe('vu')
+    expect(currentStatus(events)).toBe('seen')
   })
 
   it('un cycle sans date ne prend jamais le pas sur un cycle daté', () => {
-    const f = creerFabrique()
-    const evenements = [
-      f.start('en-cours', '2026-01-01T20:00:00.000Z'),
-      f.start('je-ne-sais-plus', null, 'inconnu'),
+    const f = createFactory()
+    const events = [
+      f.start('watching', '2026-01-01T20:00:00.000Z'),
+      f.start('je-ne-sais-plus', null, 'unknown'),
       f.seen('je-ne-sais-plus', null),
     ]
 
     // Les cycles sans date sont classés avant tous les autres, donc celui
     // de 2026 reste courant.
-    expect(statutCourant(evenements)).toBe('en-cours')
+    expect(currentStatus(events)).toBe('watching')
   })
 })
 
 describe('statutCourant — présence en bibliothèque', () => {
   it('rend absent après un REMOVE', () => {
-    const f = creerFabrique()
-    expect(statutCourant([f.watch(), f.remove()])).toBe('absent')
+    const f = createFactory()
+    expect(currentStatus([f.watch(), f.remove()])).toBe('absent')
   })
 
   it('réapparaît avec ses cycles après un WATCH suivant un REMOVE', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.watch(),
       f.start('c1', '2026-01-01T20:00:00.000Z'),
       f.seen('c1'),
@@ -149,43 +149,43 @@ describe('statutCourant — présence en bibliothèque', () => {
     // Le WATCH est postérieur à tout le cycle courant : la pastille revient
     // à « à voir », et l'historique du cycle est intact — c'est la
     // consequence assumee de l'append-only.
-    expect(statutCourant(evenements)).toBe('a-voir')
+    expect(currentStatus(events)).toBe('to-watch')
   })
 
   it('un REMOVE annulé ne retire plus le média', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const remove = f.remove()
-    const evenements = [f.watch(), remove, f.annule(remove.id)]
+    const events = [f.watch(), remove, f.voided(remove.id)]
 
-    expect(statutCourant(evenements)).toBe('a-voir')
+    expect(currentStatus(events)).toBe('to-watch')
   })
 
   it('un DROP annulé rend son statut au cycle', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const drop = f.drop('c1')
-    const evenements = [
+    const events = [
       f.watch(),
       f.start('c1', '2026-01-01T20:00:00.000Z'),
       f.seen('c1'),
       drop,
-      f.annule(drop.id),
+      f.voided(drop.id),
     ]
 
-    expect(statutCourant(evenements)).toBe('vu')
+    expect(currentStatus(events)).toBe('seen')
   })
 })
 
 describe('statutCourant — tolérance', () => {
   it('rend à voir pour un média sans cycle mais avec un coup de cœur', () => {
-    const f = creerFabrique()
-    expect(statutCourant([f.watch(), f.fav()])).toBe('a-voir')
+    const f = createFactory()
+    expect(currentStatus([f.watch(), f.fav()])).toBe('to-watch')
   })
 
   it('ignore les types inconnus sans lever', () => {
-    const f = creerFabrique()
-    const evenements = [f.watch(), f.inconnu('LEND'), f.start('c1', '2026-01-01T20:00:00.000Z')]
+    const f = createFactory()
+    const events = [f.watch(), f.unknown('LEND'), f.start('c1', '2026-01-01T20:00:00.000Z')]
 
-    expect(() => statutCourant(evenements)).not.toThrow()
-    expect(statutCourant(evenements)).toBe('en-cours')
+    expect(() => currentStatus(events)).not.toThrow()
+    expect(currentStatus(events)).toBe('watching')
   })
 })

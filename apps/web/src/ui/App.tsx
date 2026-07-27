@@ -1,10 +1,12 @@
+import { useTranslation } from 'react-i18next'
 import { Route, Switch, useRoute } from 'wouter'
 
-import { EcranEnConstruction } from '@/ui/components/EcranEnConstruction'
+import { UnderConstruction } from '@/ui/components/UnderConstruction'
+import { Header } from '@/ui/components/Header'
 import { TabBar } from '@/ui/components/TabBar'
-import { useReglage } from '@/ui/hooks/useReglage'
-import { Accueil } from '@/ui/screens/Accueil'
-import { Bienvenue } from '@/ui/screens/Bienvenue'
+import { useSetting } from '@/ui/hooks/useSetting'
+import { Home } from '@/ui/screens/Home'
+import { Welcome } from '@/ui/screens/Welcome'
 import { Debug } from '@/ui/screens/Debug'
 
 /**
@@ -12,7 +14,7 @@ import { Debug } from '@/ui/screens/Debug'
  *
  * Routing en mode history, pas en hash. Ce choix impose deux choses en aval,
  * toutes deux traitées à l'étape 3 : un rewrite SPA dans le Caddyfile pour
- * que `/bibliotheque` serve `index.html`, et `navigateFallback` dans la
+ * que `/library` serve `index.html`, et `navigateFallback` dans la
  * configuration Workbox pour que la même règle vaille hors-ligne.
  *
  * Tant que le prénom n'est pas renseigné, l'écran de bienvenue occupe toute
@@ -21,7 +23,8 @@ import { Debug } from '@/ui/screens/Debug'
  * que d'une app neuve.
  */
 export function App() {
-  const { valeur: prenom, chargement } = useReglage('prenom')
+  const { t } = useTranslation()
+  const { value: firstName, loading } = useSetting('firstName')
   const [surDebug] = useRoute('/debug')
 
   // `/debug` passe avant la question du prénom. Un écran de diagnostic
@@ -34,46 +37,53 @@ export function App() {
   // Premier rendu : on ne sait pas encore si le prénom existe. Afficher
   // l'écran de bienvenue tout de suite le ferait clignoter à chaque
   // ouverture, y compris pour quelqu'un qui l'a déjà renseigné.
-  if (chargement) {
+  if (loading) {
     return <div className="min-h-dvh" />
   }
 
-  if (prenom === undefined) {
-    return <Bienvenue />
+  if (firstName === undefined) {
+    return (
+      <>
+        <Header />
+        <Welcome />
+      </>
+    )
   }
 
   return (
     <div className="min-h-dvh pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+      <Header />
+
       <Switch>
         <Route path="/">
-          <Accueil prenom={prenom} />
+          <Home firstName={firstName} />
         </Route>
         <Route path="/bibliotheque">
-          <EcranEnConstruction
-            titre="Bibliothèque"
-            etape={10}
-            quoi="Tout ce que tu as logué, filtrable par statut et par coup de cœur."
+          <UnderConstruction
+            title={t('library.title')}
+            step={10}
+            what={t('library.what')}
           />
         </Route>
         <Route path="/log">
-          <EcranEnConstruction
-            titre="Log"
-            etape={9}
-            quoi="Le flux horodaté de tout ce que tu as fait. Le tail -f de ta vie de spectateur."
+          <UnderConstruction
+            title={t('log.title')}
+            step={9}
+            what={t('log.what')}
           />
         </Route>
         <Route path="/stats">
-          <EcranEnConstruction
-            titre="Stats"
-            etape={11}
-            quoi="Temps total, répartition, notes, genres. Tout calculé depuis tes visionnages."
+          <UnderConstruction
+            title={t('stats.title')}
+            step={11}
+            what={t('stats.what')}
           />
         </Route>
         <Route>
-          <EcranEnConstruction
-            titre="Page introuvable"
-            etape={1}
-            quoi="Cette adresse ne correspond à aucun écran."
+          <UnderConstruction
+            title={t('notFound.title')}
+            step={1}
+            what={t('notFound.what')}
           />
         </Route>
       </Switch>

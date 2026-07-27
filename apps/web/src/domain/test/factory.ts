@@ -1,10 +1,10 @@
 import type {
   CycleKey,
-  Evenement,
-  EvenementInconnu,
-  Horodatage,
+  DomainEvent,
+  UnknownEvent,
+  Timestamp,
   MediaRef,
-  Precision,
+  DatePrecision,
 } from '@/domain/types'
 
 /**
@@ -24,29 +24,29 @@ import type {
  * compte pour les règles, c'est qu'il soit ordonnable, et un compteur
  * zéro-paddé l'est. Un vrai UUID rendrait les échecs de test illisibles.
  */
-export const FILM: MediaRef = 'tmdb:movie/693134'
-export const SERIE: MediaRef = 'tmdb:tv/95396'
+export const MOVIE: MediaRef = 'tmdb:movie/693134'
+export const SERIES: MediaRef = 'tmdb:tv/95396'
 
-export interface Fabrique {
-  watch(occurredAt?: Horodatage | null): Evenement
-  remove(occurredAt?: Horodatage | null): Evenement
-  start(cycle: CycleKey, occurredAt?: Horodatage | null, precision?: Precision): Evenement
-  rewatch(cycle: CycleKey, occurredAt?: Horodatage | null, precision?: Precision): Evenement
-  seen(cycle: CycleKey, occurredAt?: Horodatage | null): Evenement
-  drop(cycle: CycleKey, occurredAt?: Horodatage | null): Evenement
+export interface Factory {
+  watch(occurredAt?: Timestamp | null): DomainEvent
+  remove(occurredAt?: Timestamp | null): DomainEvent
+  start(cycle: CycleKey, occurredAt?: Timestamp | null, precision?: DatePrecision): DomainEvent
+  rewatch(cycle: CycleKey, occurredAt?: Timestamp | null, precision?: DatePrecision): DomainEvent
+  seen(cycle: CycleKey, occurredAt?: Timestamp | null): DomainEvent
+  drop(cycle: CycleKey, occurredAt?: Timestamp | null): DomainEvent
   prog(
     cycle: CycleKey,
     percent: number,
-    options?: { label?: string; labelCreatedAt?: Horodatage; occurredAt?: Horodatage },
-  ): Evenement
-  rate(cycle: CycleKey, rating: number | null, occurredAt?: Horodatage): Evenement
-  note(cycle: CycleKey, text: string, occurredAt?: Horodatage): Evenement
-  fav(occurredAt?: Horodatage): Evenement
-  unfav(occurredAt?: Horodatage): Evenement
-  annule(cible: string, occurredAt?: Horodatage): Evenement
-  inconnu(type: string, occurredAt?: Horodatage | null): EvenementInconnu
+    options?: { label?: string; labelCreatedAt?: Timestamp; occurredAt?: Timestamp },
+  ): DomainEvent
+  rate(cycle: CycleKey, rating: number | null, occurredAt?: Timestamp): DomainEvent
+  note(cycle: CycleKey, text: string, occurredAt?: Timestamp): DomainEvent
+  fav(occurredAt?: Timestamp): DomainEvent
+  unfav(occurredAt?: Timestamp): DomainEvent
+  voided(target: string, occurredAt?: Timestamp): DomainEvent
+  unknown(type: string, occurredAt?: Timestamp | null): UnknownEvent
   /** Dernier identifiant produit, pour cibler une annulation. */
-  dernierId(): string
+  lastId(): string
 }
 
 /**
@@ -59,11 +59,11 @@ export interface Fabrique {
  */
 let instances = 0
 
-export function creerFabrique(ref: MediaRef = FILM): Fabrique {
+export function createFactory(ref: MediaRef = MOVIE): Factory {
   instances += 1
-  const prefixe = `f${instances}`
-  let compteur = 0
-  let dernier = ''
+  const prefix = `f${instances}`
+  let counter = 0
+  let last = ''
 
   /**
    * `occurredAt` omis (et non `null`) signifie « événement live » : la
@@ -74,17 +74,17 @@ export function creerFabrique(ref: MediaRef = FILM): Fabrique {
    * le `start()` qu'il termine, et les tests d'ordre vérifieraient une
    * chronologie impossible.
    */
-  function base(occurredAt: Horodatage | null | undefined, precision: Precision) {
-    compteur += 1
-    dernier = `${prefixe}e${String(compteur).padStart(4, '0')}`
+  function base(occurredAt: Timestamp | null | undefined, precision: DatePrecision) {
+    counter += 1
+    last = `${prefix}e${String(counter).padStart(4, '0')}`
     // Une seconde d'écart par appel : l'ordre d'écriture est l'ordre d'appel.
-    const seconde = String(compteur).padStart(2, '0')
-    const ecritLe = `2026-01-01T00:00:${seconde}.000Z` as Horodatage
+    const second = String(counter).padStart(2, '0')
+    const writtenAt = `2026-01-01T00:00:${second}.000Z` as Timestamp
     return {
-      id: dernier,
+      id: last,
       device_id: 'test',
-      created_at: ecritLe,
-      occurred_at: occurredAt === undefined ? ecritLe : occurredAt,
+      created_at: writtenAt,
+      occurred_at: occurredAt === undefined ? writtenAt : occurredAt,
       occurred_precision: precision,
       media_ref: ref,
     }
@@ -155,17 +155,17 @@ export function creerFabrique(ref: MediaRef = FILM): Fabrique {
       type: 'UNFAV',
       cycle_key: null,
     }),
-    annule: (cible, occurredAt) => ({
+    voided: (target, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'VOID',
       cycle_key: null,
-      payload: { target: cible },
+      payload: { target: target },
     }),
-    inconnu: (type, occurredAt) => ({
+    unknown: (type, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type,
       cycle_key: null,
     }),
-    dernierId: () => dernier,
+    lastId: () => last,
   }
 }

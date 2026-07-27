@@ -1,28 +1,28 @@
 import { applyVoids } from '@/domain/reducers/applyVoids'
 import { cycles, type Cycle } from '@/domain/rules/cycles'
-import { statutCourant } from '@/domain/rules/statut'
+import { currentStatus } from '@/domain/rules/status'
 import {
-  estConnu,
+  isKnownEvent,
   type CycleKey,
-  type Evenement,
-  type EvenementStocke,
-  type Horodatage,
+  type DomainEvent,
+  type StoredEvent,
+  type Timestamp,
 } from '@/domain/types'
 
 /** Avancement dans le cycle courant. */
-export interface Progression {
-  readonly pourcentage: number
+export interface Progress {
+  readonly percent: number
   readonly label: string | null
   /** Le label décrit un point plus ancien que la progression affichée. */
-  readonly perime: boolean
-  readonly majLe: Horodatage | null
+  readonly stale: boolean
+  readonly updatedAt: Timestamp | null
 }
 
-const AUCUNE_PROGRESSION: Progression = {
-  pourcentage: 0,
+const NO_PROGRESS: Progress = {
+  percent: 0,
   label: null,
-  perime: false,
-  majLe: null,
+  stale: false,
+  updatedAt: null,
 }
 
 /**
@@ -33,8 +33,8 @@ const AUCUNE_PROGRESSION: Progression = {
  * fin. Sans cette règle, un titre affiché `✕ abandonné` porterait un
  * compteur de visionnages incrémenté.
  */
-export function nombreDeVisionnages(evenements: readonly EvenementStocke[]): number {
-  return cyclesActifs(evenements).filter((cycle) => cycle.aSeen && !cycle.aDrop).length
+export function seenCount(events: readonly StoredEvent[]): number {
+  return activeCycles(events).filter((cycle) => cycle.hasSeen && !cycle.hasDrop).length
 }
 
 /**
@@ -44,25 +44,25 @@ export function nombreDeVisionnages(evenements: readonly EvenementStocke[]): num
  * le cycle courant reste l'ancien cycle abandonné, et afficher sa
  * progression sur un titre remis à « à voir » serait faux.
  */
-export function progression(evenements: readonly EvenementStocke[]): Progression {
-  if (statutCourant(evenements) === 'a-voir') return AUCUNE_PROGRESSION
+export function progress(events: readonly StoredEvent[]): Progress {
+  if (currentStatus(events) === 'to-watch') return NO_PROGRESS
 
-  const courant = cycleCourant(evenements)
-  if (!courant) return AUCUNE_PROGRESSION
+  const current = currentCycle(events)
+  if (!current) return NO_PROGRESS
 
-  const dernier = dernierDuType(courant.evenements, 'PROG')
-  if (!dernier || dernier.type !== 'PROG') return AUCUNE_PROGRESSION
+  const last = lastOfType(current.events, 'PROG')
+  if (!last || last.type !== 'PROG') return NO_PROGRESS
 
-  const label = dernier.payload.label ?? null
-  const poseLe = dernier.payload.label_created_at ?? null
+  const label = last.payload.label ?? null
+  const labelSetAt = last.payload.label_created_at ?? null
 
   return {
-    pourcentage: dernier.payload.percent,
+    percent: last.payload.percent,
     label,
     // Le label a été saisi avant l'événement de progression qui le porte :
     // il décrit un point plus ancien que l'avancement affiché.
-    perime: poseLe !== null && poseLe < dernier.created_at,
-    majLe: dernier.created_at,
+    stale: labelSetAt !== null && labelSetAt < last.created_at,
+    updatedAt: last.created_at,
   }
 }
 
@@ -74,23 +74,23 @@ export function progression(evenements: readonly EvenementStocke[]): Progression
  * l'affichage — jamais noté, ou note effacée par un re-tap sur la même
  * étoile.
  */
-export function note(
-  evenements: readonly EvenementStocke[],
+export function rating(
+  events: readonly StoredEvent[],
   cycle: CycleKey,
 ): number | null {
-  const dernier = dernierDuTypeDansCycle(evenements, cycle, 'RATE')
-  if (!dernier || dernier.type !== 'RATE') return null
-  return dernier.payload.rating
+  const last = lastOfTypeInCycle(events, cycle, 'RATE')
+  if (!last || last.type !== 'RATE') return null
+  return last.payload.rating
 }
 
 /** Dernier commentaire d'un cycle. */
-export function commentaire(
-  evenements: readonly EvenementStocke[],
+export function comment(
+  events: readonly StoredEvent[],
   cycle: CycleKey,
 ): string | null {
-  const dernier = dernierDuTypeDansCycle(evenements, cycle, 'NOTE')
-  if (!dernier || dernier.type !== 'NOTE') return null
-  return dernier.payload.text
+  const last = lastOfTypeInCycle(events, cycle, 'NOTE')
+  if (!last || last.type !== 'NOTE') return null
+  return last.payload.text
 }
 
 /**
@@ -100,50 +100,50 @@ export function commentaire(
  * jamais la pastille. Départagé par `created_at` et non par la position
  * dans le tableau, qui n'a aucune garantie d'ordre.
  */
-export function estCoupDeCoeur(evenements: readonly EvenementStocke[]): boolean {
-  let dernier: Evenement | null = null
+export function isFavorite(events: readonly StoredEvent[]): boolean {
+  let last: DomainEvent | null = null
 
-  for (const evenement of applyVoids(evenements)) {
-    if (!estConnu(evenement)) continue
-    if (evenement.type !== 'FAV' && evenement.type !== 'UNFAV') continue
-    if (dernier === null || evenement.created_at >= dernier.created_at) {
-      dernier = evenement
+  for (const event of applyVoids(events)) {
+    if (!isKnownEvent(event)) continue
+    if (event.type !== 'FAV' && event.type !== 'UNFAV') continue
+    if (last === null || event.created_at >= last.created_at) {
+      last = event
     }
   }
 
-  return dernier?.type === 'FAV'
+  return last?.type === 'FAV'
 }
 
-function cyclesActifs(evenements: readonly EvenementStocke[]): readonly Cycle[] {
-  return cycles(applyVoids(evenements))
+function activeCycles(events: readonly StoredEvent[]): readonly Cycle[] {
+  return cycles(applyVoids(events))
 }
 
-function cycleCourant(evenements: readonly EvenementStocke[]): Cycle | undefined {
-  const tous = cyclesActifs(evenements)
-  return tous[tous.length - 1]
+function currentCycle(events: readonly StoredEvent[]): Cycle | undefined {
+  const all = activeCycles(events)
+  return all[all.length - 1]
 }
 
 /** Dernier événement d'un type donné, par ordre d'écriture. */
-function dernierDuType(
-  evenements: readonly Evenement[],
-  type: Evenement['type'],
-): Evenement | undefined {
-  let trouve: Evenement | undefined
-  for (const evenement of evenements) {
-    if (evenement.type !== type) continue
-    if (!trouve || evenement.created_at >= trouve.created_at) {
-      trouve = evenement
+function lastOfType(
+  events: readonly DomainEvent[],
+  type: DomainEvent['type'],
+): DomainEvent | undefined {
+  let found: DomainEvent | undefined
+  for (const event of events) {
+    if (event.type !== type) continue
+    if (!found || event.created_at >= found.created_at) {
+      found = event
     }
   }
-  return trouve
+  return found
 }
 
-function dernierDuTypeDansCycle(
-  evenements: readonly EvenementStocke[],
+function lastOfTypeInCycle(
+  events: readonly StoredEvent[],
   cycle: CycleKey,
-  type: Evenement['type'],
-): Evenement | undefined {
-  const trouve = cyclesActifs(evenements).find((candidat) => candidat.key === cycle)
-  if (!trouve) return undefined
-  return dernierDuType(trouve.evenements, type)
+  type: DomainEvent['type'],
+): DomainEvent | undefined {
+  const found = activeCycles(events).find((candidat) => candidat.key === cycle)
+  if (!found) return undefined
+  return lastOfType(found.events, type)
 }

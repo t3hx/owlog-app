@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 
 import { eventStore } from '@/adapters/dexie/eventStore'
 import { settingsStore } from '@/adapters/dexie/settingsStore'
+import '@/i18n'
 import { App } from '@/ui/App'
 import { PortsProvider } from '@/ui/PortsProvider'
 import '@/ui/styles/tokens.css'
@@ -20,7 +21,7 @@ import '@/ui/styles/tokens.css'
  */
 const container = document.getElementById('root')
 if (!container) {
-  throw new Error('Élément racine #root introuvable dans index.html')
+  throw new Error('Root element #root not found in index.html')
 }
 
 createRoot(container).render(

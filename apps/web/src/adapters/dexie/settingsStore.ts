@@ -1,10 +1,10 @@
 import { db } from '@/adapters/dexie/db'
-import type { CleReglage, SettingsStore } from '@/ports/SettingsStore'
+import type { SettingKey, SettingsStore } from '@/ports/SettingsStore'
 
 /**
  * Implémentation Dexie du port SettingsStore.
  *
- * Aucun état en mémoire côté valeurs : chaque `lire` interroge la base. Le
+ * Aucun état en mémoire côté valeurs : chaque `read` interroge la base. Le
  * contrat l'exige (« une nouvelle instance relit la valeur ») parce qu'un
  * cache mémoire ici créerait deux sources de vérité pour la même donnée,
  * exactement le défaut que le modèle de lecture évite ailleurs.
@@ -12,33 +12,33 @@ import type { CleReglage, SettingsStore } from '@/ports/SettingsStore'
  * Les abonnés, eux, sont bien en mémoire : ce sont des rappels React, ils
  * ne survivent pas au rechargement par nature.
  */
-export function creerSettingsStore(): SettingsStore {
-  const abonnes = new Map<CleReglage, Set<() => void>>()
+export function createSettingsStore(): SettingsStore {
+  const subscribers = new Map<SettingKey, Set<() => void>>()
 
-  function notifier(cle: CleReglage): void {
-    for (const rappel of abonnes.get(cle) ?? []) {
-      rappel()
+  function notify(key: SettingKey): void {
+    for (const callback of subscribers.get(key) ?? []) {
+      callback()
     }
   }
 
   return {
-    async lire(cle: CleReglage): Promise<string | undefined> {
-      const ligne = await db.settings.get(cle)
-      return ligne?.valeur
+    async read(key: SettingKey): Promise<string | undefined> {
+      const row = await db.settings.get(key)
+      return row?.value
     },
 
-    async ecrire(cle: CleReglage, valeur: string): Promise<void> {
-      await db.settings.put({ cle, valeur })
-      notifier(cle)
+    async write(key: SettingKey, value: string): Promise<void> {
+      await db.settings.put({ key, value })
+      notify(key)
     },
 
-    souscrire(cle: CleReglage, rappel: () => void): () => void {
-      const pourCetteCle = abonnes.get(cle) ?? new Set()
-      pourCetteCle.add(rappel)
-      abonnes.set(cle, pourCetteCle)
+    subscribe(key: SettingKey, callback: () => void): () => void {
+      const forKey = subscribers.get(key) ?? new Set()
+      forKey.add(callback)
+      subscribers.set(key, forKey)
 
       return () => {
-        pourCetteCle.delete(rappel)
+        forKey.delete(callback)
       }
     },
   }
@@ -51,4 +51,4 @@ export function creerSettingsStore(): SettingsStore {
  * différentes ne se verraient pas mutuellement : l'un écrirait, l'autre ne
  * se recalculerait pas, et l'écran afficherait une valeur périmée.
  */
-export const settingsStore = creerSettingsStore()
+export const settingsStore = createSettingsStore()

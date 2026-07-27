@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { CleReglage } from '@/ports/SettingsStore'
+import type { SettingKey } from '@/ports/SettingsStore'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**
@@ -12,37 +12,37 @@ import { usePorts } from '@/ui/PortsProvider'
  * seconde source de vérité pour la même donnée — précisément ce que
  * l'adaptateur refuse de faire.
  *
- * `chargement` est distinct de `valeur === undefined` : au premier rendu on
+ * `loading` est distinct de `value === undefined` : au premier rendu on
  * ne sait pas encore si le réglage existe. Confondre les deux ferait
  * clignoter l'écran de bienvenue à chaque ouverture, y compris pour
  * quelqu'un qui a déjà renseigné son prénom.
  */
-export function useReglage(cle: CleReglage): {
-  valeur: string | undefined
-  chargement: boolean
+export function useSetting(key: SettingKey): {
+  value: string | undefined
+  loading: boolean
 } {
   const { settings } = usePorts()
-  const [valeur, setValeur] = useState<string | undefined>(undefined)
-  const [chargement, setChargement] = useState(true)
+  const [value, setValeur] = useState<string | undefined>(undefined)
+  const [loading, setChargement] = useState(true)
 
   useEffect(() => {
-    let annule = false
+    let voided = false
 
-    async function relire() {
-      const lue = await settings.lire(cle)
-      if (annule) return
+    async function reload() {
+      const lue = await settings.read(key)
+      if (voided) return
       setValeur(lue)
       setChargement(false)
     }
 
-    void relire()
-    const desabonner = settings.souscrire(cle, () => void relire())
+    void reload()
+    const unsubscribe = settings.subscribe(key, () => void reload())
 
     return () => {
-      annule = true
-      desabonner()
+      voided = true
+      unsubscribe()
     }
-  }, [cle, settings])
+  }, [key, settings])
 
-  return { valeur, chargement }
+  return { value, loading }
 }

@@ -1,4 +1,4 @@
-import type { EventId, Horodatage } from '@/domain/types'
+import type { EventId, Timestamp } from '@/domain/types'
 
 /**
  * Ports du temps et de l'identité.
@@ -12,12 +12,12 @@ import type { EventId, Horodatage } from '@/domain/types'
  * C'est la raison pour laquelle ces deux-là sont des ports alors qu'ils
  * n'ont rien à voir avec le stockage.
  */
-export interface Horloge {
+export interface Clock {
   /** Instant présent, en ISO 8601 UTC. */
-  maintenant(): Horodatage
+  now(): Timestamp
 }
 
-export interface GenerateurId {
+export interface IdGenerator {
   /**
    * Nouvel identifiant d'événement.
    *
@@ -26,5 +26,5 @@ export interface GenerateurId {
    * de survenue — le cas courant quand on rétro-date vingt titres à
    * l'année près.
    */
-  suivant(): EventId
+  next(): EventId
 }

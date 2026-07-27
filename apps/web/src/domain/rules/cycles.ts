@@ -1,30 +1,30 @@
 import {
-  estConnu,
-  ouvreUnCycle,
+  isKnownEvent,
+  opensCycle,
   type CycleKey,
-  type Evenement,
-  type EvenementStocke,
-  type Horodatage,
+  type DomainEvent,
+  type StoredEvent,
+  type Timestamp,
 } from '@/domain/types'
 
 /**
  * Un cycle de visionnage, avec son rang.
  *
- * `rang` est dérivé, jamais stocké. Le stocker obligerait à renuméroter des
+ * `rank` est dérivé, jamais stocké. Le stocker obligerait à renuméroter des
  * événements existants dès qu'un visionnage antérieur est saisi après coup,
  * ce que l'append-only interdit.
  */
 export interface Cycle {
   readonly key: CycleKey
   /** `occurred_at` de l'événement d'ouverture. `null` si précision inconnue. */
-  readonly dateDeRang: Horodatage | null
+  readonly rankDate: Timestamp | null
   /** Position chronologique, 1-indexée. C'est le `#N` affiché. */
-  readonly rang: number
-  readonly evenements: readonly Evenement[]
-  readonly aSeen: boolean
-  readonly aDrop: boolean
+  readonly rank: number
+  readonly events: readonly DomainEvent[]
+  readonly hasSeen: boolean
+  readonly hasDrop: boolean
   /** Vrai si aucun `START`/`REWATCH` — synchronisation partielle. */
-  readonly ouvertureManquante: boolean
+  readonly missingOpening: boolean
 }
 
 /**
@@ -39,84 +39,84 @@ export interface Cycle {
  * identiques, et sans départage le `#N` affiché serait non déterministe
  * d'un rendu à l'autre.
  *
- * Les cycles sans date (précision `inconnu`) passent **avant** tous les
+ * Les cycles sans date (précision `unknown`) passent **avant** tous les
  * autres : « je ne sais plus quand » est nécessairement plus ancien que
  * n'importe quelle date connue, sans quoi ils s'intercaleraient au hasard.
  *
  * Les types inconnus sont ignorés, jamais une exception : au temps 2, deux
  * appareils tourneront sur deux versions du client.
  */
-export function cycles(evenements: readonly EvenementStocke[]): readonly Cycle[] {
-  const parCycle = new Map<CycleKey, Evenement[]>()
+export function cycles(events: readonly StoredEvent[]): readonly Cycle[] {
+  const byCycle = new Map<CycleKey, DomainEvent[]>()
 
-  for (const evenement of evenements) {
-    if (!estConnu(evenement)) continue
-    if (evenement.cycle_key === null) continue
+  for (const event of events) {
+    if (!isKnownEvent(event)) continue
+    if (event.cycle_key === null) continue
 
-    const existants = parCycle.get(evenement.cycle_key)
-    if (existants) {
-      existants.push(evenement)
+    const existing = byCycle.get(event.cycle_key)
+    if (existing) {
+      existing.push(event)
     } else {
-      parCycle.set(evenement.cycle_key, [evenement])
+      byCycle.set(event.cycle_key, [event])
     }
   }
 
-  const construits = [...parCycle.entries()].map(([key, evenementsDuCycle]) =>
-    construireCycle(key, evenementsDuCycle),
+  const built = [...byCycle.entries()].map(([key, cycleEvents]) =>
+    buildCycle(key, cycleEvents),
   )
 
-  construits.sort(comparerParRang)
+  built.sort(compareByRank)
 
-  return construits.map((cycle, index) => ({ ...cycle, rang: index + 1 }))
+  return built.map((cycle, index) => ({ ...cycle, rank: index + 1 }))
 }
 
 /** Ce qui sert à ordonner, avant que le rang final ne soit attribué. */
-type CycleSansRang = Omit<Cycle, 'rang'> & {
+type UnrankedCycle = Omit<Cycle, 'rang'> & {
   /** Retenu pour le départage : `created_at` de l'événement d'ouverture. */
-  readonly ecritLe: Horodatage
-  readonly idOuverture: string
+  readonly writtenAt: Timestamp
+  readonly openingId: string
 }
 
-function construireCycle(key: CycleKey, evenements: Evenement[]): CycleSansRang & { rang: number } {
-  const ouverture = evenements.find(ouvreUnCycle)
+function buildCycle(key: CycleKey, events: DomainEvent[]): UnrankedCycle & { rank: number } {
+  const opening = events.find(opensCycle)
 
   // Sans événement d'ouverture — synchronisation partielle — on retient le
   // plus ancien événement écrit du cycle. La donnée de l'utilisateur est
   // conservée et classée approximativement, plutôt que perdue.
   const reference =
-    ouverture ??
-    [...evenements].sort((a, b) => comparerChaines(a.created_at, b.created_at))[0]
+    opening ??
+    [...events].sort((a, b) => compareStrings(a.created_at, b.created_at))[0]
 
   if (!reference) {
-    throw new Error(`Cycle ${key} sans aucun événement, ce qui est impossible`)
+    throw new Error(`Cycle ${key} has no events at all, which cannot happen`)
   }
 
   return {
     key,
-    dateDeRang: reference.occurred_at,
-    rang: 0,
-    evenements,
-    aSeen: evenements.some((e) => e.type === 'SEEN'),
-    aDrop: evenements.some((e) => e.type === 'DROP'),
-    ouvertureManquante: ouverture === undefined,
-    ecritLe: reference.created_at,
-    idOuverture: reference.id,
+    rankDate: reference.occurred_at,
+    rank: 0,
+    events,
+    hasSeen: events.some((e) => e.type === 'SEEN'),
+    hasDrop: events.some((e) => e.type === 'DROP'),
+    missingOpening: opening === undefined,
+    writtenAt: reference.created_at,
+    openingId: reference.id,
   }
 }
 
-function comparerParRang(a: CycleSansRang, b: CycleSansRang): number {
-  if (a.dateDeRang === null && b.dateDeRang !== null) return -1
-  if (a.dateDeRang !== null && b.dateDeRang === null) return 1
+function compareByRank(a: UnrankedCycle, b: UnrankedCycle): number {
+  if (a.rankDate === null && b.rankDate !== null) return -1
+  if (a.rankDate !== null && b.rankDate === null) return 1
 
-  if (a.dateDeRang !== null && b.dateDeRang !== null) {
-    const parDate = comparerChaines(a.dateDeRang, b.dateDeRang)
+  if (a.rankDate !== null && b.rankDate !== null) {
+    const parDate = compareStrings(a.rankDate, b.rankDate)
     if (parDate !== 0) return parDate
   }
 
-  const parEcriture = comparerChaines(a.ecritLe, b.ecritLe)
+  const parEcriture = compareStrings(a.writtenAt, b.writtenAt)
   if (parEcriture !== 0) return parEcriture
 
-  return comparerChaines(a.idOuverture, b.idOuverture)
+  return compareStrings(a.openingId, b.openingId)
 }
 
 /**
@@ -126,6 +126,6 @@ function comparerParRang(a: CycleSansRang, b: CycleSansRang): number {
  * est trié correctement tel quel, et parser reviendrait à faire confiance
  * au fuseau du navigateur pour une donnée qui n'en dépend pas.
  */
-function comparerChaines(a: string, b: string): number {
+function compareStrings(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }

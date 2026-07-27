@@ -1,0 +1,65 @@
+{
+  "app": {
+    "tagline": "Everything you watch. One single log."
+  },
+  "nav": {
+    "home": "home",
+    "library": "library",
+    "log": "log",
+    "stats": "stats",
+    "ariaLabel": "Main navigation"
+  },
+  "welcome": {
+    "eyebrow": "// FIRST LAUNCH",
+    "title": "Your <0>log</0> is empty.",
+    "body": "Every title you add writes a dated line. Every time you rewatch something, that's another viewing, with its own date and its own rating. After a while you're no longer looking at a list: you're rereading your history.",
+    "firstNameLabel": "what should we call you?",
+    "firstNamePlaceholder": "your first name",
+    "submit": "GET STARTED",
+    "legal": "stays on this device · no account · exportable data"
+  },
+  "home": {
+    "greeting": "Good evening, {{firstName}}",
+    "counters": "› {{watching}} watching · {{toWatch}} to watch",
+    "watchingTitle": "Watching",
+    "watchingWhat": "What you're currently watching, with its progress and the button to move it forward."
+  },
+  "library": {
+    "title": "Library",
+    "what": "Everything you've logged, filterable by status and by favourite."
+  },
+  "log": {
+    "title": "Log",
+    "what": "The timestamped feed of everything you've done. The tail -f of your viewing life."
+  },
+  "stats": {
+    "title": "Stats",
+    "what": "Total time, breakdown, ratings, genres. All computed from your viewings."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "what": "This address doesn't match any screen."
+  },
+  "underConstruction": {
+    "step": "step {{step}} of the plan"
+  },
+  "debug": {
+    "title": "/debug",
+    "measuring": "measuring…",
+    "mediaCount": "media",
+    "cyclesBeyondFirst": "cycles_beyond_first",
+    "journalEntries": "journal_entries",
+    "entriesPerDay": "journal_entries_per_day",
+    "voidedEvents": "voided_events",
+    "unknownEvents": "unknown_event_types",
+    "rebuild": "rebuild media_state from events",
+    "rebuilding": "rebuilding…",
+    "rebuilt": "rebuilt.",
+    "note": "media_state is derived: rebuilding it loses no data. events is the source of truth and is never modified."
+  },
+  "language": {
+    "label": "Language",
+    "fr": "FR",
+    "en": "EN"
+  }
+}

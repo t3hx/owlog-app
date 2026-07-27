@@ -1,4 +1,4 @@
-import type { EventId, EvenementStocke } from '@/domain/types'
+import type { EventId, StoredEvent } from '@/domain/types'
 
 /**
  * Retire de la projection les événements annulés.
@@ -22,37 +22,37 @@ import type { EventId, EvenementStocke } from '@/domain/types'
  * sur un événement écrit par une version ultérieure du client.
  */
 export function applyVoids(
-  evenements: readonly EvenementStocke[],
-): readonly EvenementStocke[] {
-  const identifiantsDesVoids = new Set<EventId>()
-  for (const evenement of evenements) {
-    if (evenement.type === 'VOID') {
-      identifiantsDesVoids.add(evenement.id)
+  events: readonly StoredEvent[],
+): readonly StoredEvent[] {
+  const voidIds = new Set<EventId>()
+  for (const event of events) {
+    if (event.type === 'VOID') {
+      voidIds.add(event.id)
     }
   }
 
-  const cibles = new Set<EventId>()
-  for (const evenement of evenements) {
-    if (evenement.type !== 'VOID') continue
+  const targets = new Set<EventId>()
+  for (const event of events) {
+    if (event.type !== 'VOID') continue
 
-    const cible = lireCible(evenement)
+    const target = readTarget(event)
     // Un VOID sans cible lisible vient d'une version ultérieure du client :
     // on l'ignore plutôt que de lever, comme n'importe quel type inconnu.
-    if (cible === null) continue
-    if (identifiantsDesVoids.has(cible)) continue
+    if (target === null) continue
+    if (voidIds.has(target)) continue
 
-    cibles.add(cible)
+    targets.add(target)
   }
 
-  return evenements.filter(
-    (evenement) => evenement.type !== 'VOID' && !cibles.has(evenement.id),
+  return events.filter(
+    (event) => event.type !== 'VOID' && !targets.has(event.id),
   )
 }
 
-function lireCible(evenement: EvenementStocke): EventId | null {
-  const payload: unknown = (evenement as { payload?: unknown }).payload
+function readTarget(event: StoredEvent): EventId | null {
+  const payload: unknown = (event as { payload?: unknown }).payload
   if (typeof payload !== 'object' || payload === null) return null
 
-  const cible: unknown = (payload as { target?: unknown }).target
-  return typeof cible === 'string' ? cible : null
+  const target: unknown = (payload as { target?: unknown }).target
+  return typeof target === 'string' ? target : null
 }

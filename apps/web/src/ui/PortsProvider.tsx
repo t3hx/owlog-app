@@ -45,7 +45,7 @@ export function PortsProvider({
 export function usePorts(): Ports {
   const ports = useContext(ContextePorts)
   if (!ports) {
-    throw new Error('usePorts doit être utilisé dans un PortsProvider')
+    throw new Error('usePorts must be used inside a PortsProvider')
   }
   return ports
 }

@@ -11,19 +11,20 @@
  *
  * Pas d'onglet mort : un onglet qui ouvre un écran vide est pire qu'un
  * onglet absent.
+ *
+ * Les libellés ne sont pas ici : ce sont des clés de traduction, résolues
+ * au rendu. Un tableau de constantes n'a pas de langue.
  */
 export interface Tab {
   /** Chemin, en mode history. */
   readonly path: string
-  /** Label affiché sous l'icône, en mono 9px. */
-  readonly label: string
-  /** Titre de l'écran, utilisé par le document et l'en-tête. */
-  readonly titre: string
+  /** Clé du libellé affiché sous l'icône, en mono 9px. */
+  readonly labelKey: 'nav.home' | 'nav.library' | 'nav.log' | 'nav.stats'
 }
 
 export const TABS: readonly Tab[] = [
-  { path: '/', label: 'accueil', titre: 'Accueil' },
-  { path: '/bibliotheque', label: 'bibliothèque', titre: 'Bibliothèque' },
-  { path: '/log', label: 'log', titre: 'Log' },
-  { path: '/stats', label: 'stats', titre: 'Stats' },
+  { path: '/', labelKey: 'nav.home' },
+  { path: '/bibliotheque', labelKey: 'nav.library' },
+  { path: '/log', labelKey: 'nav.log' },
+  { path: '/stats', labelKey: 'nav.stats' },
 ]

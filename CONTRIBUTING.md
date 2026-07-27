@@ -59,6 +59,16 @@ Portées utilisées : `domain`, `adapters`, `api`, `ui`, `pwa`, `design`, `setup
 
 **Jamais de co-auteur.** Aucun `Co-Authored-By`, aucune mention d'outil ou d'assistant dans un message de commit.
 
+### Branches hors étapes
+
+Le travail transversal, qui ne correspond à aucune étape du plan, prend un préfixe qui dit sa nature plutôt qu'un numéro : `refactor/…` pour une réorganisation sans changement de comportement, `chore/…` pour de l'outillage, `fix/…` pour une correction. Même règle de fusion en `--no-ff`.
+
+`git log --first-parent dev` reste lisible : les fusions d'étapes portent un numéro, les autres portent leur nature.
+
+### Langue
+
+Les messages de commit sont en français. **Le code est en anglais**, sans exception — voir `CLAUDE.md`. Les noms de tests restent en français : ce sont des phrases descriptives, pas des identifiants.
+
 ## Développement piloté par les tests
 
 Sur `domain/`, le test précède le code, et **les deux sont des commits distincts** :

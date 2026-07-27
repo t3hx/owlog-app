@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
-import { metriques, type Metriques } from '@/domain/reducers/metriques'
-import type { EvenementStocke, MediaRef } from '@/domain/types'
+import { metrics, type Metrics } from '@/domain/reducers/metrics'
+import type { StoredEvent, MediaRef } from '@/domain/types'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**
@@ -23,61 +24,62 @@ import { usePorts } from '@/ui/PortsProvider'
  *    est le chemin de réparation, pas un utilitaire de confort.
  */
 export function Debug() {
+  const { t } = useTranslation()
   const { events } = usePorts()
-  const [mesures, setMesures] = useState<Metriques | null>(null)
-  const [reconstruction, setReconstruction] = useState<'inactif' | 'en-cours' | 'fait'>(
+  const [measures, setMesures] = useState<Metrics | null>(null)
+  const [rebuilding, setReconstruction] = useState<'inactif' | 'watching' | 'fait'>(
     'inactif',
   )
 
-  const mesurer = useCallback(async () => {
-    const etats = await events.allMediaStates()
-    const parMedia = new Map<MediaRef, readonly EvenementStocke[]>()
+  const measure = useCallback(async () => {
+    const states = await events.allMediaStates()
+    const byMedia = new Map<MediaRef, readonly StoredEvent[]>()
 
-    for (const etat of etats) {
-      parMedia.set(etat.ref, await events.eventsForMedia(etat.ref))
+    for (const etat of states) {
+      byMedia.set(etat.ref, await events.eventsForMedia(etat.ref))
     }
 
-    setMesures(metriques(parMedia))
+    setMesures(metrics(byMedia))
   }, [events])
 
   useEffect(() => {
-    void mesurer()
-  }, [mesurer])
+    void measure()
+  }, [measure])
 
-  async function reconstruire() {
-    setReconstruction('en-cours')
+  async function rebuild() {
+    setReconstruction('watching')
     await events.rebuildAllState()
-    await mesurer()
+    await measure()
     setReconstruction('fait')
   }
 
   return (
     <div className="mx-auto max-w-md px-5 py-8 font-mono text-xs text-muted">
-      <h1 className="mb-4 text-sm text-text">/debug</h1>
+      <h1 className="mb-4 text-sm text-text">{t('debug.title')}</h1>
 
-      {mesures === null ? (
-        <p>mesure…</p>
+      {measures === null ? (
+        <p>{t('debug.measuring')}</p>
       ) : (
         <dl className="space-y-1">
-          <Mesure nom="medias" valeur={mesures.medias} />
-          <Mesure
-            nom="cycles_ouverts_au_dela_du_premier"
-            valeur={mesures.cyclesAuDelaDuPremier}
-            alerte={mesures.cyclesAuDelaDuPremier === 0 && mesures.medias > 0}
+          <Metric name={t('debug.mediaCount')} value={measures.mediaCount} />
+          <Metric
+            name={t('debug.cyclesBeyondFirst')}
+            value={measures.cyclesBeyondFirst}
+            warning={measures.cyclesBeyondFirst === 0 && measures.mediaCount > 0}
           />
-          <Mesure nom="entrees_de_journal" valeur={mesures.entreesDeJournal} />
-          <Mesure nom="entrees_de_journal_par_jour" valeur={mesures.entreesParJour} />
-          <Mesure nom="evenements_annules" valeur={mesures.evenementsAnnules} />
-          <Mesure
-            nom="evenements_de_type_inconnu"
-            valeur={mesures.evenementsInconnus.reduce((total, e) => total + e.nombre, 0)}
-            alerte={mesures.evenementsInconnus.length > 0}
+          <Metric name={t('debug.journalEntries')} value={measures.journalEntries} />
+          <Metric name={t('debug.entriesPerDay')} value={measures.entriesPerDay} />
+          <Metric name={t('debug.voidedEvents')} value={measures.voidedEvents} />
+          <Metric
+            name={t('debug.unknownEvents')}
+            value={measures.unknownEvents.reduce((total, e) => total + e.count, 0)}
+            warning={measures.unknownEvents.length > 0}
           />
-          {mesures.evenementsInconnus.map((inconnu) => (
-            <Mesure
-              key={inconnu.type}
-              nom={`  └ ${inconnu.type}`}
-              valeur={inconnu.nombre}
+          {measures.unknownEvents.map((unknown) => (
+            <Metric
+              key={unknown.type}
+              name={`  └ ${unknown.type}`}
+              value={unknown.count}
             />
           ))}
         </dl>
@@ -85,38 +87,35 @@ export function Debug() {
 
       <button
         type="button"
-        onClick={() => void reconstruire()}
-        disabled={reconstruction === 'en-cours'}
+        onClick={() => void rebuild()}
+        disabled={rebuilding === 'watching'}
         className="mt-6 rounded-action border border-border px-3 py-2 text-left text-[11px] text-text disabled:opacity-40"
       >
-        {reconstruction === 'en-cours'
-          ? 'reconstruction…'
-          : 'reconstruire media_state depuis les evenements'}
+        {rebuilding === 'watching'
+          ? t('debug.rebuilding')
+          : t('debug.rebuild')}
       </button>
 
-      {reconstruction === 'fait' && <p className="mt-2 text-accent">reconstruit.</p>}
+      {rebuilding === 'fait' && <p className="mt-2 text-accent">{t('debug.rebuilt')}</p>}
 
-      <p className="mt-6 leading-relaxed text-subtle">
-        media_state est derivee : la reconstruire ne perd aucune donnee.
-        events est la source de verite et n&apos;est jamais modifiee.
-      </p>
+      <p className="mt-6 leading-relaxed text-subtle">{t('debug.note')}</p>
     </div>
   )
 }
 
-function Mesure({
-  nom,
-  valeur,
-  alerte = false,
+function Metric({
+  name,
+  value,
+  warning = false,
 }: {
-  nom: string
-  valeur: number
-  alerte?: boolean
+  name: string
+  value: number
+  warning?: boolean
 }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="whitespace-pre">{nom}</dt>
-      <dd className={alerte ? 'text-status-watch' : 'text-text'}>{valeur}</dd>
+      <dt className="whitespace-pre">{name}</dt>
+      <dd className={warning ? 'text-status-watch' : 'text-text'}>{value}</dd>
     </div>
   )
 }

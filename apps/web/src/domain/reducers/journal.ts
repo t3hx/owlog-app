@@ -1,32 +1,32 @@
 import { applyVoids } from '@/domain/reducers/applyVoids'
 import { cycles, type Cycle } from '@/domain/rules/cycles'
-import { estConnu, type CycleKey, type EvenementStocke, type Horodatage } from '@/domain/types'
+import { isKnownEvent, type CycleKey, type StoredEvent, type Timestamp } from '@/domain/types'
 
 /** Marqueur `— visionnage #N —` ouvrant le bloc d'un cycle. */
-export interface MarqueurDeCycle {
-  readonly genre: 'marqueur'
-  readonly numero: number
+export interface CycleMarker {
+  readonly kind: 'marqueur'
+  readonly number: number
   readonly cycle: CycleKey
 }
 
 /** Une ligne du journal. */
-export interface LigneJournal {
-  readonly genre: 'evenement'
-  readonly evenement: EvenementStocke
+export interface JournalLine {
+  readonly kind: 'evenement'
+  readonly event: StoredEvent
   /** Faux pour un type écrit par une version ultérieure du client. */
-  readonly connu: boolean
+  readonly known: boolean
 }
 
-export type EntreeJournal = MarqueurDeCycle | LigneJournal
+export type JournalEntry = CycleMarker | JournalLine
 
 /** Un bloc à positionner : soit un cycle entier, soit un événement isolé. */
-interface Bloc {
-  readonly cle: Horodatage | null
-  readonly entrees: readonly EntreeJournal[]
+interface Block {
+  readonly key: Timestamp | null
+  readonly entries: readonly JournalEntry[]
 }
 
 /** Types qui n'apparaissent jamais dans le journal. */
-const EXCLUS = new Set<string>(['PROG'])
+const EXCLUDED = new Set<string>(['PROG'])
 
 /**
  * Journal d'un média, du plus récent au plus ancien.
@@ -48,40 +48,40 @@ const EXCLUS = new Set<string>(['PROG'])
  * `PROG` est exclu : c'est le seul type sans valeur historique. Le store
  * reste append-only, on filtre à l'affichage.
  */
-export function journal(evenements: readonly EvenementStocke[]): readonly EntreeJournal[] {
-  const actifs = applyVoids(evenements).filter((e) => !EXCLUS.has(e.type))
-  const tousLesCycles = cycles(actifs)
+export function journal(events: readonly StoredEvent[]): readonly JournalEntry[] {
+  const active = applyVoids(events).filter((e) => !EXCLUDED.has(e.type))
+  const allCycles = cycles(active)
 
-  const clesDeCycle = new Set(tousLesCycles.map((cycle) => cycle.key))
+  const cycleKeys = new Set(allCycles.map((cycle) => cycle.key))
 
-  const blocs: Bloc[] = tousLesCycles.map(blocDeCycle)
+  const blocks: Block[] = allCycles.map(cycleBlock)
 
-  for (const evenement of actifs) {
-    const cle = evenement.cycle_key
+  for (const event of active) {
+    const key = event.cycle_key
     // Un événement dont le cycle a été reconnu appartient déjà à son bloc.
-    if (cle !== null && clesDeCycle.has(cle)) continue
+    if (key !== null && cycleKeys.has(key)) continue
 
-    blocs.push({
-      cle: evenement.occurred_at,
-      entrees: [{ genre: 'evenement', evenement, connu: estConnu(evenement) }],
+    blocks.push({
+      key: event.occurred_at,
+      entries: [{ kind: 'evenement', event, known: isKnownEvent(event) }],
     })
   }
 
-  blocs.sort(comparerBlocsDecroissant)
+  blocks.sort(compareBlocksDesc)
 
-  return blocs.flatMap((bloc) => bloc.entrees)
+  return blocks.flatMap((block) => block.entries)
 }
 
-function blocDeCycle(cycle: Cycle): Bloc {
-  const lignes = [...cycle.evenements]
-    .sort(comparerEvenementsDecroissant)
-    .map<LigneJournal>((evenement) => ({ genre: 'evenement', evenement, connu: true }))
+function cycleBlock(cycle: Cycle): Block {
+  const rows = [...cycle.events]
+    .sort(compareEventsDesc)
+    .map<JournalLine>((event) => ({ kind: 'evenement', event, known: true }))
 
   return {
-    cle: cycle.dateDeRang,
-    entrees: [
-      { genre: 'marqueur', numero: cycle.rang, cycle: cycle.key },
-      ...lignes,
+    key: cycle.rankDate,
+    entries: [
+      { kind: 'marqueur', number: cycle.rank, cycle: cycle.key },
+      ...rows,
     ],
   }
 }
@@ -94,11 +94,11 @@ function blocDeCycle(cycle: Cycle): Bloc {
  * quand » est nécessairement ancien ; à l'affichage, on ne peut pas le
  * placer, donc on le sort de la chronologie plutôt que de mentir.
  */
-function comparerBlocsDecroissant(a: Bloc, b: Bloc): number {
-  if (a.cle === null && b.cle === null) return 0
-  if (a.cle === null) return 1
-  if (b.cle === null) return -1
-  return a.cle < b.cle ? 1 : a.cle > b.cle ? -1 : 0
+function compareBlocksDesc(a: Block, b: Block): number {
+  if (a.key === null && b.key === null) return 0
+  if (a.key === null) return 1
+  if (b.key === null) return -1
+  return a.key < b.key ? 1 : a.key > b.key ? -1 : 0
 }
 
 /**
@@ -109,15 +109,15 @@ function comparerBlocsDecroissant(a: Bloc, b: Bloc): number {
  * `SEEN` posés ensemble), et sans départage leur ordre changerait d'un
  * rendu à l'autre.
  */
-function comparerEvenementsDecroissant(a: EvenementStocke, b: EvenementStocke): number {
-  const parSurvenue = comparerNullables(a.occurred_at, b.occurred_at)
-  if (parSurvenue !== 0) return parSurvenue
+function compareEventsDesc(a: StoredEvent, b: StoredEvent): number {
+  const byOccurrence = compareNullable(a.occurred_at, b.occurred_at)
+  if (byOccurrence !== 0) return byOccurrence
 
   if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1
   return a.id < b.id ? 1 : a.id > b.id ? -1 : 0
 }
 
-function comparerNullables(a: Horodatage | null, b: Horodatage | null): number {
+function compareNullable(a: Timestamp | null, b: Timestamp | null): number {
   if (a === null && b === null) return 0
   if (a === null) return 1
   if (b === null) return -1
