@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+/**
+ * Socle de styles.
+ *
+ * Les tokens du handoff arrivent au commit suivant. Ce fichier ne porte pour
+ * l'instant que le strict nécessaire pour que l'application se construise.
+ */
+@theme {
+  --color-bg: #070a12;
+  --color-text: #eaeef2;
+  --color-muted: #8a8f9c;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}

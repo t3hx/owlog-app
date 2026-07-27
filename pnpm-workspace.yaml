@@ -1,0 +1,8 @@
+packages:
+  - "apps/*"
+
+# esbuild (via Vite) est la seule dependance autorisee a executer un script
+# d'installation. Tout le reste est installe sans script : une dependance qui
+# en reclame un doit etre ajoutee ici explicitement, apres examen.
+onlyBuiltDependencies:
+  - esbuild
