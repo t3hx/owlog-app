@@ -2,6 +2,9 @@ import { Route, Switch } from 'wouter'
 
 import { EcranEnConstruction } from '@/ui/components/EcranEnConstruction'
 import { TabBar } from '@/ui/components/TabBar'
+import { useReglage } from '@/ui/hooks/useReglage'
+import { Accueil } from '@/ui/screens/Accueil'
+import { Bienvenue } from '@/ui/screens/Bienvenue'
 
 /**
  * Racine de l'application.
@@ -11,18 +14,30 @@ import { TabBar } from '@/ui/components/TabBar'
  * que `/bibliotheque` serve `index.html`, et `navigateFallback` dans la
  * configuration Workbox pour que la même règle vaille hors-ligne.
  *
- * Le padding bas laisse la place à la tab bar fixe, encoche iPhone comprise.
+ * Tant que le prénom n'est pas renseigné, l'écran de bienvenue occupe toute
+ * la vue, sans tab bar : à la première ouverture il n'y a rien à naviguer,
+ * et quatre onglets vides donneraient l'impression d'une app cassée plutôt
+ * que d'une app neuve.
  */
 export function App() {
+  const { valeur: prenom, chargement } = useReglage('prenom')
+
+  // Premier rendu : on ne sait pas encore si le prénom existe. Afficher
+  // l'écran de bienvenue tout de suite le ferait clignoter à chaque
+  // ouverture, y compris pour quelqu'un qui l'a déjà renseigné.
+  if (chargement) {
+    return <div className="min-h-dvh" />
+  }
+
+  if (prenom === undefined) {
+    return <Bienvenue />
+  }
+
   return (
     <div className="min-h-dvh pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
       <Switch>
         <Route path="/">
-          <EcranEnConstruction
-            titre="Accueil"
-            etape={8}
-            quoi="Ce que tu regardes en ce moment, et ce que tu as mis de côté."
-          />
+          <Accueil prenom={prenom} />
         </Route>
         <Route path="/bibliotheque">
           <EcranEnConstruction

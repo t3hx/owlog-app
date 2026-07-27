@@ -7,9 +7,9 @@
  * directe, à côté du store d'événements qui lui est append-only.
  *
  * `souscrire` existe pour que l'UI se recalcule quand un réglage change,
- * sans que l'UI connaisse Dexie. Elle branche `useSyncExternalStore` dessus,
- * ce qui est la primitive React prévue pour ça — plutôt qu'un hook fourni
- * par l'adaptateur, qui ferait remonter l'infrastructure dans la vue.
+ * sans que l'UI connaisse Dexie : elle relit via ce rappel. L'alternative
+ * aurait été que l'adaptateur fournisse un hook React tout fait, ce qui
+ * ferait remonter l'infrastructure dans la vue.
  */
 export interface SettingsStore {
   /** Lit un réglage. `undefined` si la clé n'a jamais été écrite. */

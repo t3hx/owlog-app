@@ -45,7 +45,9 @@ export default tseslint.config(
   },
   {
     // Les adaptateurs sont précisément la couche autorisée à parler à Dexie.
-    files: ['src/adapters/**/*.{ts,tsx}'],
+    // `main.tsx` est le point d'assemblage : par définition, c'est le seul
+    // endroit qui branche des implémentations concrètes sur des ports.
+    files: ['src/adapters/**/*.{ts,tsx}', 'src/main.tsx'],
     rules: {
       'no-restricted-imports': 'off',
     },
