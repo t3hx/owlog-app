@@ -1,22 +1,54 @@
+import { db } from '@/adapters/dexie/db'
 import type { CleReglage, SettingsStore } from '@/ports/SettingsStore'
 
 /**
  * Implémentation Dexie du port SettingsStore.
  *
- * Squelette : le contrat est posé et testé, l'implémentation arrive au
- * commit suivant. Voir CONTRIBUTING.md, le test précède le code et les deux
- * sont des commits distincts.
+ * Aucun état en mémoire côté valeurs : chaque `lire` interroge la base. Le
+ * contrat l'exige (« une nouvelle instance relit la valeur ») parce qu'un
+ * cache mémoire ici créerait deux sources de vérité pour la même donnée,
+ * exactement le défaut que le modèle de lecture évite ailleurs.
+ *
+ * Les abonnés, eux, sont bien en mémoire : ce sont des rappels React, ils
+ * ne survivent pas au rechargement par nature.
  */
 export function creerSettingsStore(): SettingsStore {
+  const abonnes = new Map<CleReglage, Set<() => void>>()
+
+  function notifier(cle: CleReglage): void {
+    for (const rappel of abonnes.get(cle) ?? []) {
+      rappel()
+    }
+  }
+
   return {
-    lire(_cle: CleReglage): Promise<string | undefined> {
-      throw new Error('Pas encore implémenté')
+    async lire(cle: CleReglage): Promise<string | undefined> {
+      const ligne = await db.settings.get(cle)
+      return ligne?.valeur
     },
-    ecrire(_cle: CleReglage, _valeur: string): Promise<void> {
-      throw new Error('Pas encore implémenté')
+
+    async ecrire(cle: CleReglage, valeur: string): Promise<void> {
+      await db.settings.put({ cle, valeur })
+      notifier(cle)
     },
-    souscrire(_cle: CleReglage, _rappel: () => void): () => void {
-      throw new Error('Pas encore implémenté')
+
+    souscrire(cle: CleReglage, rappel: () => void): () => void {
+      const pourCetteCle = abonnes.get(cle) ?? new Set()
+      pourCetteCle.add(rappel)
+      abonnes.set(cle, pourCetteCle)
+
+      return () => {
+        pourCetteCle.delete(rappel)
+      }
     },
   }
 }
+
+/**
+ * Instance partagée par l'application.
+ *
+ * Une seule instance, sans quoi deux composants abonnés via deux instances
+ * différentes ne se verraient pas mutuellement : l'un écrirait, l'autre ne
+ * se recalculerait pas, et l'écran afficherait une valeur périmée.
+ */
+export const settingsStore = creerSettingsStore()
