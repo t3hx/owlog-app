@@ -69,8 +69,10 @@ describe('etatMedia', () => {
 
   it('horodate la ligne avec le dernier evenement ecrit', () => {
     const f = creerFabrique()
+    // L'ordre de construction fait foi : la fabrique horodate a l'appel.
+    const watch = f.watch()
     const dernier = f.start('c1')
-    const etat = etatMedia([f.watch(), dernier], FILM)
+    const etat = etatMedia([watch, dernier], FILM)
 
     expect(etat.majLe).toBe(dernier.created_at)
   })
