@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Link, useRoute } from 'wouter'
 
 import { TABS, type Tab } from '@/ui/navigation'
@@ -19,9 +20,11 @@ import { TABS, type Tab } from '@/ui/navigation'
  * de l'écran. Sans ça, le dernier onglet devient difficile à atteindre.
  */
 export function TabBar() {
+  const { t } = useTranslation()
+
   return (
     <nav
-      aria-label="Navigation principale"
+      aria-label={t('nav.ariaLabel')}
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-tabbar backdrop-blur-lg"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
@@ -37,6 +40,7 @@ export function TabBar() {
 }
 
 function TabLink({ tab }: { tab: Tab }) {
+  const { t } = useTranslation()
   const [active] = useRoute(tab.path)
 
   return (
@@ -60,7 +64,7 @@ function TabLink({ tab }: { tab: Tab }) {
             : 'font-mono text-[9px] tracking-wide text-muted'
         }
       >
-        {tab.label}
+        {t(tab.labelKey)}
       </span>
     </Link>
   )

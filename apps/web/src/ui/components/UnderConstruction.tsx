@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 import { Logo } from '@/ui/components/Logo'
 
 /**
@@ -19,12 +21,16 @@ export function UnderConstruction({
   step: number
   what: string
 }) {
+  const { t } = useTranslation()
+
   return (
     <section className="flex min-h-[60dvh] flex-col items-center justify-center gap-3 px-6 text-center">
       <Logo className="opacity-30" />
       <h1 className="font-display text-[25px] font-semibold text-text">{title}</h1>
       <p className="max-w-xs text-sm text-muted">{what}</p>
-      <p className="font-mono text-[10px] text-subtle">étape {step} du plan</p>
+      <p className="font-mono text-[10px] text-subtle">
+        {t('underConstruction.step', { step })}
+      </p>
     </section>
   )
 }

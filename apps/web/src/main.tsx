@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 
 import { eventStore } from '@/adapters/dexie/eventStore'
 import { settingsStore } from '@/adapters/dexie/settingsStore'
+import '@/i18n'
 import { App } from '@/ui/App'
 import { PortsProvider } from '@/ui/PortsProvider'
 import '@/ui/styles/tokens.css'

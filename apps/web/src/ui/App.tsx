@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import { Route, Switch, useRoute } from 'wouter'
 
 import { UnderConstruction } from '@/ui/components/UnderConstruction'
+import { Header } from '@/ui/components/Header'
 import { TabBar } from '@/ui/components/TabBar'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
@@ -21,6 +23,7 @@ import { Debug } from '@/ui/screens/Debug'
  * que d'une app neuve.
  */
 export function App() {
+  const { t } = useTranslation()
   const { value: firstName, loading } = useSetting('firstName')
   const [surDebug] = useRoute('/debug')
 
@@ -39,41 +42,48 @@ export function App() {
   }
 
   if (firstName === undefined) {
-    return <Welcome />
+    return (
+      <>
+        <Header />
+        <Welcome />
+      </>
+    )
   }
 
   return (
     <div className="min-h-dvh pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+      <Header />
+
       <Switch>
         <Route path="/">
           <Home firstName={firstName} />
         </Route>
         <Route path="/bibliotheque">
           <UnderConstruction
-            title="Bibliothèque"
+            title={t('library.title')}
             step={10}
-            what="Tout ce que tu as logué, filtrable par statut et par coup de cœur."
+            what={t('library.what')}
           />
         </Route>
         <Route path="/log">
           <UnderConstruction
-            title="Log"
+            title={t('log.title')}
             step={9}
-            what="Le flux horodaté de tout ce que tu as fait. Le tail -f de ta vie de spectateur."
+            what={t('log.what')}
           />
         </Route>
         <Route path="/stats">
           <UnderConstruction
-            title="Stats"
+            title={t('stats.title')}
             step={11}
-            what="Temps total, répartition, notes, genres. Tout calculé depuis tes visionnages."
+            what={t('stats.what')}
           />
         </Route>
         <Route>
           <UnderConstruction
-            title="Page introuvable"
+            title={t('notFound.title')}
             step={1}
-            what="Cette adresse ne correspond à aucun écran."
+            what={t('notFound.what')}
           />
         </Route>
       </Switch>

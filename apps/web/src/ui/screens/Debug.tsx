@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { metrics, type Metrics } from '@/domain/reducers/metrics'
 import type { StoredEvent, MediaRef } from '@/domain/types'
@@ -23,6 +24,7 @@ import { usePorts } from '@/ui/PortsProvider'
  *    est le chemin de réparation, pas un utilitaire de confort.
  */
 export function Debug() {
+  const { t } = useTranslation()
   const { events } = usePorts()
   const [measures, setMesures] = useState<Metrics | null>(null)
   const [rebuilding, setReconstruction] = useState<'inactif' | 'watching' | 'fait'>(
@@ -53,23 +55,23 @@ export function Debug() {
 
   return (
     <div className="mx-auto max-w-md px-5 py-8 font-mono text-xs text-muted">
-      <h1 className="mb-4 text-sm text-text">/debug</h1>
+      <h1 className="mb-4 text-sm text-text">{t('debug.title')}</h1>
 
       {measures === null ? (
-        <p>mesure…</p>
+        <p>{t('debug.measuring')}</p>
       ) : (
         <dl className="space-y-1">
-          <Metric name="medias" value={measures.mediaCount} />
+          <Metric name={t('debug.mediaCount')} value={measures.mediaCount} />
           <Metric
-            name="cycles_ouverts_au_dela_du_premier"
+            name={t('debug.cyclesBeyondFirst')}
             value={measures.cyclesBeyondFirst}
             warning={measures.cyclesBeyondFirst === 0 && measures.mediaCount > 0}
           />
-          <Metric name="entrees_de_journal" value={measures.journalEntries} />
-          <Metric name="entrees_de_journal_par_jour" value={measures.entriesPerDay} />
-          <Metric name="evenements_annules" value={measures.voidedEvents} />
+          <Metric name={t('debug.journalEntries')} value={measures.journalEntries} />
+          <Metric name={t('debug.entriesPerDay')} value={measures.entriesPerDay} />
+          <Metric name={t('debug.voidedEvents')} value={measures.voidedEvents} />
           <Metric
-            name="evenements_de_type_inconnu"
+            name={t('debug.unknownEvents')}
             value={measures.unknownEvents.reduce((total, e) => total + e.count, 0)}
             warning={measures.unknownEvents.length > 0}
           />
@@ -90,16 +92,13 @@ export function Debug() {
         className="mt-6 rounded-action border border-border px-3 py-2 text-left text-[11px] text-text disabled:opacity-40"
       >
         {rebuilding === 'watching'
-          ? 'reconstruction…'
-          : 'reconstruire media_state depuis les evenements'}
+          ? t('debug.rebuilding')
+          : t('debug.rebuild')}
       </button>
 
-      {rebuilding === 'fait' && <p className="mt-2 text-accent">reconstruit.</p>}
+      {rebuilding === 'fait' && <p className="mt-2 text-accent">{t('debug.rebuilt')}</p>}
 
-      <p className="mt-6 leading-relaxed text-subtle">
-        media_state est derivee : la rebuild ne perd aucune donnee.
-        events est la source de verite et n&apos;est jamais modifiee.
-      </p>
+      <p className="mt-6 leading-relaxed text-subtle">{t('debug.note')}</p>
     </div>
   )
 }
