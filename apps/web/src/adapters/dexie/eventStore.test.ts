@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { db } from '@/adapters/dexie/db'
 import { createEventStore } from '@/adapters/dexie/eventStore'
+import { createPendingAdds } from '@/adapters/dexie/pendingAdds'
+import { partialCacheRow } from '@/ports/MediaCache'
 import { createFactory, MOVIE, SERIES } from '@/domain/test/factory'
 import type { DomainEvent } from '@/domain/types'
 
@@ -13,10 +15,19 @@ import type { DomainEvent } from '@/domain/types'
  * `append` est bien transactionnel, et que la table dérivée ne se
  * désaccorde jamais du journal.
  */
+const HIT = {
+  ref: MOVIE,
+  kind: 'movie' as const,
+  title: 'Dune',
+  year: 2021,
+  posterPath: '/dune.jpg',
+}
+
 describe('EventStore (adaptateur Dexie)', () => {
   beforeEach(async () => {
     await db.events.clear()
     await db.media_state.clear()
+    await db.media_cache.clear()
   })
 
   it('relit les evenements ecrits', async () => {
@@ -127,5 +138,113 @@ describe('EventStore (adaptateur Dexie)', () => {
     await store.rebuildAllState()
 
     expect((await store.allMediaStates())[0]?.status).toBe('watching')
+  })
+})
+
+describe('cache média', () => {
+  beforeEach(async () => {
+    await db.events.clear()
+    await db.media_state.clear()
+    await db.media_cache.clear()
+  })
+
+  it('écrit la ligne de cache dans la même transaction que l événement', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+
+    await store.append([f.watch()] as DomainEvent[], {
+      cacheRows: [partialCacheRow(HIT, '2026-07-28T10:00:00.000Z')],
+    })
+
+    const [row] = await store.mediaCache([MOVIE])
+    expect(row).toMatchObject({ ref: MOVIE, title: 'Dune', complete: false })
+  })
+
+  it('rend une liste vide quand aucune référence n est demandée', async () => {
+    const store = createEventStore()
+    await expect(store.mediaCache([])).resolves.toEqual([])
+  })
+
+  it('ne rend que les références demandées', async () => {
+    const store = createEventStore()
+    const movie = createFactory(MOVIE)
+    const series = createFactory(SERIES)
+
+    await store.append([movie.watch(), series.watch()] as DomainEvent[], {
+      cacheRows: [
+        partialCacheRow(HIT, '2026-07-28T10:00:00.000Z'),
+        partialCacheRow(
+          { ref: SERIES, kind: 'tv', title: 'Severance', year: 2022, posterPath: null },
+          '2026-07-28T10:00:00.000Z',
+        ),
+      ],
+    })
+
+    const rows = await store.mediaCache([SERIES])
+    expect(rows.map((r) => r.ref)).toEqual([SERIES])
+  })
+
+  it('remplace une ligne partielle par une ligne complète', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+
+    await store.append([f.watch()] as DomainEvent[], {
+      cacheRows: [partialCacheRow(HIT, '2026-07-28T10:00:00.000Z')],
+    })
+    await store.append([f.fav()] as DomainEvent[], {
+      cacheRows: [
+        {
+          ...partialCacheRow(HIT, '2026-07-28T11:00:00.000Z'),
+          genres: ['Science-Fiction'],
+          totalRuntime: 155,
+          complete: true,
+        },
+      ],
+    })
+
+    const [row] = await store.mediaCache([MOVIE])
+    // C'est ce qui permet à l'ouverture d'une fiche de compléter ce que la
+    // recherche n'avait pas : genres et durée.
+    expect(row).toMatchObject({ complete: true, totalRuntime: 155 })
+  })
+})
+
+describe('file d ajouts hors-ligne', () => {
+  beforeEach(async () => {
+    await db.pending_adds.clear()
+  })
+
+  it('conserve les saisies dans l ordre', async () => {
+    const queue = createPendingAdds()
+
+    await queue.add('dune')
+    await queue.add('severance')
+
+    const all = await queue.all()
+    expect(all.map((entry) => entry.text)).toEqual(['dune', 'severance'])
+  })
+
+  it('ignore une saisie vide', async () => {
+    const queue = createPendingAdds()
+    await queue.add('   ')
+    await expect(queue.all()).resolves.toHaveLength(0)
+  })
+
+  it('survit à une nouvelle instance', async () => {
+    await createPendingAdds().add('dune')
+
+    // Une saisie faite dans le métro doit être encore là le soir : un état
+    // React ou sessionStorage la perdrait au premier verrouillage.
+    await expect(createPendingAdds().all()).resolves.toHaveLength(1)
+  })
+
+  it('retire une entrée confirmée', async () => {
+    const queue = createPendingAdds()
+    await queue.add('dune')
+
+    const [entry] = await queue.all()
+    await queue.remove(entry!.id)
+
+    await expect(queue.all()).resolves.toHaveLength(0)
   })
 })

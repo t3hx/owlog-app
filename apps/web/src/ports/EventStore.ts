@@ -1,5 +1,6 @@
 import type { MediaStateRow } from '@/domain/reducers/mediaState'
 import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
+import type { MediaCacheRow } from '@/ports/MediaCache'
 
 /**
  * Port du store d'événements.
@@ -26,7 +27,19 @@ export interface EventStore {
    * journal, et comme la page média et la bibliothèque la lisent toutes les
    * deux, l'app afficherait deux statuts différents pour le même titre.
    */
-  append(events: readonly DomainEvent[]): Promise<void>
+  append(
+    events: readonly DomainEvent[],
+    options?: { readonly cacheRows?: readonly MediaCacheRow[] },
+  ): Promise<void>
+
+  /**
+   * Lignes de cache TMDB, pour l'affichage hors-ligne.
+   *
+   * Séparé de `allMediaStates` : l'un est dérivé des événements et
+   * appartient au domaine, l'autre est une copie d'une API tierce. Les
+   * confondre ferait croire qu'un cache vidé perd de la donnée utilisateur.
+   */
+  mediaCache(refs: readonly MediaRef[]): Promise<readonly MediaCacheRow[]>
 
   /** Tous les événements d'un média, pour sa fiche et son journal. */
   eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]>
