@@ -1,0 +1,48 @@
+# Serveur statique de owlog-web.
+#
+# Dokploy gere le TLS et le routage du domaine ; ce Caddy ne fait que servir
+# les fichiers construits, sur le port 80 du conteneur.
+
+:80 {
+	root * /srv
+	encode gzip zstd
+
+	# Sonde de vie, pour que Dokploy sache si le conteneur repond.
+	handle /health {
+		respond "ok" 200
+	}
+
+	# --- En-tetes de cache -------------------------------------------------
+	#
+	# C'est le piege identifie des la conception, et il est invisible :
+	# l'application marche, elle est simplement perimee. Sans `no-cache` sur
+	# index.html, le navigateur garde l'ancien document, qui reference
+	# l'ancien bundle, et un deploiement n'atteint jamais les clients
+	# existants — indefiniment.
+
+	# Les assets portent un hash dans leur nom : leur contenu ne change
+	# jamais pour une URL donnee, donc on peut les figer un an.
+	@immutable path /assets/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	# Les polices aussi sont versionnees par le build.
+	@fonts path /fonts/*
+	header @fonts Cache-Control "public, max-age=31536000, immutable"
+
+	# Le document, le service worker et le manifest doivent etre reverifies
+	# a chaque chargement. Un service worker mis en cache est un service
+	# worker qui ne se met plus jamais a jour.
+	@volatile path /index.html / /sw.js /manifest.webmanifest /registerSW.js
+	header @volatile Cache-Control "no-cache"
+
+	# --- Routage SPA -------------------------------------------------------
+	#
+	# Le routing est en mode history : /bibliotheque n'existe pas sur le
+	# disque. Sans ce repli, un rechargement sur une route interne rendrait
+	# un 404 — et l'utilisateur qui partage un lien tomberait dessus.
+	#
+	# `try_files` ne s'applique pas aux fichiers reels, donc les assets et le
+	# service worker continuent d'etre servis normalement.
+	try_files {path} /index.html
+	file_server
+}

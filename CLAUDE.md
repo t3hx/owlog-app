@@ -147,12 +147,17 @@ doppler secrets download --no-file --format env   # inspection
 
 Secrets attendus à l'étape 3, côté `owlog-api` uniquement :
 
-| Nom | Rôle |
-|---|---|
-| `TMDB_API_KEY` | Clé v3 de The Movie Database |
-| `TMDB_READ_TOKEN` | Jeton de lecture v4 |
+| Nom | Où | Rôle |
+|---|---|---|
+| `TMDB_API_TOKEN` | `owlog-api` | Jeton de lecture v4. Ne quitte jamais le serveur |
+| `TMDB_API_KEY` | `owlog-api` | Clé v3, non utilisée par le code actuel |
+| `OWLOG_SHARED_TOKEN` | les deux | Jeton partagé, public par nature |
+| `OWLOG_ALLOWED_ORIGINS` | `owlog-api` | Origines CORS autorisées |
+| `OWLOG_TRUSTED_PROXIES` | `owlog-api` | IP des proxies devant le service |
 
-**À faire avant l'étape 3 :** les secrets existants s'appellent `TVDB_API_KEY` et `TVDB_API_TOKEN`. TheTVDB et TMDB sont deux APIs différentes ; le projet est bâti sur TMDB, jusqu'au format de référence `tmdb:movie/…` gravé dans le type `MediaRef` et dans les 126 tests du domaine. Les secrets sont donc à renommer côté Doppler.
+`OWLOG_TRUSTED_PROXIES` n'est pas optionnel en production : sans cette liste, le service refuse de croire les en-têtes d'IP et limite tout le monde sur l'adresse du proxy. Le premier utilisateur qui dépasse coupe alors le service pour tous.
+
+Procédure complète de mise en ligne : [DEPLOY.md](DEPLOY.md).
 
 La clé ne quitte jamais `owlog-api`. Elle n'entre à aucun moment dans le bundle client, qui ne connaît que `/search` et `/media/:ref`.
 
