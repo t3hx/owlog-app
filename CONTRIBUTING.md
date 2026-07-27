@@ -14,9 +14,15 @@ Ce document contient le modèle de données, les règles de dérivation, l'ordre
 
 | Branche | Rôle |
 |---|---|
-| `main` | Stable. Mise à jour aux jalons, jamais directement. |
-| `dev` | Intégration. Chaque étape du plan y est fusionnée. |
+| `main` | **Ce qui est en ligne.** Seule branche déployée. |
+| `dev` | Intégration. Chaque étape du plan y est fusionnée. Branche par défaut du dépôt. |
 | `feat/NN-nom` | Une branche par étape du plan. `NN` est le numéro de l'étape. |
+
+**`main` ne suit pas `dev`.** Elle reste volontairement en retrait et ne reçoit `dev` qu'au moment d'un déploiement. Ce n'est pas une branche d'archivage, c'est l'état exact de ce qui tourne sur le VPS : `git log main` répond à la question « qu'est-ce qui est en ligne, là, maintenant ? », et une branche qui avance à chaque étape ne pourrait pas y répondre.
+
+Premier passage prévu : le déploiement de test de l'étape 3.
+
+La branche par défaut du dépôt est donc `dev`, pas `main` — c'est là que le travail se lit.
 
 Une branche par étape, et une seule. `feat/01-socle`, `feat/02-domaine`, `feat/03-proxy-pwa`, et ainsi de suite jusqu'à `feat/11-stats`.
 

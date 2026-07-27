@@ -65,3 +65,5 @@ Le document de design complet — modèle de données, règles de dérivation, o
 Étape 1 sur 11 livrée : socle, tokens, polices, état vide. En cours : étape 2, le domaine.
 
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
+
+`main` n'est pas la branche de travail : elle porte l'état exact de ce qui est déployé, et ne reçoit `dev` qu'au moment d'une mise en ligne. Le premier passage est prévu au déploiement de test de l'étape 3. Voir [CONTRIBUTING.md](CONTRIBUTING.md).
