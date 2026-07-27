@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { eventStore } from '@/adapters/dexie/eventStore'
 import { settingsStore } from '@/adapters/dexie/settingsStore'
 import { App } from '@/ui/App'
 import { PortsProvider } from '@/ui/PortsProvider'
@@ -24,7 +25,7 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <PortsProvider ports={{ settings: settingsStore }}>
+    <PortsProvider ports={{ settings: settingsStore, events: eventStore }}>
       <App />
     </PortsProvider>
   </StrictMode>,
