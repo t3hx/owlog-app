@@ -62,7 +62,7 @@ Le document de design complet — modèle de données, règles de dérivation, o
 
 ## État
 
-Étape 1 sur 11 livrée : socle, tokens, polices, état vide. En cours : étape 2, le domaine.
+Étapes 1 et 2 sur 11 livrées : socle, tokens, polices, état vide, puis le domaine complet (126 tests). En cours : étape 3, proxy TMDB et PWA installable.
 
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
 

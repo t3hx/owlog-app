@@ -1,10 +1,11 @@
-import { Route, Switch } from 'wouter'
+import { Route, Switch, useRoute } from 'wouter'
 
 import { EcranEnConstruction } from '@/ui/components/EcranEnConstruction'
 import { TabBar } from '@/ui/components/TabBar'
 import { useReglage } from '@/ui/hooks/useReglage'
 import { Accueil } from '@/ui/screens/Accueil'
 import { Bienvenue } from '@/ui/screens/Bienvenue'
+import { Debug } from '@/ui/screens/Debug'
 
 /**
  * Racine de l'application.
@@ -21,6 +22,14 @@ import { Bienvenue } from '@/ui/screens/Bienvenue'
  */
 export function App() {
   const { valeur: prenom, chargement } = useReglage('prenom')
+  const [surDebug] = useRoute('/debug')
+
+  // `/debug` passe avant la question du prénom. Un écran de diagnostic
+  // qu'on ne peut ouvrir qu'après l'onboarding est inutile précisément
+  // quand l'onboarding est ce qui ne marche pas.
+  if (surDebug) {
+    return <Debug />
+  }
 
   // Premier rendu : on ne sait pas encore si le prénom existe. Afficher
   // l'écran de bienvenue tout de suite le ferait clignoter à chaque
