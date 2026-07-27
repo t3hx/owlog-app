@@ -15,6 +15,16 @@ Thèse produit : **le visionnage est l'unité d'enregistrement, pas le film.** U
 
 ## Règles projet — non négociables
 
+### Langue du code
+
+**Le code s'écrit en anglais. Toujours, sans exception.** Noms de fonctions, de variables, de types, de fichiers, de champs, de clés, de valeurs stockées, de tables et de colonnes.
+
+Le français est réservé aux **commentaires**, à la **documentation**, aux **messages de commit** et aux **noms de tests** — qui sont de la prose descriptive, pas du code.
+
+Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune langue : elles passent par l'i18n.
+
+**Ne jamais déduire la langue du code de la langue du projet.** Owlog est documenté en français, son interface est en français, ses commits sont en français. Son code est en anglais. Le mimétisme avec la documentation est précisément l'erreur à éviter.
+
 ### Commits
 
 - **Jamais de co-auteur.** Aucun `Co-Authored-By`, aucune mention d'outil ou d'assistant dans un message de commit.

@@ -28,20 +28,20 @@ import { usePorts } from '@/ui/PortsProvider'
  * mono. Ce sont les codes de l'écran de connexion, réemployés parce que
  * c'est le même moment du parcours.
  */
-export function Bienvenue() {
+export function Welcome() {
   const { settings } = usePorts()
-  const [prenom, setPrenom] = useState('')
-  const [envoi, setEnvoi] = useState(false)
+  const [firstName, setPrenom] = useState('')
+  const [submitting, setEnvoi] = useState(false)
 
-  const valide = prenom.trim().length > 0
+  const valid = firstName.trim().length > 0
 
-  async function soumettre(evenement: FormEvent) {
-    evenement.preventDefault()
-    if (!valide || envoi) return
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!valid || submitting) return
 
     setEnvoi(true)
-    await settings.ecrire('prenom', prenom.trim())
-    // Pas de remise à zéro de `envoi` : l'écriture fait disparaître cet
+    await settings.write('firstName', firstName.trim())
+    // Pas de remise à zéro de `submitting` : l'écriture fait disparaître cet
     // écran. Le remettre à false ferait clignoter le bouton avant le
     // démontage du composant.
   }
@@ -57,14 +57,14 @@ export function Bienvenue() {
           Ton <span className="text-gradient-action">log</span> est vide.
         </h1>
         <p className="text-sm leading-relaxed text-muted">
-          Chaque titre que tu ajoutes écrit une ligne datée. Chaque fois que tu
-          revois quelque chose, c&apos;est un visionnage de plus, avec sa propre
+          Chaque title que tu ajoutes écrit une row datée. Chaque fois que tu
+          revois quelque chose, c&apos;est un visionnage de plus, withEvents sa propre
           date et sa propre note. Au bout d&apos;un moment, tu ne regardes plus
           une liste : tu relis ton histoire.
         </p>
       </header>
 
-      <form onSubmit={soumettre} className="flex flex-col gap-3">
+      <form onSubmit={submit} className="flex flex-col gap-3">
         <label htmlFor="prenom" className="font-mono text-[10px] text-subtle">
           on t&apos;appelle comment ?
         </label>
@@ -77,8 +77,8 @@ export function Bienvenue() {
             id="prenom"
             name="prenom"
             type="text"
-            value={prenom}
-            onChange={(evenement) => setPrenom(evenement.target.value)}
+            value={firstName}
+            onChange={(event) => setPrenom(event.target.value)}
             autoComplete="given-name"
             enterKeyHint="go"
             maxLength={40}
@@ -89,7 +89,7 @@ export function Bienvenue() {
 
         <button
           type="submit"
-          disabled={!valide || envoi}
+          disabled={!valid || submitting}
           className="h-11 rounded-action bg-gradient-action font-display text-sm font-bold tracking-wide text-bg shadow-glow disabled:opacity-40 disabled:shadow-none"
         >
           COMMENCER

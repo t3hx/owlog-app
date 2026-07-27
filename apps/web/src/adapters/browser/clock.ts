@@ -1,10 +1,10 @@
 import { uuidv7 } from 'uuidv7'
 
-import type { GenerateurId, Horloge } from '@/ports/Horloge'
+import type { IdGenerator, Clock } from '@/ports/Clock'
 
 /** Horloge système. */
-export const horlogeSysteme: Horloge = {
-  maintenant: () => new Date().toISOString(),
+export const systemClock: Clock = {
+  now: () => new Date().toISOString(),
 }
 
 /**
@@ -15,6 +15,6 @@ export const horlogeSysteme: Horloge = {
  * aucun ordre stable, et la numérotation des cycles changerait d'un rendu à
  * l'autre.
  */
-export const generateurUuidv7: GenerateurId = {
-  suivant: () => uuidv7(),
+export const uuidv7Generator: IdGenerator = {
+  next: () => uuidv7(),
 }

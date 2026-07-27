@@ -1,4 +1,4 @@
-import type { GenerateurId, Horloge } from '@/ports/Horloge'
+import type { IdGenerator, Clock } from '@/ports/Clock'
 
 /**
  * Horloge de test.
@@ -7,19 +7,19 @@ import type { GenerateurId, Horloge } from '@/ports/Horloge'
  * événements écrits par la même commande se suivent dans le temps sans
  * jamais partager exactement le même instant.
  */
-export function horlogeDeTest(depart = '2026-07-27T22:00:00.000Z'): Horloge & {
-  avancerDe(secondes: number): void
+export function testClock(depart = '2026-07-27T22:00:00.000Z'): Clock & {
+  advanceBy(secondes: number): void
 } {
-  let instant = new Date(depart).getTime()
+  let at = new Date(depart).getTime()
 
   return {
-    maintenant() {
-      const courant = new Date(instant).toISOString()
-      instant += 1000
-      return courant
+    now() {
+      const current = new Date(at).toISOString()
+      at += 1000
+      return current
     },
-    avancerDe(secondes) {
-      instant += secondes * 1000
+    advanceBy(secondes) {
+      at += secondes * 1000
     },
   }
 }
@@ -30,12 +30,12 @@ export function horlogeDeTest(depart = '2026-07-27T22:00:00.000Z'): Horloge & {
  * Séquentiel et zéro-paddé (`id0001`) : ordonnable comme un UUIDv7, et
  * lisible dans un échec de test, ce qu'un vrai UUID ne serait pas.
  */
-export function idsDeTest(prefixe = 'id'): GenerateurId {
-  let compteur = 0
+export function testIds(prefix = 'id'): IdGenerator {
+  let counter = 0
   return {
-    suivant() {
-      compteur += 1
-      return `${prefixe}${String(compteur).padStart(4, '0')}`
+    next() {
+      counter += 1
+      return `${prefix}${String(counter).padStart(4, '0')}`
     },
   }
 }

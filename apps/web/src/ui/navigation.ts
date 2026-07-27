@@ -18,12 +18,12 @@ export interface Tab {
   /** Label affiché sous l'icône, en mono 9px. */
   readonly label: string
   /** Titre de l'écran, utilisé par le document et l'en-tête. */
-  readonly titre: string
+  readonly title: string
 }
 
 export const TABS: readonly Tab[] = [
-  { path: '/', label: 'accueil', titre: 'Accueil' },
-  { path: '/bibliotheque', label: 'bibliothèque', titre: 'Bibliothèque' },
-  { path: '/log', label: 'log', titre: 'Log' },
-  { path: '/stats', label: 'stats', titre: 'Stats' },
+  { path: '/', label: 'accueil', title: 'Accueil' },
+  { path: '/bibliotheque', label: 'bibliothèque', title: 'Bibliothèque' },
+  { path: '/log', label: 'log', title: 'Log' },
+  { path: '/stats', label: 'stats', title: 'Stats' },
 ]

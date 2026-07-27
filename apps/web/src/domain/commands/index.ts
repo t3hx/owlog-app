@@ -1,16 +1,16 @@
 import { applyVoids } from '@/domain/reducers/applyVoids'
-import { progression } from '@/domain/reducers/projections'
+import { progress } from '@/domain/reducers/projections'
 import { cycles, type Cycle } from '@/domain/rules/cycles'
-import { statutCourant } from '@/domain/rules/statut'
+import { currentStatus } from '@/domain/rules/status'
 import type {
   CycleKey,
-  Evenement,
-  EvenementStocke,
-  Horodatage,
+  DomainEvent,
+  StoredEvent,
+  Timestamp,
   MediaRef,
-  Precision,
+  DatePrecision,
 } from '@/domain/types'
-import type { GenerateurId, Horloge } from '@/ports/Horloge'
+import type { IdGenerator, Clock } from '@/ports/Clock'
 
 /**
  * Contexte d'exécution d'une commande.
@@ -20,24 +20,24 @@ import type { GenerateurId, Horloge } from '@/ports/Horloge'
  * rien elle-même — c'est l'appelant qui les passe au store, en une seule
  * transaction.
  */
-export interface Contexte {
-  readonly evenements: readonly EvenementStocke[]
+export interface CommandContext {
+  readonly events: readonly StoredEvent[]
   readonly mediaRef: MediaRef
-  readonly horloge: Horloge
-  readonly ids: GenerateurId
+  readonly clock: Clock
+  readonly ids: IdGenerator
 }
 
 /** Saisie d'un visionnage passé. */
-export interface SaisieRetro {
-  readonly date: Horodatage | null
-  readonly precision: Precision
+export interface BackdateEntry {
+  readonly date: Timestamp | null
+  readonly precision: DatePrecision
   readonly note?: number | null
-  readonly commentaire?: string
+  readonly comment?: string
 }
 
 /** Ajoute le média à la bibliothèque, en « à voir ». */
-export function ajouter(contexte: Contexte): readonly Evenement[] {
-  return [live(contexte, { type: 'WATCH', cycle_key: null })]
+export function addToLibrary(context: CommandContext): readonly DomainEvent[] {
+  return [liveEvent(context, { type: 'WATCH', cycle_key: null })]
 }
 
 /**
@@ -47,23 +47,23 @@ export function ajouter(contexte: Contexte): readonly Evenement[] {
  * pas agissent sur un cycle ; le dernier écrit un `WATCH` **hors cycle**,
  * ce qui est ce qui permet au rebouclage de ne pas toucher à l'historique.
  */
-export function avancerStatut(contexte: Contexte): readonly Evenement[] {
-  const statut = statutCourant(contexte.evenements)
-  const courant = cycleCourant(contexte.evenements)
+export function advanceStatus(context: CommandContext): readonly DomainEvent[] {
+  const status = currentStatus(context.events)
+  const current = currentCycle(context.events)
 
-  switch (statut) {
+  switch (status) {
     case 'absent':
-    case 'abandonne':
-      return [live(contexte, { type: 'WATCH', cycle_key: null })]
+    case 'dropped':
+      return [liveEvent(context, { type: 'WATCH', cycle_key: null })]
 
-    case 'a-voir':
-      return [live(contexte, { type: 'START', cycle_key: contexte.ids.suivant() })]
+    case 'to-watch':
+      return [liveEvent(context, { type: 'START', cycle_key: context.ids.next() })]
 
-    case 'en-cours':
-      return courant ? [live(contexte, { type: 'SEEN', cycle_key: courant.key })] : []
+    case 'watching':
+      return current ? [liveEvent(context, { type: 'SEEN', cycle_key: current.key })] : []
 
-    case 'vu':
-      return courant ? [live(contexte, { type: 'DROP', cycle_key: courant.key })] : []
+    case 'seen':
+      return current ? [liveEvent(context, { type: 'DROP', cycle_key: current.key })] : []
   }
 }
 
@@ -84,59 +84,59 @@ export function avancerStatut(contexte: Contexte): readonly Evenement[] {
  * qu'un `S02E05` décrit un point plus ancien que l'avancement affiché, et
  * donc de le griser au lieu de laisser croire qu'il est à jour.
  */
-export function progresser(
-  contexte: Contexte,
+export function advanceProgress(
+  context: CommandContext,
   options: { increment: number; label?: string },
-): readonly Evenement[] {
-  const statut = statutCourant(contexte.evenements)
-  const existant = cycleCourant(contexte.evenements)
-  const ouvert = existant !== null && statut !== 'a-voir' && statut !== 'absent'
+): readonly DomainEvent[] {
+  const status = currentStatus(context.events)
+  const existant = currentCycle(context.events)
+  const isOpen = existant !== null && status !== 'to-watch' && status !== 'absent'
 
-  const produits: Evenement[] = []
-  let cle: CycleKey
+  const produced: DomainEvent[] = []
+  let key: CycleKey
 
-  if (ouvert && existant) {
-    cle = existant.key
+  if (isOpen && existant) {
+    key = existant.key
   } else {
-    const ouverture = live(contexte, { type: 'START', cycle_key: contexte.ids.suivant() })
-    produits.push(ouverture)
-    cle = ouverture.cycle_key as CycleKey
+    const opening = liveEvent(context, { type: 'START', cycle_key: context.ids.next() })
+    produced.push(opening)
+    key = opening.cycle_key as CycleKey
   }
 
-  const precedente = ouvert ? progression(contexte.evenements) : null
-  const pourcentage = Math.min(100, (precedente?.pourcentage ?? 0) + options.increment)
+  const previous = isOpen ? progress(context.events) : null
+  const percent = Math.min(100, (previous?.percent ?? 0) + options.increment)
 
-  const instant = contexte.horloge.maintenant()
-  const label = options.label ?? precedente?.label ?? undefined
+  const at = context.clock.now()
+  const label = options.label ?? previous?.label ?? undefined
   const labelPoseLe =
     options.label !== undefined
-      ? instant
+      ? at
       : label === undefined
         ? undefined
-        : (precedente?.majLe ?? undefined)
+        : (previous?.updatedAt ?? undefined)
 
-  produits.push(
-    assembler(
-      contexte,
+  produced.push(
+    build(
+      context,
       {
         type: 'PROG',
-        cycle_key: cle,
+        cycle_key: key,
         payload: {
-          percent: pourcentage,
+          percent: percent,
           ...(label === undefined ? {} : { label }),
           ...(labelPoseLe === undefined ? {} : { label_created_at: labelPoseLe }),
         },
       },
-      instant,
-      { occurred_at: instant, occurred_precision: 'exact' },
+      at,
+      { occurred_at: at, occurred_precision: 'exact' },
     ),
   )
 
-  if (pourcentage >= 100) {
-    produits.push(live(contexte, { type: 'SEEN', cycle_key: cle }))
+  if (percent >= 100) {
+    produced.push(liveEvent(context, { type: 'SEEN', cycle_key: key }))
   }
 
-  return produits
+  return produced
 }
 
 /**
@@ -152,69 +152,69 @@ export function progresser(
  * vie et créerait un cycle #2 clos : l'écran afficherait `✓ vu ×1` face à
  * un `— visionnage #2 —` et un `— visionnage #1 —` sans fin.
  */
-export function retroDater(contexte: Contexte, saisie: SaisieRetro): readonly Evenement[] {
-  const produits: Evenement[] = []
+export function backdate(context: CommandContext, entry: BackdateEntry): readonly DomainEvent[] {
+  const produced: DomainEvent[] = []
 
-  if (statutCourant(contexte.evenements) === 'absent') {
-    produits.push(live(contexte, { type: 'WATCH', cycle_key: null }))
+  if (currentStatus(context.events) === 'absent') {
+    produced.push(liveEvent(context, { type: 'WATCH', cycle_key: null }))
   }
 
-  const rattachable = cycleOuvertAnterieurA(contexte.evenements, saisie.date)
-  const cle = rattachable?.key ?? contexte.ids.suivant()
+  const attachable = openCycleStartedBefore(context.events, entry.date)
+  const key = attachable?.key ?? context.ids.next()
 
   const date = {
-    occurred_at: saisie.date,
-    occurred_precision: saisie.precision,
+    occurred_at: entry.date,
+    occurred_precision: entry.precision,
   }
 
-  if (!rattachable) {
-    produits.push(passe(contexte, { type: 'START', cycle_key: cle }, date))
+  if (!attachable) {
+    produced.push(pastEvent(context, { type: 'START', cycle_key: key }, date))
   }
 
-  produits.push(passe(contexte, { type: 'SEEN', cycle_key: cle }, date))
+  produced.push(pastEvent(context, { type: 'SEEN', cycle_key: key }, date))
 
-  if (saisie.note !== undefined) {
-    produits.push(
-      passe(
-        contexte,
-        { type: 'RATE', cycle_key: cle, payload: { rating: saisie.note } },
+  if (entry.note !== undefined) {
+    produced.push(
+      pastEvent(
+        context,
+        { type: 'RATE', cycle_key: key, payload: { rating: entry.note } },
         date,
       ),
     )
   }
 
-  if (saisie.commentaire !== undefined) {
-    produits.push(
-      passe(
-        contexte,
-        { type: 'NOTE', cycle_key: cle, payload: { text: saisie.commentaire } },
+  if (entry.comment !== undefined) {
+    produced.push(
+      pastEvent(
+        context,
+        { type: 'NOTE', cycle_key: key, payload: { text: entry.comment } },
         date,
       ),
     )
   }
 
-  return produits
+  return produced
 }
 
 /** Relance un visionnage. Minte toujours un cycle neuf, ne rouvre jamais. */
-export function revoir(contexte: Contexte): readonly Evenement[] {
-  return [live(contexte, { type: 'REWATCH', cycle_key: contexte.ids.suivant() })]
+export function rewatch(context: CommandContext): readonly DomainEvent[] {
+  return [liveEvent(context, { type: 'REWATCH', cycle_key: context.ids.next() })]
 }
 
 /** Note le cycle courant. `null` efface — c'est le re-tap sur l'étoile. */
-export function noter(contexte: Contexte, note: number | null): readonly Evenement[] {
-  return surLeCycleCourant(contexte, (cle) => ({
+export function rate(context: CommandContext, note: number | null): readonly DomainEvent[] {
+  return onCurrentCycle(context, (key) => ({
     type: 'RATE',
-    cycle_key: cle,
+    cycle_key: key,
     payload: { rating: note },
   }))
 }
 
 /** Commente le cycle courant. */
-export function commenter(contexte: Contexte, texte: string): readonly Evenement[] {
-  return surLeCycleCourant(contexte, (cle) => ({
+export function addComment(context: CommandContext, texte: string): readonly DomainEvent[] {
+  return onCurrentCycle(context, (key) => ({
     type: 'NOTE',
-    cycle_key: cle,
+    cycle_key: key,
     payload: { text: texte },
   }))
 }
@@ -225,24 +225,24 @@ export function commenter(contexte: Contexte, texte: string): readonly Evenement
  * Jamais rattaché à un cycle : c'est un marqueur transversal, il ne
  * remplace jamais la pastille et ne dépend d'aucun visionnage.
  */
-export function basculerCoupDeCoeur(contexte: Contexte): readonly Evenement[] {
-  const actif = derniereMarqueDeCoeur(contexte.evenements) === 'FAV'
-  return [live(contexte, { type: actif ? 'UNFAV' : 'FAV', cycle_key: null })]
+export function toggleFavorite(context: CommandContext): readonly DomainEvent[] {
+  const active = lastFavoriteMark(context.events) === 'FAV'
+  return [liveEvent(context, { type: active ? 'UNFAV' : 'FAV', cycle_key: null })]
 }
 
 /** Retire le média de la bibliothèque, sans effacer son historique. */
-export function retirer(contexte: Contexte): readonly Evenement[] {
-  return [live(contexte, { type: 'REMOVE', cycle_key: null })]
+export function removeFromLibrary(context: CommandContext): readonly DomainEvent[] {
+  return [liveEvent(context, { type: 'REMOVE', cycle_key: null })]
 }
 
 /** Annule un événement par son identifiant. */
-export function annuler(contexte: Contexte, cible: string): readonly Evenement[] {
-  return [live(contexte, { type: 'VOID', cycle_key: null, payload: { target: cible } })]
+export function undo(context: CommandContext, target: string): readonly DomainEvent[] {
+  return [liveEvent(context, { type: 'VOID', cycle_key: null, payload: { target: target } })]
 }
 
 // --- Fabrication des événements -------------------------------------------
 
-type Corps = Pick<Evenement, 'type' | 'cycle_key'> & { payload?: unknown }
+type EventBody = Pick<DomainEvent, 'type' | 'cycle_key'> & { payload?: unknown }
 
 /**
  * Événement produit par un geste dans l'app.
@@ -250,48 +250,48 @@ type Corps = Pick<Evenement, 'type' | 'cycle_key'> & { payload?: unknown }
  * `occurred_at = created_at` et précision `exact`. Sans cette règle, un
  * `START` live laissé sans date serait classé avant tous les autres cycles.
  */
-function live(contexte: Contexte, corps: Corps): Evenement {
-  const instant = contexte.horloge.maintenant()
-  return assembler(contexte, corps, instant, {
-    occurred_at: instant,
+function liveEvent(context: CommandContext, corps: EventBody): DomainEvent {
+  const at = context.clock.now()
+  return build(context, corps, at, {
+    occurred_at: at,
     occurred_precision: 'exact',
   })
 }
 
 /** Événement décrivant un moment passé, avec sa précision assumée. */
-function passe(
-  contexte: Contexte,
-  corps: Corps,
-  date: { occurred_at: Horodatage | null; occurred_precision: Precision },
-): Evenement {
-  return assembler(contexte, corps, contexte.horloge.maintenant(), date)
+function pastEvent(
+  context: CommandContext,
+  corps: EventBody,
+  date: { occurred_at: Timestamp | null; occurred_precision: DatePrecision },
+): DomainEvent {
+  return build(context, corps, context.clock.now(), date)
 }
 
-function assembler(
-  contexte: Contexte,
-  corps: Corps,
-  ecritLe: Horodatage,
-  date: { occurred_at: Horodatage | null; occurred_precision: Precision },
-): Evenement {
+function build(
+  context: CommandContext,
+  corps: EventBody,
+  writtenAt: Timestamp,
+  date: { occurred_at: Timestamp | null; occurred_precision: DatePrecision },
+): DomainEvent {
   return {
-    id: contexte.ids.suivant(),
+    id: context.ids.next(),
     device_id: 'local',
-    created_at: ecritLe,
-    media_ref: contexte.mediaRef,
+    created_at: writtenAt,
+    media_ref: context.mediaRef,
     ...date,
     ...corps,
-  } as Evenement
+  } as DomainEvent
 }
 
 // --- Lectures utilitaires --------------------------------------------------
 
-function cyclesActifs(evenements: readonly EvenementStocke[]): readonly Cycle[] {
-  return cycles(applyVoids(evenements))
+function activeCycles(events: readonly StoredEvent[]): readonly Cycle[] {
+  return cycles(applyVoids(events))
 }
 
-function cycleCourant(evenements: readonly EvenementStocke[]): Cycle | null {
-  const tous = cyclesActifs(evenements)
-  return tous[tous.length - 1] ?? null
+function currentCycle(events: readonly StoredEvent[]): Cycle | null {
+  const all = activeCycles(events)
+  return all[all.length - 1] ?? null
 }
 
 /**
@@ -301,18 +301,18 @@ function cycleCourant(evenements: readonly EvenementStocke[]): Cycle | null {
  * ne rattache pas, on minte un cycle neuf. Rattacher au jugé fusionnerait
  * deux visionnages distincts sans que rien ne le signale.
  */
-function cycleOuvertAnterieurA(
-  evenements: readonly EvenementStocke[],
-  date: Horodatage | null,
+function openCycleStartedBefore(
+  events: readonly StoredEvent[],
+  date: Timestamp | null,
 ): Cycle | null {
   if (date === null) return null
 
-  const courant = cycleCourant(evenements)
-  if (!courant) return null
-  if (courant.aSeen || courant.aDrop) return null
-  if (courant.dateDeRang === null) return null
+  const current = currentCycle(events)
+  if (!current) return null
+  if (current.hasSeen || current.hasDrop) return null
+  if (current.rankDate === null) return null
 
-  return courant.dateDeRang < date ? courant : null
+  return current.rankDate < date ? current : null
 }
 
 /**
@@ -322,25 +322,25 @@ function cycleOuvertAnterieurA(
  * refuser obligerait à taper sur la pastille d'abord, pour un geste qui
  * exprime déjà l'intention.
  */
-function surLeCycleCourant(
-  contexte: Contexte,
-  corps: (cle: CycleKey) => Corps,
-): readonly Evenement[] {
-  const courant = cycleCourant(contexte.evenements)
-  if (courant) return [live(contexte, corps(courant.key))]
+function onCurrentCycle(
+  context: CommandContext,
+  corps: (key: CycleKey) => EventBody,
+): readonly DomainEvent[] {
+  const current = currentCycle(context.events)
+  if (current) return [liveEvent(context, corps(current.key))]
 
-  const cle = contexte.ids.suivant()
+  const key = context.ids.next()
   return [
-    live(contexte, { type: 'START', cycle_key: cle }),
-    live(contexte, corps(cle)),
+    liveEvent(context, { type: 'START', cycle_key: key }),
+    liveEvent(context, corps(key)),
   ]
 }
 
-function derniereMarqueDeCoeur(evenements: readonly EvenementStocke[]): string | null {
-  let dernier: EvenementStocke | null = null
-  for (const evenement of applyVoids(evenements)) {
-    if (evenement.type !== 'FAV' && evenement.type !== 'UNFAV') continue
-    if (dernier === null || evenement.created_at >= dernier.created_at) dernier = evenement
+function lastFavoriteMark(events: readonly StoredEvent[]): string | null {
+  let last: StoredEvent | null = null
+  for (const event of applyVoids(events)) {
+    if (event.type !== 'FAV' && event.type !== 'UNFAV') continue
+    if (last === null || event.created_at >= last.created_at) last = event
   }
-  return dernier?.type ?? null
+  return last?.type ?? null
 }

@@ -1,6 +1,6 @@
 import { applyVoids } from '@/domain/reducers/applyVoids'
 import { cycles, type Cycle } from '@/domain/rules/cycles'
-import { estConnu, type EtatMedia, type Evenement, type EvenementStocke } from '@/domain/types'
+import { isKnownEvent, type MediaStatus, type DomainEvent, type StoredEvent } from '@/domain/types'
 
 /**
  * Dérivation du statut d'un média.
@@ -41,25 +41,25 @@ import { estConnu, type EtatMedia, type Evenement, type EvenementStocke } from '
  * partie de toute modification de cette règle : un diagramme périmé induit
  * activement en erreur.
  */
-export function statutCourant(evenements: readonly EvenementStocke[]): EtatMedia {
-  const actifs = applyVoids(evenements)
-  const connus = actifs.filter(estConnu)
+export function currentStatus(events: readonly StoredEvent[]): MediaStatus {
+  const active = applyVoids(events)
+  const known = active.filter(isKnownEvent)
 
-  if (connus.length === 0) return 'absent'
+  if (known.length === 0) return 'absent'
 
-  if (dernierMouvementEstUnRetrait(connus)) return 'absent'
+  if (lastLibraryMoveIsRemoval(known)) return 'absent'
 
-  const tousLesCycles = cycles(connus)
-  if (tousLesCycles.length === 0) return 'a-voir'
+  const allCycles = cycles(known)
+  if (allCycles.length === 0) return 'to-watch'
 
-  const courant = tousLesCycles[tousLesCycles.length - 1]
-  if (!courant) return 'a-voir'
+  const current = allCycles[allCycles.length - 1]
+  if (!current) return 'to-watch'
 
-  if (reboucleVersAVoir(connus, courant)) return 'a-voir'
+  if (loopsBackToWatchlist(known, current)) return 'to-watch'
 
-  if (courant.aDrop) return 'abandonne'
-  if (courant.aSeen) return 'vu'
-  return 'en-cours'
+  if (current.hasDrop) return 'dropped'
+  if (current.hasSeen) return 'seen'
+  return 'watching'
 }
 
 /**
@@ -70,17 +70,17 @@ export function statutCourant(evenements: readonly EvenementStocke[]): EtatMedia
  * comparaison porte sur ces deux types nommément, et non sur « le dernier
  * événement hors cycle ».
  */
-function dernierMouvementEstUnRetrait(evenements: readonly Evenement[]): boolean {
-  let dernier: Evenement | null = null
+function lastLibraryMoveIsRemoval(events: readonly DomainEvent[]): boolean {
+  let last: DomainEvent | null = null
 
-  for (const evenement of evenements) {
-    if (evenement.type !== 'WATCH' && evenement.type !== 'REMOVE') continue
-    if (dernier === null || evenement.created_at >= dernier.created_at) {
-      dernier = evenement
+  for (const event of events) {
+    if (event.type !== 'WATCH' && event.type !== 'REMOVE') continue
+    if (last === null || event.created_at >= last.created_at) {
+      last = event
     }
   }
 
-  return dernier?.type === 'REMOVE'
+  return last?.type === 'REMOVE'
 }
 
 /**
@@ -90,13 +90,13 @@ function dernierMouvementEstUnRetrait(evenements: readonly Evenement[]): boolean
  * porte sur `created_at` et non sur `occurred_at` : le geste de taper sur
  * la pastille est un acte d'écriture, il n'a pas de date de survenue propre.
  */
-function reboucleVersAVoir(evenements: readonly Evenement[], courant: Cycle): boolean {
-  const finDuCycle = courant.evenements.reduce(
-    (max, evenement) => (evenement.created_at > max ? evenement.created_at : max),
+function loopsBackToWatchlist(events: readonly DomainEvent[], current: Cycle): boolean {
+  const cycleEnd = current.events.reduce(
+    (max, event) => (event.created_at > max ? event.created_at : max),
     '',
   )
 
-  return evenements.some(
-    (evenement) => evenement.type === 'WATCH' && evenement.created_at > finDuCycle,
+  return events.some(
+    (event) => event.type === 'WATCH' && event.created_at > cycleEnd,
   )
 }

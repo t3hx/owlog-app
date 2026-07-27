@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { applyVoids } from '@/domain/reducers/applyVoids'
-import { creerFabrique } from '@/domain/test/fabrique'
+import { createFactory } from '@/domain/test/factory'
 
 /**
  * Annulation.
@@ -17,90 +17,90 @@ import { creerFabrique } from '@/domain/test/fabrique'
  */
 describe('applyVoids', () => {
   it('retire l événement cible', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const drop = f.drop('c1')
-    const evenements = [f.start('c1', '2019-01-01T20:00:00.000Z'), drop, f.annule(drop.id)]
+    const events = [f.start('c1', '2019-01-01T20:00:00.000Z'), drop, f.voided(drop.id)]
 
-    const resultat = applyVoids(evenements)
+    const result = applyVoids(events)
 
-    expect(resultat.map((e) => e.type)).toEqual(['START'])
+    expect(result.map((e) => e.type)).toEqual(['START'])
   })
 
   it('retire aussi le VOID lui-même de la projection', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const watch = f.watch()
-    const resultat = applyVoids([watch, f.annule(watch.id)])
+    const result = applyVoids([watch, f.voided(watch.id)])
 
     // Le VOID a fait son travail ; le laisser passer le ferait apparaître
     // comme une entrée dans le journal, ce qui n'a pas de sens.
-    expect(resultat).toHaveLength(0)
+    expect(result).toHaveLength(0)
   })
 
   it('laisse passer les événements non cibles', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const drop = f.drop('c1')
-    const evenements = [
+    const events = [
       f.start('c1', '2019-01-01T20:00:00.000Z'),
       f.seen('c1'),
       drop,
-      f.annule(drop.id),
+      f.voided(drop.id),
     ]
 
-    const resultat = applyVoids(evenements)
+    const result = applyVoids(events)
 
-    expect(resultat.map((e) => e.type)).toEqual(['START', 'SEEN'])
+    expect(result.map((e) => e.type)).toEqual(['START', 'SEEN'])
   })
 
   it('est sans effet quand la cible n existe pas', () => {
-    const f = creerFabrique()
-    const resultat = applyVoids([f.watch(), f.annule('identifiant-inconnu')])
+    const f = createFactory()
+    const result = applyVoids([f.watch(), f.voided('identifiant-inconnu')])
 
-    expect(resultat.map((e) => e.type)).toEqual(['WATCH'])
+    expect(result.map((e) => e.type)).toEqual(['WATCH'])
   })
 
   it('ignore un VOID qui vise un autre VOID', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const watch = f.watch()
-    const premierVoid = f.annule(watch.id)
+    const premierVoid = f.voided(watch.id)
     // Annuler une annulation serait un undo chaîné : le modèle ne le
     // prévoit pas, et le laisser passer ferait réapparaître un événement
     // que l'utilisateur croyait supprimé.
-    const secondVoid = f.annule(premierVoid.id)
+    const secondVoid = f.voided(premierVoid.id)
 
-    const resultat = applyVoids([watch, premierVoid, secondVoid])
+    const result = applyVoids([watch, premierVoid, secondVoid])
 
-    expect(resultat).toHaveLength(0)
+    expect(result).toHaveLength(0)
   })
 
   it('laisse passer les types inconnus', () => {
-    const f = creerFabrique()
-    const resultat = applyVoids([f.inconnu('LEND'), f.watch()])
+    const f = createFactory()
+    const result = applyVoids([f.unknown('LEND'), f.watch()])
 
     // Un type inconnu ne se comprend pas, donc ne se filtre pas non plus.
     // Il traverse et sera ignoré plus loin, par les réducteurs.
-    expect(resultat).toHaveLength(2)
+    expect(result).toHaveLength(2)
   })
 
   it('annule un événement d un type inconnu si on le cible', () => {
-    const f = creerFabrique()
-    const inconnu = f.inconnu('LEND')
-    const resultat = applyVoids([inconnu, f.annule(inconnu.id)])
+    const f = createFactory()
+    const unknown = f.unknown('LEND')
+    const result = applyVoids([unknown, f.voided(unknown.id)])
 
     // L'annulation vise un identifiant, pas un type : elle fonctionne même
     // sur un événement écrit par une version ultérieure du client.
-    expect(resultat).toHaveLength(0)
+    expect(result).toHaveLength(0)
   })
 
   it('préserve l ordre des événements restants', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const aAnnuler = f.fav()
-    const resultat = applyVoids([
+    const result = applyVoids([
       f.watch(),
       aAnnuler,
       f.start('c1', '2019-01-01T20:00:00.000Z'),
-      f.annule(aAnnuler.id),
+      f.voided(aAnnuler.id),
     ])
 
-    expect(resultat.map((e) => e.type)).toEqual(['WATCH', 'START'])
+    expect(result.map((e) => e.type)).toEqual(['WATCH', 'START'])
   })
 })

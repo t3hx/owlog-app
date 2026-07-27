@@ -37,25 +37,25 @@ export function TabBar() {
 }
 
 function TabLink({ tab }: { tab: Tab }) {
-  const [actif] = useRoute(tab.path)
+  const [active] = useRoute(tab.path)
 
   return (
     <Link
       href={tab.path}
-      aria-current={actif ? 'page' : undefined}
+      aria-current={active ? 'page' : undefined}
       className="flex h-14 flex-col items-center justify-center gap-1.5"
     >
       <span
         aria-hidden
         className={
-          actif
+          active
             ? 'size-[22px] rounded-[6px] bg-gradient-action shadow-glow-sm'
             : 'size-[22px] rounded-[6px] border-[1.5px] border-icon-dim'
         }
       />
       <span
         className={
-          actif
+          active
             ? 'font-mono text-[9px] tracking-wide text-accent'
             : 'font-mono text-[9px] tracking-wide text-muted'
         }

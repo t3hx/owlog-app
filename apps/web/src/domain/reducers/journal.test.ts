@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { journal } from '@/domain/reducers/journal'
-import { creerFabrique } from '@/domain/test/fabrique'
+import { createFactory } from '@/domain/test/factory'
 
 /**
  * Journal d'un média.
@@ -17,60 +17,60 @@ import { creerFabrique } from '@/domain/test/fabrique'
  */
 describe('journal', () => {
   it('rend du plus récent au plus ancien', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('c1', '2019-01-01T20:00:00.000Z'),
       f.rewatch('c2', '2026-01-01T20:00:00.000Z'),
     ]
 
-    const entrees = journal(evenements)
-    const marqueurs = entrees.filter((e) => e.genre === 'marqueur')
+    const entries = journal(events)
+    const markers = entries.filter((e) => e.kind === 'marqueur')
 
-    expect(marqueurs.map((m) => m.genre === 'marqueur' && m.numero)).toEqual([2, 1])
+    expect(markers.map((m) => m.kind === 'marqueur' && m.number)).toEqual([2, 1])
   })
 
   it('groupe les événements d un cycle sous son marqueur', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('c1', '2019-01-01T20:00:00.000Z'),
       f.rate('c1', 4, '2019-01-02T20:00:00.000Z'),
       f.seen('c1', '2019-01-02T20:00:00.000Z'),
     ]
 
-    const entrees = journal(evenements)
+    const entries = journal(events)
 
-    expect(entrees[0]?.genre).toBe('marqueur')
-    expect(entrees.filter((e) => e.genre === 'evenement')).toHaveLength(3)
+    expect(entries[0]?.kind).toBe('marqueur')
+    expect(entries.filter((e) => e.kind === 'evenement')).toHaveLength(3)
   })
 
   it('commenter aujourd hui un cycle de 2019 ne le remonte pas', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Le contre-exemple qui avait fait rejeter « positionner le bloc sur le
     // max des occurred_at ». La date de rang ne bouge jamais.
-    const evenements = [
+    const events = [
       f.start('ancien', '2019-01-01T20:00:00.000Z'),
       f.start('recent', '2026-01-01T20:00:00.000Z'),
       f.note('ancien', 'toujours aussi bon', '2026-07-27T22:00:00.000Z'),
     ]
 
-    const entrees = journal(evenements)
-    const marqueurs = entrees.filter((e) => e.genre === 'marqueur')
+    const entries = journal(events)
+    const markers = entries.filter((e) => e.kind === 'marqueur')
 
     // Le cycle 2026 (#2) reste au-dessus du cycle 2019 (#1).
-    expect(marqueurs.map((m) => m.genre === 'marqueur' && m.numero)).toEqual([2, 1])
+    expect(markers.map((m) => m.kind === 'marqueur' && m.number)).toEqual([2, 1])
   })
 
   it('place les événements hors cycle à leur position chronologique', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('c1', '2019-01-01T20:00:00.000Z'),
       f.fav('2022-06-01T20:00:00.000Z'),
       f.rewatch('c2', '2026-01-01T20:00:00.000Z'),
     ]
 
-    const entrees = journal(evenements)
-    const types = entrees.map((e) =>
-      e.genre === 'marqueur' ? `#${e.numero}` : e.evenement.type,
+    const entries = journal(events)
+    const types = entries.map((e) =>
+      e.kind === 'marqueur' ? `#${e.number}` : e.event.type,
     )
 
     // 2026 en haut, puis le coup de cœur de 2022, puis 2019 en bas.
@@ -78,13 +78,13 @@ describe('journal', () => {
   })
 
   it('exclut les événements de progression', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Tout est live : les dates de survenue suivent l'ordre d'appel.
-    const evenements = [f.start('c1'), f.prog('c1', 30), f.prog('c1', 60), f.seen('c1')]
+    const events = [f.start('c1'), f.prog('c1', 30), f.prog('c1', 60), f.seen('c1')]
 
-    const types = journal(evenements)
-      .filter((e) => e.genre === 'evenement')
-      .map((e) => e.genre === 'evenement' && e.evenement.type)
+    const types = journal(events)
+      .filter((e) => e.kind === 'evenement')
+      .map((e) => e.kind === 'evenement' && e.event.type)
 
     // Personne ne veut relire qu'il a poussé la barre à 30 % un mardi soir.
     expect(types).not.toContain('PROG')
@@ -92,59 +92,59 @@ describe('journal', () => {
   })
 
   it('exclut les événements annulés', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     const drop = f.drop('c1')
-    const evenements = [f.start('c1', '2026-01-01T20:00:00.000Z'), drop, f.annule(drop.id)]
+    const events = [f.start('c1', '2026-01-01T20:00:00.000Z'), drop, f.voided(drop.id)]
 
-    const types = journal(evenements)
-      .filter((e) => e.genre === 'evenement')
-      .map((e) => e.genre === 'evenement' && e.evenement.type)
+    const types = journal(events)
+      .filter((e) => e.kind === 'evenement')
+      .map((e) => e.kind === 'evenement' && e.event.type)
 
     expect(types).toEqual(['START'])
   })
 
   it('place les dates inconnues en fin de liste', () => {
-    const f = creerFabrique()
-    const evenements = [
+    const f = createFactory()
+    const events = [
       f.start('date', '2019-01-01T20:00:00.000Z'),
-      f.start('sans-date', null, 'inconnu'),
+      f.start('sans-date', null, 'unknown'),
     ]
 
-    const entrees = journal(evenements)
-    const marqueurs = entrees.filter((e) => e.genre === 'marqueur')
+    const entries = journal(events)
+    const markers = entries.filter((e) => e.kind === 'marqueur')
 
     // Le cycle sans date est le #1 par rang, mais il s'affiche en dernier :
     // on ne peut pas le placer chronologiquement puisqu'on n'a pas sa date.
-    expect(marqueurs.map((m) => m.genre === 'marqueur' && m.numero)).toEqual([2, 1])
-    expect(entrees[entrees.length - 1]?.genre).toBe('evenement')
+    expect(markers.map((m) => m.kind === 'marqueur' && m.number)).toEqual([2, 1])
+    expect(entries[entries.length - 1]?.kind).toBe('evenement')
   })
 
   it('conserve les types inconnus en les signalant', () => {
-    const f = creerFabrique()
-    const evenements = [f.start('c1', '2026-01-01T20:00:00.000Z'), f.inconnu('LEND')]
+    const f = createFactory()
+    const events = [f.start('c1', '2026-01-01T20:00:00.000Z'), f.unknown('LEND')]
 
-    const entrees = journal(evenements)
-    const inconnu = entrees.find(
-      (e) => e.genre === 'evenement' && e.evenement.type === 'LEND',
+    const entries = journal(events)
+    const unknown = entries.find(
+      (e) => e.kind === 'evenement' && e.event.type === 'LEND',
     )
 
     // Un trou dans l'historique serait pire qu'une ligne qu'on ne sait pas
     // interpréter : l'UI l'affiche en gris avec son type brut.
-    expect(inconnu).toBeDefined()
-    expect(inconnu?.genre === 'evenement' && inconnu.connu).toBe(false)
+    expect(unknown).toBeDefined()
+    expect(unknown?.kind === 'evenement' && unknown.known).toBe(false)
   })
 
   it('départage deux événements de même date par ordre d écriture', () => {
-    const f = creerFabrique()
+    const f = createFactory()
     // Cas courant du rétro-datage : START et SEEN partagent la date saisie.
-    const evenements = [
-      f.start('c1', '2019-05-01T00:00:00.000Z', 'annee'),
+    const events = [
+      f.start('c1', '2019-05-01T00:00:00.000Z', 'year'),
       f.seen('c1', '2019-05-01T00:00:00.000Z'),
     ]
 
-    const types = journal(evenements)
-      .filter((e) => e.genre === 'evenement')
-      .map((e) => e.genre === 'evenement' && e.evenement.type)
+    const types = journal(events)
+      .filter((e) => e.kind === 'evenement')
+      .map((e) => e.kind === 'evenement' && e.event.type)
 
     // Le plus récemment écrit en premier, puisque l'affichage est décroissant.
     expect(types).toEqual(['SEEN', 'START'])

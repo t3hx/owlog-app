@@ -1,4 +1,4 @@
-import { EcranEnConstruction } from '@/ui/components/EcranEnConstruction'
+import { UnderConstruction } from '@/ui/components/UnderConstruction'
 
 /**
  * Accueil.
@@ -10,18 +10,18 @@ import { EcranEnConstruction } from '@/ui/components/EcranEnConstruction'
  * Ce qui existe déjà : la salutation, qui prouve que le prénom demandé à la
  * première ouverture a bien été persisté et relu.
  */
-export function Accueil({ prenom }: { prenom: string }) {
+export function Home({ firstName }: { firstName: string }) {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-1 px-5 pt-8">
       <h1 className="font-display text-[25px] font-semibold text-text">
-        Bonsoir, {prenom}
+        Bonsoir, {firstName}
       </h1>
       <p className="font-mono text-[11px] text-muted">› 0 en cours · 0 à voir</p>
 
-      <EcranEnConstruction
-        titre="En cours"
-        etape={8}
-        quoi="Les titres que tu regardes, avec leur progression et le bouton pour avancer."
+      <UnderConstruction
+        title="En cours"
+        step={8}
+        what="Les titres que tu regardes, avec leur progression et le bouton pour avancer."
       />
     </div>
   )

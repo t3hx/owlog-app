@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { db } from '@/adapters/dexie/db'
-import { creerEventStore } from '@/adapters/dexie/eventStore'
-import { creerFabrique, FILM, SERIE } from '@/domain/test/fabrique'
-import type { Evenement } from '@/domain/types'
+import { createEventStore } from '@/adapters/dexie/eventStore'
+import { createFactory, MOVIE, SERIES } from '@/domain/test/factory'
+import type { DomainEvent } from '@/domain/types'
 
 /**
  * Adaptateur Dexie du port EventStore.
@@ -20,68 +20,68 @@ describe('EventStore (adaptateur Dexie)', () => {
   })
 
   it('relit les evenements ecrits', async () => {
-    const store = creerEventStore()
-    const f = creerFabrique()
-    const evenements = [f.watch(), f.start('c1')] as Evenement[]
+    const store = createEventStore()
+    const f = createFactory()
+    const events = [f.watch(), f.start('c1')] as DomainEvent[]
 
-    await store.append(evenements)
+    await store.append(events)
 
-    const relus = await store.eventsForMedia(FILM)
+    const relus = await store.eventsForMedia(MOVIE)
     expect(relus.map((e) => e.type)).toEqual(['WATCH', 'START'])
   })
 
   it('met a jour media_state dans la meme transaction', async () => {
-    const store = creerEventStore()
-    const f = creerFabrique()
+    const store = createEventStore()
+    const f = createFactory()
 
-    await store.append([f.watch(), f.start('c1')] as Evenement[])
+    await store.append([f.watch(), f.start('c1')] as DomainEvent[])
 
-    const etats = await store.allMediaStates()
-    expect(etats).toHaveLength(1)
-    expect(etats[0]).toMatchObject({ ref: FILM, statut: 'en-cours', cycleCourant: 'c1' })
+    const states = await store.allMediaStates()
+    expect(states).toHaveLength(1)
+    expect(states[0]).toMatchObject({ ref: MOVIE, status: 'watching', currentCycle: 'c1' })
   })
 
   it('recalcule l etat a chaque append successif', async () => {
-    const store = creerEventStore()
-    const f = creerFabrique()
+    const store = createEventStore()
+    const f = createFactory()
 
-    await store.append([f.watch()] as Evenement[])
-    expect((await store.allMediaStates())[0]?.statut).toBe('a-voir')
+    await store.append([f.watch()] as DomainEvent[])
+    expect((await store.allMediaStates())[0]?.status).toBe('to-watch')
 
-    await store.append([f.start('c1')] as Evenement[])
-    expect((await store.allMediaStates())[0]?.statut).toBe('en-cours')
+    await store.append([f.start('c1')] as DomainEvent[])
+    expect((await store.allMediaStates())[0]?.status).toBe('watching')
 
-    await store.append([f.seen('c1')] as Evenement[])
-    expect((await store.allMediaStates())[0]?.statut).toBe('vu')
+    await store.append([f.seen('c1')] as DomainEvent[])
+    expect((await store.allMediaStates())[0]?.status).toBe('seen')
   })
 
   it('met a jour une ligne par media touche', async () => {
-    const store = creerEventStore()
-    const film = creerFabrique(FILM)
-    const serie = creerFabrique(SERIE)
+    const store = createEventStore()
+    const film = createFactory(MOVIE)
+    const serie = createFactory(SERIES)
 
-    await store.append([film.watch(), serie.watch(), serie.start('c1')] as Evenement[])
+    await store.append([film.watch(), serie.watch(), serie.start('c1')] as DomainEvent[])
 
-    const etats = await store.allMediaStates()
-    const parRef = new Map(etats.map((etat) => [etat.ref, etat.statut]))
+    const states = await store.allMediaStates()
+    const parRef = new Map(states.map((etat) => [etat.ref, etat.status]))
 
-    expect(parRef.get(FILM)).toBe('a-voir')
-    expect(parRef.get(SERIE)).toBe('en-cours')
+    expect(parRef.get(MOVIE)).toBe('to-watch')
+    expect(parRef.get(SERIES)).toBe('watching')
   })
 
   it('ne rend que les evenements du media demande', async () => {
-    const store = creerEventStore()
-    const film = creerFabrique(FILM)
-    const serie = creerFabrique(SERIE)
+    const store = createEventStore()
+    const film = createFactory(MOVIE)
+    const serie = createFactory(SERIES)
 
-    await store.append([film.watch(), serie.watch(), serie.fav()] as Evenement[])
+    await store.append([film.watch(), serie.watch(), serie.fav()] as DomainEvent[])
 
-    expect(await store.eventsForMedia(FILM)).toHaveLength(1)
-    expect(await store.eventsForMedia(SERIE)).toHaveLength(2)
+    expect(await store.eventsForMedia(MOVIE)).toHaveLength(1)
+    expect(await store.eventsForMedia(SERIES)).toHaveLength(2)
   })
 
   it('accepte un append vide sans rien ecrire', async () => {
-    const store = creerEventStore()
+    const store = createEventStore()
 
     await store.append([])
 
@@ -89,21 +89,21 @@ describe('EventStore (adaptateur Dexie)', () => {
   })
 
   it('pagine par identifiant croissant', async () => {
-    const store = creerEventStore()
-    const f = creerFabrique()
-    await store.append([f.watch(), f.start('c1'), f.seen('c1')] as Evenement[])
+    const store = createEventStore()
+    const f = createFactory()
+    await store.append([f.watch(), f.start('c1'), f.seen('c1')] as DomainEvent[])
 
-    const premiere = await store.eventsSince(null, 2)
-    expect(premiere.map((e) => e.type)).toEqual(['WATCH', 'START'])
+    const firstPage = await store.eventsSince(null, 2)
+    expect(firstPage.map((e) => e.type)).toEqual(['WATCH', 'START'])
 
-    const seconde = await store.eventsSince(premiere[1]?.id ?? null, 2)
-    expect(seconde.map((e) => e.type)).toEqual(['SEEN'])
+    const second = await store.eventsSince(firstPage[1]?.id ?? null, 2)
+    expect(second.map((e) => e.type)).toEqual(['SEEN'])
   })
 
   it('reconstruit media_state a l identique', async () => {
-    const store = creerEventStore()
-    const f = creerFabrique()
-    await store.append([f.watch(), f.start('c1'), f.rate('c1', 4)] as Evenement[])
+    const store = createEventStore()
+    const f = createFactory()
+    await store.append([f.watch(), f.start('c1'), f.rate('c1', 4)] as DomainEvent[])
 
     const avant = await store.allMediaStates()
 
@@ -117,15 +117,15 @@ describe('EventStore (adaptateur Dexie)', () => {
   })
 
   it('reconstruit aussi une ligne devenue fausse', async () => {
-    const store = creerEventStore()
-    const f = creerFabrique()
-    await store.append([f.watch(), f.start('c1')] as Evenement[])
+    const store = createEventStore()
+    const f = createFactory()
+    await store.append([f.watch(), f.start('c1')] as DomainEvent[])
 
-    await db.media_state.update(FILM, { statut: 'vu' })
-    expect((await store.allMediaStates())[0]?.statut).toBe('vu')
+    await db.media_state.update(MOVIE, { status: 'seen' })
+    expect((await store.allMediaStates())[0]?.status).toBe('seen')
 
     await store.rebuildAllState()
 
-    expect((await store.allMediaStates())[0]?.statut).toBe('en-cours')
+    expect((await store.allMediaStates())[0]?.status).toBe('watching')
   })
 })

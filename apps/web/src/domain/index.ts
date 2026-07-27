@@ -52,15 +52,15 @@
  *   d'ouverture. Une seule définition, trois consommateurs : la numérotation
  *   `#N`, la dérivation du statut, le tri du journal.
  * - Le statut se dérive du cycle de **rang** le plus élevé, jamais du
- *   `created_at` le plus récent. Voir `rules/statut.ts` pour le piège.
+ *   `created_at` le plus récent. Voir `rules/status.ts` pour le piège.
  */
 
 export * from '@/domain/commands'
 export * from '@/domain/reducers/applyVoids'
-export * from '@/domain/reducers/etatMedia'
+export * from '@/domain/reducers/mediaState'
 export * from '@/domain/reducers/journal'
-export * from '@/domain/reducers/metriques'
+export * from '@/domain/reducers/metrics'
 export * from '@/domain/reducers/projections'
 export * from '@/domain/rules/cycles'
-export * from '@/domain/rules/statut'
+export * from '@/domain/rules/status'
 export * from '@/domain/types'

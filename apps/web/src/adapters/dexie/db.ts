@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 
-import type { LigneEtat } from '@/domain/reducers/etatMedia'
-import type { EvenementStocke } from '@/domain/types'
+import type { MediaStateRow } from '@/domain/reducers/mediaState'
+import type { StoredEvent } from '@/domain/types'
 
 /**
  * Base locale.
@@ -18,26 +18,26 @@ import type { EvenementStocke } from '@/domain/types'
  * d'historique et personne ne veut relire dans le journal qu'il a changé
  * son prénom.
  */
-export interface LigneReglage {
-  cle: string
-  valeur: string
+export interface SettingRow {
+  key: string
+  value: string
 }
 
 export const db = new Dexie('owlog') as Dexie & {
-  settings: EntityTable<LigneReglage, 'cle'>
-  events: EntityTable<EvenementStocke, 'id'>
-  media_state: EntityTable<LigneEtat, 'ref'>
+  settings: EntityTable<SettingRow, 'key'>
+  events: EntityTable<StoredEvent, 'id'>
+  media_state: EntityTable<MediaStateRow, 'ref'>
 }
 
 db.version(1).stores({
-  settings: '&cle',
+  settings: '&key',
 })
 
 // Version 2 : le domaine. Dexie applique les migrations dans l'ordre des
 // versions, donc une base créée à l'étape 1 reçoit ces tables sans perdre
 // le prénom déjà saisi.
 db.version(2).stores({
-  settings: '&cle',
+  settings: '&key',
   events: '&id, media_ref, created_at',
   media_state: '&ref, statut',
 })
