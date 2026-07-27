@@ -9,3 +9,4 @@ dist-ssr/
 coverage/
 .vite/
 *.tsbuildinfo
+.gstack/

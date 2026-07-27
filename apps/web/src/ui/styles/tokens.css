@@ -59,6 +59,7 @@
   --radius-searchbar: 0 14px 14px 14px;
 
   /* --- Ombres et halos --- */
+  --shadow-glow-sm: 0 0 10px rgb(39 255 147 / 0.35); /* icone de nav active */
   --shadow-glow: 0 0 12px rgb(39 255 147 / 0.35);
   --shadow-glow-strong: 0 0 18px rgb(39 255 147 / 0.35);
 }
