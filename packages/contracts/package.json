@@ -1,0 +1,13 @@
+{
+  "name": "@owlog/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "echo 'no tests' && exit 0",
+    "lint": "echo 'no lint' && exit 0"
+  }
+}

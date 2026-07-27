@@ -1,5 +1,9 @@
 packages:
   - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  esbuild: set this to true or false
 
 # esbuild (via Vite) est la seule dependance autorisee a executer un script
 # d'installation. Tout le reste est installe sans script : une dependance qui
