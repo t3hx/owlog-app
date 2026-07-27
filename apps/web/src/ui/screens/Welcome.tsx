@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
+import { Attribution } from '@/ui/components/Attribution'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**
@@ -99,6 +100,8 @@ export function Welcome() {
           {t('welcome.legal')}
         </p>
       </form>
+
+      <Attribution />
     </section>
   )
 }

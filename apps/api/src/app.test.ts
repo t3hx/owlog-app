@@ -1,0 +1,292 @@
+import { SHARED_TOKEN_HEADER, type MediaDetail, type SearchResponse } from '@owlog/contracts'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { createApp } from './app.ts'
+import type { Config } from './config.ts'
+import { UpstreamError, type TmdbClient } from './tmdb.ts'
+
+/**
+ * Routes du service.
+ *
+ * Les tests n'appellent jamais TMDB : le client est injecté. Ce qui est
+ * vérifié ici, ce n'est pas la forme des données de TMDB — c'est le
+ * comportement du proxy, qui est le seul code qu'on écrit.
+ */
+const CONFIG: Config = {
+  port: 0,
+  tmdbToken: 'jeton-tmdb-de-test',
+  sharedToken: 'jeton-partage-de-test',
+  allowedOrigins: [],
+  trustedProxies: ['10.0.0.1'],
+}
+
+const HIT: SearchResponse = {
+  hits: [
+    {
+      ref: 'tmdb:tv/95396',
+      kind: 'tv',
+      title: 'Severance',
+      year: 2022,
+      posterPath: '/poster.jpg',
+    },
+  ],
+  count: 1,
+}
+
+const DETAIL: MediaDetail = {
+  ...HIT.hits[0]!,
+  backdropPath: '/backdrop.jpg',
+  genres: ['Drame', 'Mystère'],
+  totalRuntime: 1800,
+  numberOfEpisodes: 19,
+  overview: 'Mark dirige une équipe…',
+  externalRatings: { tmdb: 8.4 },
+}
+
+function fakeTmdb(overrides: Partial<TmdbClient> = {}): TmdbClient {
+  return {
+    search: vi.fn(async () => HIT),
+    detail: vi.fn(async () => DETAIL),
+    ...overrides,
+  }
+}
+
+function authenticated(path: string, headers: Record<string, string> = {}) {
+  return new Request(`http://local${path}`, {
+    headers: { [SHARED_TOKEN_HEADER]: CONFIG.sharedToken, ...headers },
+  })
+}
+
+describe('authentification', () => {
+  it('refuse une requête sans jeton', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(new Request('http://local/search?q=dune'))
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toEqual({ error: 'unauthorized' })
+  })
+
+  it('refuse un jeton faux', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(
+      authenticated('/search?q=dune', { [SHARED_TOKEN_HEADER]: 'faux' }),
+    )
+
+    expect(response.status).toBe(401)
+  })
+
+  it('laisse passer la sonde de vie sans jeton', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    // Dokploy doit pouvoir vérifier le conteneur sans détenir le jeton.
+    const response = await app.fetch(new Request('http://local/health'))
+
+    expect(response.status).toBe(200)
+  })
+})
+
+describe('recherche', () => {
+  it('rend les résultats normalisés', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/search?q=severance'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual(HIT)
+  })
+
+  it('refuse une requête vide', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/search?q=%20%20'))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('transmet la langue demandée', async () => {
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    await app.fetch(authenticated('/search?q=dune&lang=en-US'))
+
+    expect(tmdb.search).toHaveBeenCalledWith('dune', 'en-US')
+  })
+
+  it('utilise le français par défaut', async () => {
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    await app.fetch(authenticated('/search?q=dune'))
+
+    expect(tmdb.search).toHaveBeenCalledWith('dune', 'fr-FR')
+  })
+})
+
+describe('cache', () => {
+  it('ne rappelle pas TMDB pour la même requête', async () => {
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    await app.fetch(authenticated('/search?q=dune'))
+    await app.fetch(authenticated('/search?q=dune'))
+
+    // C'est le quota TMDB que le cache protège, pas la latence.
+    expect(tmdb.search).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignore la casse de la requête', async () => {
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    await app.fetch(authenticated('/search?q=Dune'))
+    await app.fetch(authenticated('/search?q=dune'))
+
+    expect(tmdb.search).toHaveBeenCalledTimes(1)
+  })
+
+  it('sépare les caches par langue', async () => {
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    await app.fetch(authenticated('/search?q=dune&lang=fr-FR'))
+    await app.fetch(authenticated('/search?q=dune&lang=en-US'))
+
+    // Sans ça, basculer la langue afficherait les titres de l'autre.
+    expect(tmdb.search).toHaveBeenCalledTimes(2)
+  })
+
+  it('expire après vingt-quatre heures', async () => {
+    let maintenant = 0
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb, now: () => maintenant })
+
+    await app.fetch(authenticated('/search?q=dune'))
+    maintenant = 25 * 60 * 60 * 1000
+    await app.fetch(authenticated('/search?q=dune'))
+
+    expect(tmdb.search).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('fiche média', () => {
+  it('rend le détail normalisé', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/media/tmdb:tv/95396'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual(DETAIL)
+  })
+
+  it('refuse une référence mal formée', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/media/imdb:tt0111161'))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('rend 404 quand TMDB ne connaît pas la référence', async () => {
+    const tmdb = fakeTmdb({
+      detail: vi.fn(async () => {
+        throw new UpstreamError(404, null)
+      }),
+    })
+    const app = createApp({ config: CONFIG, tmdb })
+
+    const response = await app.fetch(authenticated('/media/tmdb:movie/999999999'))
+
+    expect(response.status).toBe(404)
+  })
+})
+
+describe('propagation des erreurs amont', () => {
+  it('renvoie 429 avec le délai que TMDB indique', async () => {
+    const tmdb = fakeTmdb({
+      search: vi.fn(async () => {
+        throw new UpstreamError(429, 17)
+      }),
+    })
+    const app = createApp({ config: CONFIG, tmdb })
+
+    const response = await app.fetch(authenticated('/search?q=dune'))
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get('Retry-After')).toBe('17')
+    // Le client doit pouvoir dire combien de temps attendre, pas afficher
+    // une panne générique.
+    await expect(response.json()).resolves.toEqual({
+      error: 'rate-limited',
+      retryAfter: 17,
+    })
+  })
+
+  it('invente un délai quand TMDB n en donne pas', async () => {
+    const tmdb = fakeTmdb({
+      search: vi.fn(async () => {
+        throw new UpstreamError(429, null)
+      }),
+    })
+    const app = createApp({ config: CONFIG, tmdb })
+
+    const response = await app.fetch(authenticated('/search?q=dune'))
+
+    expect(response.headers.get('Retry-After')).toBe('10')
+  })
+
+  it('renvoie 502 pour toute autre panne amont', async () => {
+    const tmdb = fakeTmdb({
+      search: vi.fn(async () => {
+        throw new UpstreamError(503, null)
+      }),
+    })
+    const app = createApp({ config: CONFIG, tmdb })
+
+    const response = await app.fetch(authenticated('/search?q=dune'))
+
+    expect(response.status).toBe(502)
+    await expect(response.json()).resolves.toEqual({ error: 'upstream-unavailable' })
+  })
+})
+
+describe('limitation de débit', () => {
+  let maintenant: number
+
+  beforeEach(() => {
+    maintenant = 0
+  })
+
+  it('coupe au-delà de la limite, sur la même IP', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb(), now: () => maintenant })
+    const entete = { 'cf-connecting-ip': '203.0.113.7' }
+
+    let dernier = new Response()
+    for (let index = 0; index < 61; index += 1) {
+      // Une requête distincte à chaque fois, sinon le cache répondrait avant
+      // d'atteindre le limiteur.
+      dernier = await app.fetch(authenticated(`/search?q=titre${index}`, entete))
+    }
+
+    expect(dernier.status).toBe(429)
+    expect(Number(dernier.headers.get('Retry-After'))).toBeGreaterThan(0)
+  })
+
+  it('compte séparément deux IP distinctes', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb(), now: () => maintenant })
+
+    for (let index = 0; index < 60; index += 1) {
+      await app.fetch(
+        authenticated(`/search?q=a${index}`, { 'cf-connecting-ip': '203.0.113.7' }),
+      )
+    }
+
+    const autre = await app.fetch(
+      authenticated('/search?q=dune', { 'cf-connecting-ip': '203.0.113.8' }),
+    )
+
+    // Limiter sur l'IP du proxy bannirait tout le monde d'un coup.
+    expect(autre.status).toBe(200)
+  })
+})

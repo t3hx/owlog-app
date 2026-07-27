@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
 import type { EventStore } from '@/ports/EventStore'
+import type { MediaCatalog } from '@/ports/MediaCatalog'
 import type { SettingsStore } from '@/ports/SettingsStore'
 
 /**
@@ -21,6 +22,7 @@ import type { SettingsStore } from '@/ports/SettingsStore'
 export interface Ports {
   readonly settings: SettingsStore
   readonly events: EventStore
+  readonly catalog: MediaCatalog
 }
 
 const ContextePorts = createContext<Ports | null>(null)
