@@ -1,13 +1,22 @@
 import Dexie, { type EntityTable } from 'dexie'
 
+import type { LigneEtat } from '@/domain/reducers/etatMedia'
+import type { EvenementStocke } from '@/domain/types'
+
 /**
  * Base locale.
  *
- * À l'étape 1, elle ne porte que les réglages. Les tables `events`
- * (source de vérité, append-only), `media_state` (dérivée, reconstructible),
- * `media_cache` et `pending_adds` arrivent à l'étape 2, en version 2 du
- * schéma — Dexie applique les migrations dans l'ordre des versions, donc
- * une base déjà créée en version 1 les recevra sans perdre son contenu.
+ * Deux natures de table, à ne jamais confondre :
+ *
+ * - **`events` est la source de vérité.** Append-only : jamais de mise à
+ *   jour, jamais de suppression. Une correction est un événement `VOID`.
+ * - **`media_state` est dérivée.** Reconstructible intégralement depuis
+ *   `events` par `rebuildAllState`. La perdre ne perd aucune donnée
+ *   utilisateur.
+ *
+ * `settings` est à part : ce ne sont pas des événements, ils n'ont pas
+ * d'historique et personne ne veut relire dans le journal qu'il a changé
+ * son prénom.
  */
 export interface LigneReglage {
   cle: string
@@ -16,8 +25,19 @@ export interface LigneReglage {
 
 export const db = new Dexie('owlog') as Dexie & {
   settings: EntityTable<LigneReglage, 'cle'>
+  events: EntityTable<EvenementStocke, 'id'>
+  media_state: EntityTable<LigneEtat, 'ref'>
 }
 
 db.version(1).stores({
   settings: '&cle',
+})
+
+// Version 2 : le domaine. Dexie applique les migrations dans l'ordre des
+// versions, donc une base créée à l'étape 1 reçoit ces tables sans perdre
+// le prénom déjà saisi.
+db.version(2).stores({
+  settings: '&cle',
+  events: '&id, media_ref, created_at',
+  media_state: '&ref, statut',
 })
