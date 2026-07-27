@@ -36,6 +36,8 @@ pnpm lint      # ESLint
 
 ```
 apps/web/                 PWA React + TypeScript
+apps/api/                 proxy TMDB (Hono) — cache la cle, normalise la reponse
+packages/contracts/       contrat partage entre les deux
   src/
     domain/               règles, commandes, réducteurs. Zéro infrastructure.
       commands/           construction d'événements
@@ -62,7 +64,7 @@ Le document de design complet — modèle de données, règles de dérivation, o
 
 ## État
 
-Étapes 1 et 2 sur 11 livrées : socle, tokens, polices, état vide, puis le domaine complet (126 tests). En cours : étape 3, proxy TMDB et PWA installable.
+Étapes 1 à 3 sur 11 livrées : socle et état vide, domaine complet (126 tests), puis le proxy TMDB et la PWA installable (19 tests de route). Reste à déployer — voir [DEPLOY.md](DEPLOY.md). En cours : étape 4, recherche et ajout en un tap.
 
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
 
