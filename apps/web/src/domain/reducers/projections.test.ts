@@ -110,7 +110,9 @@ describe('progression', () => {
       f.start('c1', '2026-01-01T20:00:00.000Z'),
       f.prog('c1', 60, {
         label: 'S02E05',
-        labelCreatedAt: '2026-01-01T10:00:00.000Z',
+        // Anterieur au created_at du PROG, que la fabrique place a
+        // 2026-01-01T00:00:0N : le label decrit un episode plus ancien.
+        labelCreatedAt: '2025-12-20T10:00:00.000Z',
       }),
     ]
 
@@ -225,9 +227,10 @@ describe('estCoupDeCoeur', () => {
 
   it('suit l ordre d ecriture, pas l ordre du tableau', () => {
     const f = creerFabrique()
-    const fav = f.fav()
+    // unfav est ecrit EN PREMIER, fav ensuite : c'est fav qui doit gagner.
     const unfav = f.unfav()
-    // Le tableau est desordonne ; c'est created_at qui tranche.
-    expect(estCoupDeCoeur([unfav, fav])).toBe(true)
+    const fav = f.fav()
+    // Le tableau les presente dans l'ordre inverse de l'ecriture.
+    expect(estCoupDeCoeur([fav, unfav])).toBe(true)
   })
 })
