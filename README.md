@@ -62,6 +62,6 @@ Le document de design complet — modèle de données, règles de dérivation, o
 
 ## État
 
-En construction. Étape 1 sur 11 : socle, tokens, polices, état vide.
+Étape 1 sur 11 livrée : socle, tokens, polices, état vide. En cours : étape 2, le domaine.
 
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
