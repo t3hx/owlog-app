@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>body{margin:0;background:#070a12;font-family:'IBM Plex Sans',sans-serif}a{color:#27ff93}a:hover{color:#8fffc4}input{outline:none}*{box-sizing:border-box}</style>
+</helmet>
+<div style="min-height:100vh;background:#070a12;color:#eaeef2;position:relative">
+  <div style="position:fixed;inset:0;background:radial-gradient(90% 45% at 70% -10%,rgba(39,255,147,.1),transparent 55%),radial-gradient(80% 40% at 15% -10%,rgba(47,123,255,.14),transparent 60%);pointer-events:none;z-index:0"></div>
+
+  <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+  <div style="position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px;max-width:1100px;margin:0 auto;width:100%">
+      <div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:21px;letter-spacing:1px">OWL<span style="color:#27ff93;text-shadow:0 0 12px rgba(39,255,147,.55)">O</span>G</div>
+      <div onClick="{{ goLogin }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:10px 18px;border-radius:10px;border:1px solid #2c3448;color:#eaeef2;cursor:pointer" style-hover="border-color:#27ff93;color:#27ff93">se connecter</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px;max-width:640px;margin:0 auto;width:100%">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#27ff93;letter-spacing:1px">// FILMS · SÉRIES · ET BIENTÔT PLUS</div>
+      <div style="font-family:'Chakra Petch',sans-serif;font-size:44px;font-weight:700;line-height:1.1;margin-top:16px;text-wrap:pretty">Tout ce que tu regardes.<br>Un seul <span style="background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent">log</span>.</div>
+      <div style="font-size:15.5px;line-height:1.6;color:#8a8f9c;margin-top:16px;text-wrap:pretty">Ajoute un titre en un geste, suis ta progression, note, revois, et garde l'historique complet de ta vie de spectateur.</div>
+      <div onClick="{{ goLogin }}" style="display:flex;align-items:center;justify-content:center;height:50px;border-radius:12px;background:linear-gradient(90deg,#27ff93,#2f7bff);box-shadow:0 0 24px rgba(39,255,147,.3);margin-top:26px;cursor:pointer;max-width:340px" style-hover="box-shadow:0 0 34px rgba(39,255,147,.5)"><span style="font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:600;color:#070a12;letter-spacing:.5px">COMMENCER — C'EST GRATUIT</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;margin-top:10px">sans carte · données exportables · api tmdb</div>
+      <div style="display:flex;gap:36px;margin-top:48px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:8px"><span style="color:#27ff93;font-size:15px">+</span><span style="font-size:13.5px;font-weight:600">Ajout en un tap</span></div><span style="font-size:12px;color:#8a8f9c;line-height:1.5">Cherche, tape +, c'est loggé.</span></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:8px"><span style="color:#7eb0ff;font-size:14px">↻</span><span style="font-size:13.5px;font-weight:600">Journal &amp; revisionnages</span></div><span style="font-size:12px;color:#8a8f9c;line-height:1.5">Chaque cycle daté, archivé.</span></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;align-items:center;gap:8px"><span style="color:#ffd64a;font-size:13px">%</span><span style="font-size:13.5px;font-weight:600">Stats à ton image</span></div><span style="font-size:12px;color:#8a8f9c;line-height:1.5">Ton année en chiffres.</span></div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:18px 24px;max-width:1100px;margin:0 auto;width:100%"><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#5f6474">© owlog 2026</span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#5f6474">confidentialité · contact</span></div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+  <div style="position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column">
+    <div style="padding:20px 24px"><div onClick="{{ goLanding }}" style="width:36px;height:36px;border-radius:10px;background:rgba(10,14,23,.75);border:1px solid #2c3448;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer" style-hover="border-color:#27ff93">←</div></div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 20px 40px">
+      <div style="width:420px;max-width:100%;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:18px;padding:38px 32px;box-shadow:0 20px 60px rgba(0,0,0,.45)">
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:26px;letter-spacing:1px">OWL<span style="color:#27ff93;text-shadow:0 0 14px rgba(39,255,147,.55)">O</span>G</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8f9c;margin-top:8px">ravi de te revoir</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:28px">
+          <div onClick="{{ goApp }}" style="display:flex;align-items:center;gap:12px;height:48px;border-radius:12px;background:#121724;border:1px solid #2c3448;padding:0 16px;cursor:pointer" style-hover="border-color:#27ff93"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #eaeef2;flex:none;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600">G</div><span style="font-size:14px;font-weight:500">Continuer avec Google</span></div>
+          <div onClick="{{ goApp }}" style="display:flex;align-items:center;gap:12px;height:48px;border-radius:12px;background:#121724;border:1px solid #2c3448;padding:0 16px;cursor:pointer" style-hover="border-color:#27ff93"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #eaeef2;flex:none;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600">A</div><span style="font-size:14px;font-weight:500">Continuer avec Apple</span></div>
+          <div onClick="{{ goApp }}" style="display:flex;align-items:center;gap:12px;height:48px;border-radius:12px;background:#121724;border:1px solid #2c3448;padding:0 16px;cursor:pointer" style-hover="border-color:#27ff93"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #eaeef2;flex:none;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600">D</div><span style="font-size:14px;font-weight:500">Continuer avec Discord</span></div>
+          <div style="display:flex;align-items:center;gap:12px;margin:8px 0"><div style="flex:1;height:1px;background:#212a3d"></div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474">ou par e-mail</span><div style="flex:1;height:1px;background:#212a3d"></div></div>
+          <div style="display:flex;align-items:center;gap:10px;background:#121724;border:1px solid rgba(39,255,147,.35);border-radius:12px;padding:0 14px;box-shadow:0 0 20px rgba(39,255,147,.08) inset"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#27ff93">›</span><input placeholder="adresse e-mail" style="flex:1;background:transparent;border:none;color:#eaeef2;font-size:14px;font-family:'IBM Plex Sans',sans-serif;padding:14px 0"></input></div>
+          <div onClick="{{ goApp }}" style="display:flex;align-items:center;justify-content:center;height:48px;border-radius:12px;background:linear-gradient(90deg,#27ff93,#2f7bff);box-shadow:0 0 22px rgba(39,255,147,.3);cursor:pointer" style-hover="box-shadow:0 0 32px rgba(39,255,147,.5)"><span style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;color:#070a12;letter-spacing:.5px">RECEVOIR LE LIEN MAGIQUE</span></div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#5f6474;text-align:center;margin-top:4px">pas de mot de passe · un lien par e-mail suffit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+  <div style="position:relative;z-index:1;display:flex;min-height:100vh">
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+    <div style="width:216px;flex:none;background:rgba(10,14,23,.9);border-right:1px solid #212a3d;display:flex;flex-direction:column;padding:26px 16px;position:sticky;top:0;height:100vh">
+      <div style="font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:20px;letter-spacing:1px;padding:0 10px">OWL<span style="color:#27ff93;text-shadow:0 0 12px rgba(39,255,147,.55)">O</span>G</div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:34px">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+          <div onClick="{{ n.onGo }}" style="display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:10px;cursor:pointer;background:{{ n.bg }};border:1px solid {{ n.bd }}">
+            <div style="width:18px;height:18px;border-radius:{{ n.iconRadius }};background:{{ n.iconBg }};border:{{ n.iconBorder }};box-shadow:{{ n.iconGlow }}"></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ n.color }}">{{ n.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:1"></div>
+      <div onClick="{{ goLanding }}" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;border:1px solid #212a3d;cursor:pointer" style-hover="border-color:#2c3448">
+        <div style="width:30px;height:30px;border-radius:50%;background:#1a2032;border:1px solid rgba(39,255,147,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#27ff93">L</div>
+        <div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:12px;font-weight:600">Léo</span><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5f6474">@leo.log</span></div>
+      </div>
+    </div>
+    </sc-if>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="width:100%;max-width:960px;margin:0 auto;padding:24px 20px 110px;flex:1">
+
+      <sc-if value="{{ showSearch }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-bottom:8px">
+        <div style="display:flex;gap:6px;padding:0 12px">
+          <sc-for list="{{ typeTabs }}" as="t" hint-placeholder-count="3">
+            <div onClick="{{ t.onPick }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px 16px;background:{{ t.bg }};border:1px solid {{ t.bd }};border-bottom:{{ t.bb }};border-radius:10px 10px 0 0;margin-bottom:{{ t.mb }};color:{{ t.color }};position:relative;z-index:{{ t.z }};cursor:pointer;align-self:flex-start">{{ t.label }}</div>
+          </sc-for>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px 12px;border:1px dashed #2c3448;border-bottom:none;border-radius:10px 10px 0 0;color:#5f6474;align-self:flex-start" title="animes, livres, audiobooks, musique — bientôt">+</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#121724;border:1px solid rgba(39,255,147,.35);border-radius:0 14px 14px 14px;padding:0 14px;position:relative;z-index:1;box-shadow:0 0 20px rgba(39,255,147,.1) inset,0 0 16px rgba(47,123,255,.12)">
+          <div style="width:16px;height:16px;border:2px solid #27ff93;border-radius:50%;position:relative;flex:none"><div style="position:absolute;width:2px;height:7px;background:#27ff93;bottom:-5px;right:-3px;transform:rotate(-45deg)"></div></div>
+          <input value="{{ query }}" onChange="{{ onQueryChange }}" placeholder="{{ searchPlaceholder }}" style="flex:1;background:transparent;border:none;color:#eaeef2;font-size:14px;font-family:'IBM Plex Sans',sans-serif;padding:14px 0"></input>
+          <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}"><div onClick="{{ clearQuery }}" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#5f6474;cursor:pointer;padding:8px" style-hover="color:#eaeef2">✕</div></sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isSearching }}" hint-placeholder-val="{{ false }}">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;margin:8px 2px 14px">{{ resultCount }} résultats · {{ stype }} · tmdb</div>
+        <sc-if value="{{ hasLibResults }}" hint-placeholder-val="{{ false }}">
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:0 0 8px">▸ DÉJÀ DANS TA BIBLIOTHÈQUE</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+          <sc-for list="{{ libResults }}" as="m" hint-placeholder-count="1">
+            <div onClick="{{ m.onOpen }}" style="display:flex;gap:12px;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:10px;align-items:center;cursor:pointer" style-hover="border-color:#2c3448">
+              <div style="width:48px;height:72px;border-radius:8px;flex:none" style="{{ m.posterStyle }}"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0"><div style="font-size:14px;font-weight:600">{{ m.title }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c">{{ m.metaLine }}</div></div>
+              <sc-if value="{{ m.fav }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent;flex:none">♥</span></sc-if>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:6px 10px;border-radius:999px;background:{{ m.sBg }};border:1px solid {{ m.sBd }};color:{{ m.sC }};flex:none">{{ m.sLabel }}</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:0 0 8px">▸ RÉSULTATS</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ newResults }}" as="m" hint-placeholder-count="2">
+            <div style="display:flex;gap:12px;background:rgba(18,23,36,.75);border:1px solid {{ m.rowBd }};border-radius:14px;padding:10px;align-items:center">
+              <div style="width:48px;height:72px;border-radius:8px;flex:none;background:repeating-linear-gradient(-45deg,#1a2032,#1a2032 6px,#151a29 6px,#151a29 12px)"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0"><div style="font-size:14px;font-weight:600">{{ m.title }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:{{ m.subColor }}">{{ m.subLine }}</div></div>
+              <sc-if value="{{ m.added }}" hint-placeholder-val="{{ false }}"><div onClick="{{ m.onOpen }}" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;cursor:pointer;padding:8px" style-hover="color:#eaeef2">ouvrir →</div></sc-if>
+              <sc-if value="{{ m.notAdded }}" hint-placeholder-val="{{ true }}"><div onClick="{{ m.onAdd }}" style="width:44px;height:44px;border-radius:12px;border:1px solid rgba(39,255,147,.4);color:#27ff93;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:300;cursor:pointer" style-hover="background:rgba(39,255,147,.12)">+</div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;margin-top:14px">+ = ajout direct en « à voir » · tap sur la fiche = page média</div>
+      </sc-if>
+
+      <sc-if value="{{ showHome }}" hint-placeholder-val="{{ true }}">
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:25px;font-weight:600;margin-top:18px">Bonsoir, Léo</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8f9c;margin-top:4px"><span style="color:#27ff93">›</span> {{ homeSubline }}</div>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:15px;font-weight:600;letter-spacing:.5px;color:#27ff93;margin:24px 0 12px">▸ EN COURS</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ currentRows }}" as="m" hint-placeholder-count="2">
+            <div onClick="{{ m.onOpen }}" style="display:flex;gap:14px;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:12px;align-items:center;cursor:pointer" style-hover="border-color:#2c3448">
+              <div style="width:56px;height:84px;border-radius:8px;flex:none" style="{{ m.posterStyle }}"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+                <div style="font-size:15px;font-weight:600">{{ m.title }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8f9c">{{ m.progressLabel }} · {{ m.progress }}%</div>
+                <div style="height:4px;border-radius:2px;background:#212a3d"><div style="width:{{ m.progress }}%;height:100%;border-radius:2px;background:linear-gradient(90deg,#2f7bff,#27ff93);box-shadow:0 0 8px rgba(39,255,147,.5)"></div></div>
+              </div>
+              <div onClick="{{ m.onAdvance }}" title="avancer d'un épisode" style="width:44px;height:44px;border-radius:12px;background:linear-gradient(90deg,#27ff93,#2f7bff);box-shadow:0 0 18px rgba(39,255,147,.35);flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="box-shadow:0 0 28px rgba(39,255,147,.55)"><div style="width:0;height:0;border-style:solid;border-width:7px 0 7px 11px;border-color:transparent transparent transparent #070a12;margin-left:3px"></div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 12px">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:15px;font-weight:600;letter-spacing:.5px">▸ À VOIR <span style="color:#8a8f9c;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:400">· {{ watchCount }}</span></div>
+          <div onClick="{{ goLibWatch }}" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;cursor:pointer" style-hover="color:#27ff93">voir tout →</div>
+        </div>
+        <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:6px">
+          <sc-for list="{{ watchPosters }}" as="m" hint-placeholder-count="3">
+            <div onClick="{{ m.onOpen }}" style="flex:none;width:104px;display:flex;flex-direction:column;gap:7px;cursor:pointer">
+              <div style="height:156px;border-radius:10px;display:flex;align-items:center;justify-content:center" style="{{ m.posterStyle }}"><span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#4d5468">affiche 2:3</span></div>
+              <div style="font-size:12px;font-weight:500;line-height:1.25">{{ m.title }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a8f9c">{{ m.metaLine }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showLib }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:25px;font-weight:600">Bibliothèque</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8f9c">{{ libCount }} titres</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+          <sc-for list="{{ filterChips }}" as="f" hint-placeholder-count="5">
+            <sc-if value="{{ f.isFav }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ f.onPick }}" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:7px 14px;border-radius:999px;border:1px solid transparent;background:linear-gradient({{ f.favBase }},{{ f.favBase }}) padding-box,linear-gradient(90deg,#27ff93,#2f7bff) border-box;flex:none;white-space:nowrap;cursor:pointer"><span style="background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent">{{ f.label }}</span></div>
+            </sc-if>
+            <sc-if value="{{ f.notFav }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ f.onPick }}" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:7px 14px;border-radius:999px;background:{{ f.bg }};border:1px solid {{ f.bd }};color:{{ f.color }};flex:none;white-space:nowrap;cursor:pointer">{{ f.label }}</div>
+            </sc-if>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
+          <sc-for list="{{ libRows }}" as="m" hint-placeholder-count="5">
+            <div style="display:flex;gap:12px;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:10px;align-items:center">
+              <div onClick="{{ m.onOpen }}" style="width:48px;height:72px;border-radius:8px;flex:none;cursor:pointer" style="{{ m.posterStyle }}"></div>
+              <div onClick="{{ m.onOpen }}" style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;cursor:pointer">
+                <div style="font-size:14px;font-weight:600">{{ m.title }}</div>
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c">{{ m.metaLine }}</span><sc-if value="{{ m.showStars }}" hint-placeholder-val="{{ false }}"><span style="color:#27ff93;font-size:11px;letter-spacing:1.5px">{{ m.starsOn }}<span style="color:#2c3448">{{ m.starsOff }}</span></span></sc-if></div>
+                <sc-if value="{{ m.isCurrent }}" hint-placeholder-val="{{ false }}"><div style="height:4px;border-radius:2px;background:#212a3d;width:90%"><div style="width:{{ m.progress }}%;height:100%;border-radius:2px;background:linear-gradient(90deg,#2f7bff,#27ff93)"></div></div></sc-if>
+              </div>
+              <sc-if value="{{ m.fav }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent;flex:none">♥</span></sc-if>
+              <div onClick="{{ m.onCycle }}" title="tap = statut suivant" style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:6px 10px;border-radius:999px;background:{{ m.sBg }};border:1px solid {{ m.sBd }};color:{{ m.sC }};flex:none;cursor:pointer;white-space:nowrap">{{ m.sLabel }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;margin-top:12px">tap sur la pastille = statut suivant · tap sur la fiche = page média</div>
+      </sc-if>
+
+      <sc-if value="{{ showMedia }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative;height:190px;border-radius:14px;overflow:hidden;margin-top:6px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(-45deg,#1a2032,#1a2032 6px,#151a29 6px,#151a29 12px);display:flex;align-items:center;justify-content:center"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#4d5468">backdrop 16:9</span></div>
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,10,18,.25),rgba(7,10,18,.55) 60%,#070a12)"></div>
+          <div onClick="{{ backFromMedia }}" style="position:absolute;top:14px;left:14px;width:36px;height:36px;border-radius:10px;background:rgba(10,14,23,.75);border:1px solid #2c3448;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer" style-hover="border-color:#27ff93">←</div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:-56px;position:relative;align-items:flex-end;padding:0 6px">
+          <div style="width:96px;height:144px;border-radius:10px;flex:none;box-shadow:0 8px 24px rgba(0,0,0,.5)" style="{{ selPosterStyle }}"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;padding-bottom:4px;min-width:0">
+            <div style="font-family:'Chakra Petch',sans-serif;font-size:21px;font-weight:600;line-height:1.15">{{ selTitle }}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c">{{ selMeta }}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+          <sc-for list="{{ selStatusOptions }}" as="s" hint-placeholder-count="4">
+            <div onClick="{{ s.onPick }}" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:8px 13px;border-radius:999px;background:{{ s.bg }};border:1px solid {{ s.bd }};color:{{ s.color }};flex:none;cursor:pointer;white-space:nowrap">{{ s.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+          <div style="display:flex">
+            <sc-for list="{{ selStars }}" as="s" hint-placeholder-count="5">
+              <span onClick="{{ s.onPick }}" style="color:{{ s.color }};font-size:22px;letter-spacing:2px;cursor:pointer;padding:4px 2px">★</span>
+            </sc-for>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c">{{ selRatingLabel }}</span>
+          <div onClick="{{ selToggleFav }}" title="coup de cœur" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <sc-if value="{{ selFav }}" hint-placeholder-val="{{ false }}"><span style="font-size:21px;background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent">♥</span></sc-if>
+            <sc-if value="{{ selNotFav }}" hint-placeholder-val="{{ true }}"><span style="font-size:21px;color:#4d5468">♡</span></sc-if>
+          </div>
+          <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474">tmdb 8.2 · letterboxd 4.3</span>
+        </div>
+        <sc-if value="{{ selCanRewatch }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ selRewatch }}" style="display:flex;align-items:center;justify-content:center;gap:10px;height:44px;border-radius:12px;background:linear-gradient(90deg,#27ff93,#2f7bff);box-shadow:0 0 18px rgba(39,255,147,.3);margin-top:16px;cursor:pointer;max-width:420px" style-hover="box-shadow:0 0 28px rgba(39,255,147,.5)">
+            <span style="color:#070a12;font-size:16px">↻</span><span style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;color:#070a12;letter-spacing:.5px">REVOIR</span>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#5f6474;margin-top:8px">repasse en « ● en cours » · ouvre le visionnage #{{ selNextCycle }} dans le journal</div>
+        </sc-if>
+        <div style="font-size:13.5px;line-height:1.55;color:#8a8f9c;margin-top:18px;max-width:620px;text-wrap:pretty">{{ selSynopsis }}</div>
+        <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+          <sc-for list="{{ selGenres }}" as="g" hint-placeholder-count="3">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;padding:4px 10px;border-radius:6px;border:1px solid #212a3d;color:#8a8f9c">{{ g.name }}</span>
+          </sc-for>
+        </div>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:24px 0 10px">▸ JOURNAL</div>
+        <div style="display:flex;flex-direction:column;gap:8px;border-left:1px solid #212a3d;padding-left:14px;max-width:620px">
+          <sc-for list="{{ selJournal }}" as="e" hint-placeholder-count="3">
+            <sc-if value="{{ e.isMarker }}" hint-placeholder-val="{{ false }}"><div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474">{{ e.label }}</div></sc-if>
+            <sc-if value="{{ e.isEntry }}" hint-placeholder-val="{{ true }}"><div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c"><span style="color:#5f6474">{{ e.date }}</span> · <span style="color:{{ e.color }}">{{ e.label }}</span></div></sc-if>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showStats }}" hint-placeholder-val="{{ false }}">
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:25px;font-weight:600;margin-top:18px">Stats</div>
+        <div style="background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:20px;margin-top:16px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;letter-spacing:.5px">TEMPS TOTAL · 2026</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px">
+            <div style="font-family:'Chakra Petch',sans-serif;font-size:44px;font-weight:700;line-height:1;background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent">{{ totalHours }}h</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#27ff93">▲ +18h vs 2025</div>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:14px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c"><span style="color:#7eb0ff">■</span> films {{ filmHours }}h</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c"><span style="color:#27ff93">■</span> séries {{ serieHours }}h</div>
+          </div>
+        </div>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:22px 0 12px">▸ RÉPARTITION</div>
+        <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px">
+          <div style="width:{{ seriePct }}%;background:#27ff93"></div>
+          <div style="width:{{ filmPct }}%;background:#2f7bff"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c">séries {{ seriePct }}% · {{ serieCount }} titres</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c">films {{ filmPct }}% · {{ filmCount }} titres</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:22px">
+          <div style="flex:1;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px"><div style="font-family:'Chakra Petch',sans-serif;font-size:22px;font-weight:700;color:#7eb0ff">{{ seenCount }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a8f9c">✓ vus</div></div>
+          <div style="flex:1;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px"><div style="font-family:'Chakra Petch',sans-serif;font-size:22px;font-weight:700;color:#27ff93">{{ currentCount }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a8f9c">● en cours</div></div>
+          <div style="flex:1;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px"><div style="font-family:'Chakra Petch',sans-serif;font-size:22px;font-weight:700;background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent">{{ favCount }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a8f9c">♥ coups de cœur</div></div>
+        </div>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:22px 0 12px">▸ NOTES</div>
+        <div style="display:flex;gap:18px;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:14px;align-items:center">
+          <div style="width:84px;height:84px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center" style="{{ donutStyle }}">
+            <div style="width:58px;height:58px;border-radius:50%;background:#121724;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
+              <span style="font-family:'Chakra Petch',sans-serif;font-size:15px;font-weight:700;color:#27ff93">★{{ avgRating }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#5f6474">moyenne</span>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c"><span style="color:#27ff93">■</span> bonnes notes ★4-5 · {{ goodPct }}%</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c"><span style="color:#ffd64a">■</span> moyennes ★3 · {{ midPct }}%</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c"><span style="color:#ff5e5e">■</span> déceptions ★1-2 · {{ badPct }}%</div>
+          </div>
+        </div>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:22px 0 12px">▸ GENRES FAVORIS</div>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:620px">
+          <sc-for list="{{ genreBars }}" as="g" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#eaeef2;width:110px;flex:none">{{ g.name }}</span><div style="flex:1;height:4px;border-radius:2px;background:#212a3d"><div style="width:{{ g.pct }}%;height:100%;border-radius:2px;background:linear-gradient(90deg,#2f7bff,#27ff93)"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c;width:36px;text-align:right;flex:none">{{ g.pct }}%</span></div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showFriends }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px">
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:25px;font-weight:600">Amis</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8f9c">{{ friendCount }} amis</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#121724;border:1px solid rgba(39,255,147,.35);border-radius:14px;padding:13px 14px;box-shadow:0 0 20px rgba(39,255,147,.1) inset;margin-top:14px">
+          <div style="width:16px;height:16px;border:2px solid #27ff93;border-radius:50%;position:relative;flex:none"><div style="position:absolute;width:2px;height:7px;background:#27ff93;bottom:-5px;right:-3px;transform:rotate(-45deg)"></div></div>
+          <div style="font-size:14px;color:#8a8f9c">Ajouter par pseudo… @</div>
+        </div>
+        <sc-if value="{{ hasRequests }}" hint-placeholder-val="{{ true }}">
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#ffd64a;margin:22px 0 10px">▸ DEMANDES · {{ requestCount }}</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ requests }}" as="r" hint-placeholder-count="1">
+            <div style="display:flex;gap:12px;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:10px;align-items:center">
+              <div style="width:40px;height:40px;border-radius:50%;flex:none;background:#1a2032;border:1px solid #2c3448;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#7eb0ff">{{ r.initial }}</div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><div style="font-size:13.5px;font-weight:600">{{ r.handle }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#8a8f9c">{{ r.sub }}</div></div>
+              <div onClick="{{ r.onAccept }}" style="width:44px;height:44px;border-radius:12px;background:linear-gradient(90deg,#27ff93,#2f7bff);flex:none;display:flex;align-items:center;justify-content:center;color:#070a12;font-size:16px;font-weight:600;cursor:pointer">✓</div>
+              <div onClick="{{ r.onDecline }}" style="width:44px;height:44px;border-radius:12px;border:1px solid #2c3448;flex:none;display:flex;align-items:center;justify-content:center;color:#5f6474;font-size:14px;cursor:pointer" style-hover="color:#ff5e5e;border-color:rgba(255,94,94,.4)">✕</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:22px 0 10px">▸ AMIS</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ friends }}" as="f" hint-placeholder-count="3">
+            <div onClick="{{ f.onOpen }}" style="display:flex;gap:12px;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:10px;align-items:center;cursor:pointer" style-hover="border-color:#2c3448">
+              <div style="width:40px;height:40px;border-radius:50%;flex:none;background:#1a2032;border:1px solid {{ f.avatarBd }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:{{ f.avatarC }}">{{ f.initial }}</div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0"><div style="font-size:13.5px;font-weight:600">{{ f.handle }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:{{ f.subColor }}">{{ f.sub }}</div></div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c;flex:none">compat {{ f.compat }}%</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5f6474;margin-top:12px">tap sur un ami = son profil public</div>
+      </sc-if>
+
+      <sc-if value="{{ showFriendProfile }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ backToFriends }}" style="width:36px;height:36px;border-radius:10px;background:rgba(10,14,23,.75);border:1px solid #2c3448;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;margin-top:6px" style-hover="border-color:#27ff93">←</div>
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:8px">
+          <div style="width:76px;height:76px;border-radius:50%;border:1px solid transparent;background:linear-gradient(#1a2032,#1a2032) padding-box,linear-gradient(90deg,#27ff93,#2f7bff) border-box;box-shadow:0 0 18px rgba(39,255,147,.25);display:flex;align-items:center;justify-content:center;font-family:'Chakra Petch',sans-serif;font-size:26px;font-weight:600;color:#27ff93">{{ fpInitial }}</div>
+          <div style="font-family:'Chakra Petch',sans-serif;font-size:21px;font-weight:600;margin-top:12px">{{ fpHandle }}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8a8f9c;margin-top:4px">{{ fpSub }}</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <div style="flex:1;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:3px;align-items:center"><div style="font-family:'Chakra Petch',sans-serif;font-size:19px;font-weight:700;color:#7eb0ff">{{ fpSeen }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8a8f9c">✓ vus</div></div>
+          <div style="flex:1;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:3px;align-items:center"><div style="font-family:'Chakra Petch',sans-serif;font-size:19px;font-weight:700;background:linear-gradient(90deg,#27ff93,#2f7bff);-webkit-background-clip:text;background-clip:text;color:transparent">{{ fpFavs }}</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8a8f9c">♥ coups de cœur</div></div>
+          <div style="flex:1;background:rgba(18,23,36,.75);border:1px solid #212a3d;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:3px;align-items:center"><div style="font-family:'Chakra Petch',sans-serif;font-size:19px;font-weight:700;color:#27ff93">{{ fpCompat }}%</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8a8f9c">compat avec toi</div></div>
+        </div>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:24px 0 12px">▸ SES COUPS DE CŒUR</div>
+        <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:6px">
+          <sc-for list="{{ fpFavList }}" as="p" hint-placeholder-count="3">
+            <div style="flex:none;width:96px;display:flex;flex-direction:column;gap:6px">
+              <div style="height:144px;border-radius:10px;border:1px solid transparent;background:repeating-linear-gradient(-45deg,#1a2032,#1a2032 6px,#151a29 6px,#151a29 12px) padding-box,linear-gradient(90deg,#27ff93,#2f7bff) border-box;box-shadow:0 0 14px rgba(39,255,147,.15)"></div>
+              <div style="font-size:11.5px;font-weight:500">{{ p.title }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:600;letter-spacing:.5px;color:#8a8f9c;margin:22px 0 10px">▸ ACTIVITÉ</div>
+        <div style="display:flex;flex-direction:column;gap:8px;border-left:1px solid #212a3d;padding-left:14px">
+          <sc-for list="{{ fpActivity }}" as="e" hint-placeholder-count="3">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#8a8f9c"><span style="color:#5f6474">{{ e.date }}</span> · <span style="color:{{ e.color }}">{{ e.label }}</span> {{ e.rest }}</div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+    </div>
+    </div>
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+    <div style="position:fixed;bottom:0;left:0;right:0;display:flex;border-top:1px solid #212a3d;background:rgba(10,14,23,.92);padding:10px 8px 20px;z-index:10;backdrop-filter:blur(8px)">
+      <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+        <div onClick="{{ n.onGo }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer">
+          <div style="width:22px;height:22px;border-radius:{{ n.iconRadius }};background:{{ n.iconBg }};border:{{ n.iconBorder }};box-shadow:{{ n.iconGlow }}"></div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:{{ n.color }}">{{ n.label }}</span>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;430px&quot;,&quot;height&quot;:&quot;860px&quot;}}">
+const ST = {
+  watch:   {c:'#ffd64a', bg:'rgba(255,214,74,.1)',  bd:'rgba(255,214,74,.4)',  label:'+ à voir'},
+  current: {c:'#27ff93', bg:'rgba(39,255,147,.12)', bd:'rgba(39,255,147,.4)',  label:'● en cours'},
+  seen:    {c:'#7eb0ff', bg:'rgba(47,123,255,.12)', bd:'rgba(47,123,255,.45)', label:'✓ vu'},
+  dropped: {c:'#ff5e5e', bg:'rgba(255,94,94,.1)',   bd:'rgba(255,94,94,.4)',   label:'✕ abandonné'}
+};
+const STRIPES = 'repeating-linear-gradient(-45deg,#1a2032,#1a2032 6px,#151a29 6px,#151a29 12px)';
+const GRAD = 'linear-gradient(90deg,#27ff93,#2f7bff)';
+const CYCLE = ['watch','current','seen','dropped'];
+const today = () => new Date().toISOString().slice(0,10);
+const SYN = "Synopsis d'exemple : les enjeux se resserrent autour des personnages, entre loyautés mouvantes et choix impossibles.";
+
+class Component extends DCLogic {
+  state = {
+    screen: 'landing', tab: 'home', prevTab: 'home',
+    query: '', stype: 'tout', filter: 'tous',
+    selId: null, viewFriend: null,
+    isDesktop: (typeof window !== 'undefined' && window.innerWidth >= 1024),
+    media: [
+      {id:1, title:'Dark', type:'série', meta:'série · 3 saisons', dur:'S02E05', year:2017, genres:['science-fiction','thriller'], hours:9, status:'current', rating:0, fav:false, progress:62, progressLabel:'S02E05', seenCount:0, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-07-10', label:'● en cours', color:'#27ff93'},
+        {t:'e', date:'2026-06-28', label:'+ ajouté en à voir', color:'#ffd64a'}]},
+      {id:2, title:'Severance', type:'série', meta:'série · 2 saisons', dur:'S02E03', year:2022, genres:['science-fiction','thriller'], hours:6, status:'current', rating:0, fav:false, progress:30, progressLabel:'S02E03', seenCount:0, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-07-20', label:'● en cours', color:'#27ff93'}]},
+      {id:3, title:'Dune : Part Two', type:'film', meta:'film · 2h46 · 2024 · D. Villeneuve', dur:'2h46', year:2024, genres:['science-fiction','aventure'], hours:5.5, status:'seen', rating:4, fav:true, progress:null, seenCount:2, cycle:2, synopsis:"Paul Atreides s'unit à Chani et aux Fremen pour mener la révolte contre ceux qui ont détruit sa famille.", journal:[
+        {t:'m', label:'— visionnage #2 —'},
+        {t:'e', date:'2026-07-25', label:'✓ vu · ♥ coup de cœur', color:'#7eb0ff'},
+        {t:'e', date:'2026-07-12', label:'↻ revisionnage', color:'#27ff93'},
+        {t:'m', label:'— visionnage #1 —'},
+        {t:'e', date:'2024-03-12', label:'✓ vu · noté ★4', color:'#7eb0ff'},
+        {t:'e', date:'2024-03-02', label:'+ ajouté en à voir', color:'#ffd64a'}]},
+      {id:4, title:'The Zone of Interest', type:'film', meta:'film · 1h45 · 2023', dur:'1h45', year:2023, genres:['drame'], hours:1.75, status:'seen', rating:4, fav:false, progress:null, seenCount:1, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-05-02', label:'✓ vu · noté ★4', color:'#7eb0ff'}]},
+      {id:5, title:'Andor', type:'série', meta:'série · 2 saisons', dur:'S01E04', year:2022, genres:['science-fiction'], hours:3, status:'dropped', rating:2, fav:false, progress:null, progressLabel:'arrêté à S01E04', seenCount:0, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-04-11', label:'✕ abandonné à S01E04', color:'#ff5e5e'}]},
+      {id:6, title:'Oppenheimer', type:'film', meta:'film · 3h00 · 2023', dur:'3h00', year:2023, genres:['drame'], hours:3, status:'watch', rating:0, fav:false, progress:null, seenCount:0, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-07-01', label:'+ ajouté en à voir', color:'#ffd64a'}]},
+      {id:7, title:'The Bear', type:'série', meta:'série · 3 saisons', dur:'3 saisons', year:2022, genres:['drame'], hours:0, status:'watch', rating:0, fav:false, progress:null, seenCount:0, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-07-14', label:'+ ajouté en à voir', color:'#ffd64a'}]},
+      {id:8, title:'Interstellar', type:'film', meta:'film · 2h49 · 2014', dur:'2h49', year:2014, genres:['science-fiction'], hours:2.8, status:'seen', rating:5, fav:true, progress:null, seenCount:1, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-02-18', label:'✓ vu · noté ★5', color:'#7eb0ff'}]},
+      {id:9, title:'Arrival', type:'film', meta:'film · 1h56 · 2016', dur:'1h56', year:2016, genres:['science-fiction','drame'], hours:2, status:'seen', rating:4, fav:true, progress:null, seenCount:1, cycle:1, synopsis:SYN, journal:[
+        {t:'e', date:'2026-01-05', label:'✓ vu · noté ★4', color:'#7eb0ff'}]},
+      {id:10, title:'Dune', type:'film', meta:'film · 2h35 · 2021 · D. Villeneuve', dur:'2h35', year:2021, genres:['science-fiction'], hours:2.6, status:null, rating:0, fav:false, progress:null, seenCount:0, cycle:1, synopsis:SYN, journal:[]},
+      {id:11, title:"Jodorowsky's Dune", type:'film', meta:'documentaire · 1h30 · 2013', dur:'1h30', year:2013, genres:['documentaire'], hours:1.5, status:null, rating:0, fav:false, progress:null, seenCount:0, cycle:1, synopsis:SYN, journal:[]},
+      {id:12, title:'Dune (1984)', type:'film', meta:'film · 2h17 · 1984', dur:'2h17', year:1984, genres:['science-fiction'], hours:2.3, status:null, rating:0, fav:false, progress:null, seenCount:0, cycle:1, synopsis:SYN, journal:[]},
+      {id:13, title:'Blade Runner 2049', type:'film', meta:'film · 2h44 · 2017', dur:'2h44', year:2017, genres:['science-fiction'], hours:2.7, status:null, rating:0, fav:false, progress:null, seenCount:0, cycle:1, synopsis:SYN, journal:[]},
+      {id:14, title:'Dark Waters', type:'film', meta:'film · 2h07 · 2019', dur:'2h07', year:2019, genres:['drame'], hours:2.1, status:null, rating:0, fav:false, progress:null, seenCount:0, cycle:1, synopsis:SYN, journal:[]}
+    ],
+    requests: [
+      {id:'r1', handle:'@mira_ver', initial:'M', sub:'6 amis en commun'},
+      {id:'r2', handle:'@kim.obs', initial:'K', sub:'2 amis en commun'}
+    ],
+    friends: [
+      {id:'f1', handle:'@nova_klr', initial:'N', sub:'● regarde Severance S02', live:true, compat:87, seen:96, favs:23, member:'membre depuis 2025 · 214 titres loggés',
+       favList:['Severance','Dark','Interstellar','Arrival'],
+       activity:[{date:"aujourd'hui", label:'● en cours', color:'#27ff93', rest:'Severance S02E03'},{date:'hier', label:'✓ vu', color:'#7eb0ff', rest:'Dune : Part Two · ★5'},{date:'23.07', label:'+ à voir', color:'#ffd64a', rest:'The Zone of Interest'}]},
+      {id:'f2', handle:'@theo.log', initial:'T', sub:'a noté Dune : Part Two ★5', live:false, compat:74, seen:61, favs:12, member:'membre depuis 2024 · 130 titres loggés',
+       favList:['Oppenheimer','The Bear','Arrival'],
+       activity:[{date:'hier', label:'✓ vu', color:'#7eb0ff', rest:'Dune : Part Two · ★5'},{date:'20.07', label:'↻ revisionnage', color:'#27ff93', rest:'Interstellar'}]},
+      {id:'f3', handle:'@sacha_w', initial:'S', sub:'+ a ajouté 3 titres à voir', live:false, compat:61, seen:44, favs:7, member:'membre depuis 2026 · 58 titres loggés',
+       favList:['Dark','The Bear'],
+       activity:[{date:'22.07', label:'+ à voir', color:'#ffd64a', rest:'Blade Runner 2049'}]}
+    ]
+  };
+
+  componentDidMount() {
+    this._onResize = () => this.setState({isDesktop: window.innerWidth >= 1024});
+    window.addEventListener('resize', this._onResize);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._onResize); }
+
+  upd(id, fn) { this.setState(s => ({media: s.media.map(m => m.id === id ? fn({...m, journal:[...m.journal]}) : m)})); }
+  log(m, label, color) { m.journal.unshift({t:'e', date: today(), label, color}); return m; }
+
+  setStatus(id, st) {
+    this.upd(id, m => {
+      if (m.status === st) return m;
+      m.status = st;
+      if (st === 'seen') { m.seenCount = Math.max(1, m.seenCount + (m.cycle > m.seenCount ? 1 : 0)); }
+      const info = ST[st];
+      let lbl = info.label;
+      if (st === 'seen' && m.rating > 0) lbl += ' · noté ★' + m.rating;
+      if (st === 'watch') lbl = '+ ajouté en à voir';
+      if (st === 'current' && m.progress == null) { m.progress = 0; m.progressLabel = m.type === 'série' ? 'S01E01' : 'démarré'; }
+      return this.log(m, lbl, info.c);
+    });
+  }
+  cycleStatus(id) {
+    const m = this.state.media.find(x => x.id === id);
+    const next = CYCLE[(CYCLE.indexOf(m.status) + 1) % CYCLE.length];
+    this.setStatus(id, next);
+  }
+  rewatch(id) {
+    this.upd(id, m => {
+      m.cycle += 1; m.status = 'current'; m.progress = 0;
+      m.progressLabel = m.type === 'série' ? 'S01E01' : 'démarré';
+      this.log(m, '↻ revisionnage', '#27ff93');
+      m.journal.unshift({t:'m', label:'— visionnage #' + m.cycle + ' —'});
+      return m;
+    });
+  }
+  advance(id) {
+    this.upd(id, m => {
+      m.progress = Math.min(100, (m.progress || 0) + 10);
+      if (m.progress >= 100) { m.status = 'seen'; m.seenCount += 1; this.log(m, '✓ vu', '#7eb0ff'); }
+      return m;
+    });
+  }
+  setRating(id, n) {
+    this.upd(id, m => { m.rating = (m.rating === n ? 0 : n); if (m.rating) this.log(m, 'noté ★' + m.rating, '#27ff93'); return m; });
+  }
+  toggleFav(id) {
+    this.upd(id, m => { m.fav = !m.fav; this.log(m, m.fav ? '♥ coup de cœur' : '♥ retiré', m.fav ? '#27ff93' : '#5f6474'); return m; });
+  }
+  addFromSearch(id) { this.setStatus(id, 'watch'); }
+
+  posterStyle(m) {
+    return m.fav
+      ? {border:'1px solid transparent', background: STRIPES + ' padding-box,' + GRAD + ' border-box', boxShadow:'0 0 12px rgba(39,255,147,.22)'}
+      : {background: STRIPES, border:'1px solid #212a3d'};
+  }
+  row(m) {
+    const info = ST[m.status] || {c:'#8a8f9c', bg:'transparent', bd:'#212a3d', label:'—'};
+    let lbl = info.label;
+    if (m.status === 'seen' && m.seenCount > 1) lbl = '✓ vu ×' + m.seenCount;
+    let metaLine = m.type + ' · ' + m.dur;
+    if (m.status === 'current' && m.progressLabel) metaLine = m.type + ' · ' + m.progressLabel;
+    if (m.status === 'dropped' && m.progressLabel) metaLine = m.type + ' · ' + m.progressLabel;
+    return {
+      id: m.id, title: m.title, fav: m.fav, metaLine,
+      sC: info.c, sBg: info.bg, sBd: info.bd, sLabel: lbl,
+      posterStyle: this.posterStyle(m),
+      isCurrent: m.status === 'current', progress: m.progress || 0, progressLabel: m.progressLabel || '',
+      showStars: m.rating > 0, starsOn: '★'.repeat(m.rating), starsOff: '★'.repeat(5 - m.rating),
+      onOpen: () => this.setState(s => ({selId: m.id, prevTab: s.tab, tab: 'media', query:''})),
+      onCycle: (e) => { e.stopPropagation(); this.cycleStatus(m.id); },
+      onAdvance: (e) => { e.stopPropagation(); this.advance(m.id); }
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const lib = s.media.filter(m => m.status);
+    const typeOk = m => s.stype === 'tout' || (s.stype === 'films' ? m.type === 'film' : m.type === 'série');
+    const q = s.query.trim().toLowerCase();
+    const matches = q ? s.media.filter(m => m.title.toLowerCase().includes(q) && typeOk(m)) : [];
+    const libResults = matches.filter(m => m.status);
+    const newResults = matches.filter(m => !m.status);
+    const isApp = s.screen === 'app';
+    const inTabs = ['home','lib'].includes(s.tab);
+    const searching = isApp && inTabs && q.length > 0;
+
+    const seen = lib.filter(m => m.status === 'seen');
+    const current = lib.filter(m => m.status === 'current');
+    const watch = lib.filter(m => m.status === 'watch');
+    const dropped = lib.filter(m => m.status === 'dropped');
+    const favs = lib.filter(m => m.fav);
+
+    const filterMap = {tous: lib, watch, current, seen, dropped, favs};
+    const libRows = (filterMap[s.filter] || lib).filter(typeOk).map(m => this.row(m));
+
+    const watched = seen.concat(current);
+    const fh = watched.filter(m => m.type === 'film').reduce((a, m) => a + m.hours, 0);
+    const sh = watched.filter(m => m.type === 'série').reduce((a, m) => a + m.hours, 0);
+    const fc = lib.filter(m => m.type === 'film').length, sc = lib.filter(m => m.type === 'série').length;
+    const sPct = lib.length ? Math.round(sc / lib.length * 100) : 0;
+    const rated = lib.filter(m => m.rating > 0);
+    const good = rated.filter(m => m.rating >= 4).length, mid = rated.filter(m => m.rating === 3).length, bad = rated.length - good - mid;
+    const gp = rated.length ? Math.round(good / rated.length * 100) : 0;
+    const mp = rated.length ? Math.round(mid / rated.length * 100) : 0;
+    const bp = rated.length ? 100 - gp - mp : 0;
+    const avg = rated.length ? (rated.reduce((a, m) => a + m.rating, 0) / rated.length).toFixed(1) : '—';
+    const gcount = {};
+    lib.forEach(m => m.genres.forEach(g => { gcount[g] = (gcount[g] || 0) + 1; }));
+    const gtotal = Object.values(gcount).reduce((a, b) => a + b, 0) || 1;
+    const genreBars = Object.entries(gcount).sort((a, b) => b[1] - a[1]).slice(0, 4)
+      .map(([name, n]) => ({name, pct: Math.round(n / gtotal * 100)}));
+
+    const sel = s.media.find(m => m.id === s.selId);
+    const navDefs = [
+      {key:'home', label:'accueil', round:false}, {key:'lib', label:'bibliothèque', round:false},
+      {key:'stats', label:'stats', round:false}, {key:'friends', label:'amis', round:true}
+    ];
+    const activeTab = ['media'].includes(s.tab) ? s.prevTab : (s.tab === 'friendProfile' ? 'friends' : s.tab);
+    const navItems = navDefs.map(n => {
+      const active = activeTab === n.key;
+      return {
+        label: n.label, color: active ? '#27ff93' : '#8a8f9c',
+        iconRadius: n.round ? '50%' : '6px',
+        iconBg: active ? GRAD : 'transparent',
+        iconBorder: active ? 'none' : '1.5px solid #4d5468',
+        iconGlow: active ? '0 0 10px rgba(39,255,147,.35)' : 'none',
+        bg: (active && s.isDesktop) ? '#121724' : 'transparent',
+        bd: (active && s.isDesktop) ? '#212a3d' : 'transparent',
+        onGo: () => this.setState({tab: n.key, query: '', viewFriend: null})
+      };
+    });
+    const typeTabs = ['tout','films','séries'].map(t => {
+      const active = s.stype === t;
+      return {
+        label: t, color: active ? '#27ff93' : '#8a8f9c',
+        bg: active ? '#121724' : 'transparent', bd: active ? '#2c3448' : '#212a3d',
+        bb: active ? 'none' : 'none', mb: active ? '-1px' : '0', z: active ? 2 : 0,
+        onPick: () => this.setState({stype: t})
+      };
+    });
+    const filterDefs = [
+      {key:'tous', label:'tous · ' + lib.length, color:'#27ff93', activeBg:'rgba(39,255,147,.12)', activeBd:'rgba(39,255,147,.4)'},
+      {key:'watch', label:'+ à voir · ' + watch.length, color:'#ffd64a', activeBg:'rgba(255,214,74,.1)', activeBd:'rgba(255,214,74,.4)'},
+      {key:'current', label:'● en cours · ' + current.length, color:'#27ff93', activeBg:'rgba(39,255,147,.12)', activeBd:'rgba(39,255,147,.4)'},
+      {key:'seen', label:'✓ vu · ' + seen.length, color:'#7eb0ff', activeBg:'rgba(47,123,255,.12)', activeBd:'rgba(47,123,255,.45)'},
+      {key:'dropped', label:'✕ abandonné · ' + dropped.length, color:'#ff5e5e', activeBg:'rgba(255,94,94,.1)', activeBd:'rgba(255,94,94,.4)'},
+      {key:'favs', label:'♥ coups de cœur · ' + favs.length, isFav:true}
+    ];
+    const filterChips = filterDefs.map(f => {
+      const active = s.filter === f.key;
+      return {
+        label: f.label, isFav: !!f.isFav, notFav: !f.isFav,
+        favBase: active ? '#1b2438' : '#0d1119',
+        bg: active ? f.activeBg : 'transparent', bd: active ? f.activeBd : '#212a3d',
+        color: f.color,
+        onPick: () => this.setState({filter: active && f.key !== 'tous' ? 'tous' : f.key})
+      };
+    });
+
+    const friends = s.friends.map(f => ({
+      handle: f.handle, initial: f.initial, sub: f.sub, compat: f.compat,
+      subColor: f.live ? '#27ff93' : '#8a8f9c',
+      avatarBd: f.live ? 'rgba(39,255,147,.4)' : '#2c3448', avatarC: f.live ? '#27ff93' : '#7eb0ff',
+      onOpen: () => this.setState({viewFriend: f.id, tab: 'friendProfile'})
+    }));
+    const requests = s.requests.map(r => ({
+      handle: r.handle, initial: r.initial, sub: r.sub,
+      onAccept: () => this.setState(st => ({
+        requests: st.requests.filter(x => x.id !== r.id),
+        friends: [...st.friends, {id: r.id, handle: r.handle, initial: r.initial, sub: 'nouvel ami', live: false, compat: 50, seen: 0, favs: 0, member: 'membre depuis 2026', favList: [], activity: []}]
+      })),
+      onDecline: () => this.setState(st => ({requests: st.requests.filter(x => x.id !== r.id)}))
+    }));
+    const fp = s.friends.find(f => f.id === s.viewFriend);
+
+    return {
+      isLanding: s.screen === 'landing', isLogin: s.screen === 'login', isApp,
+      isDesktop: s.isDesktop, isMobile: !s.isDesktop,
+      goLanding: () => this.setState({screen: 'landing'}),
+      goLogin: () => this.setState({screen: 'login'}),
+      goApp: () => this.setState({screen: 'app', tab: 'home'}),
+      navItems, typeTabs,
+      showSearch: isApp && inTabs,
+      query: s.query, hasQuery: q.length > 0, stype: s.stype,
+      searchPlaceholder: (s.tab === 'lib' ? 'Filtrer ou ajouter dans ' : 'Ajouter ou rechercher dans ') + s.stype + '…',
+      onQueryChange: (e) => this.setState({query: e.target.value}),
+      clearQuery: () => this.setState({query: ''}),
+      isSearching: searching,
+      resultCount: matches.length, hasLibResults: libResults.length > 0,
+      libResults: libResults.map(m => this.row(m)),
+      newResults: newResults.map(m => ({
+        title: m.title, added: false, notAdded: true, rowBd: '#212a3d', subColor: '#8a8f9c', subLine: m.meta,
+        onAdd: () => this.addFromSearch(m.id),
+        onOpen: () => this.setState(st => ({selId: m.id, prevTab: st.tab, tab: 'media', query: ''}))
+      })),
+      showHome: isApp && s.tab === 'home' && !searching,
+      homeSubline: current.length + ' en cours · ' + watch.length + ' à voir',
+      currentRows: current.map(m => this.row(m)),
+      watchPosters: watch.filter(typeOk).map(m => this.row(m)),
+      watchCount: watch.length,
+      goLibWatch: () => this.setState({tab: 'lib', filter: 'watch'}),
+      showLib: isApp && s.tab === 'lib' && !searching,
+      libCount: lib.length, filterChips, libRows,
+      showMedia: isApp && s.tab === 'media' && sel != null,
+      backFromMedia: () => this.setState(st => ({tab: st.prevTab, selId: null})),
+      selTitle: sel ? sel.title : '', selMeta: sel ? sel.meta : '',
+      selPosterStyle: sel ? this.posterStyle(sel) : {},
+      selSynopsis: sel ? sel.synopsis : '',
+      selGenres: sel ? sel.genres.map(g => ({name: g})) : [],
+      selStatusOptions: sel ? CYCLE.map(k => {
+        const info = ST[k]; const active = sel.status === k;
+        let lbl = info.label;
+        if (k === 'seen' && sel.seenCount > 1) lbl = '✓ vu ×' + sel.seenCount;
+        return {label: lbl, color: info.c, bg: active ? info.bg : 'transparent', bd: active ? info.bd : '#212a3d', onPick: () => this.setStatus(sel.id, k)};
+      }) : [],
+      selStars: sel ? [1,2,3,4,5].map(n => ({color: n <= sel.rating ? '#27ff93' : '#2c3448', onPick: () => this.setRating(sel.id, n)})) : [],
+      selRatingLabel: sel && sel.rating ? sel.rating + '/5' : 'noter',
+      selFav: !!(sel && sel.fav), selNotFav: !(sel && sel.fav),
+      selToggleFav: () => sel && this.toggleFav(sel.id),
+      selCanRewatch: !!(sel && sel.status === 'seen'),
+      selNextCycle: sel ? sel.cycle + 1 : 2,
+      selRewatch: () => sel && this.rewatch(sel.id),
+      selJournal: sel ? sel.journal.map(e => ({isMarker: e.t === 'm', isEntry: e.t === 'e', date: e.date || '', label: e.label, color: e.color || '#8a8f9c'})) : [],
+      showStats: isApp && s.tab === 'stats',
+      totalHours: Math.round(fh + sh), filmHours: Math.round(fh), serieHours: Math.round(sh),
+      seriePct: sPct, filmPct: 100 - sPct, filmCount: fc, serieCount: sc,
+      seenCount: seen.length, currentCount: current.length, favCount: favs.length,
+      donutStyle: {background: 'conic-gradient(#27ff93 0 ' + gp + '%,#ffd64a ' + gp + '% ' + (gp + mp) + '%,#ff5e5e ' + (gp + mp) + '% 100%)'},
+      avgRating: avg, goodPct: gp, midPct: mp, badPct: bp, genreBars,
+      showFriends: isApp && s.tab === 'friends',
+      friendCount: s.friends.length, hasRequests: s.requests.length > 0, requestCount: s.requests.length,
+      requests, friends,
+      showFriendProfile: isApp && s.tab === 'friendProfile' && fp != null,
+      backToFriends: () => this.setState({tab: 'friends', viewFriend: null}),
+      fpInitial: fp ? fp.initial : '', fpHandle: fp ? fp.handle : '', fpSub: fp ? fp.member : '',
+      fpSeen: fp ? fp.seen : 0, fpFavs: fp ? fp.favs : 0, fpCompat: fp ? fp.compat : 0,
+      fpFavList: fp ? fp.favList.map(t => ({title: t})) : [],
+      fpActivity: fp ? fp.activity : []
+    };
+  }
+}
+</script>
+</body>
+</html>
