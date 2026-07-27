@@ -64,7 +64,7 @@ Le document de design complet — modèle de données, règles de dérivation, o
 
 ## État
 
-Étapes 1 à 3 sur 11 livrées : socle et état vide, domaine complet (126 tests), puis le proxy TMDB et la PWA installable (19 tests de route). Reste à déployer — voir [DEPLOY.md](DEPLOY.md). En cours : étape 4, recherche et ajout en un tap.
+Étapes 1 à 4 sur 11 livrées : socle et état vide, domaine complet, proxy TMDB et PWA installable, recherche omniprésente et ajout en un tap. 153 tests. Reste à déployer — voir [DEPLOY.md](DEPLOY.md). En cours : étape 5, export et import `.log`.
 
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
 

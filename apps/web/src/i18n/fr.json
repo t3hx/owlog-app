@@ -68,5 +68,47 @@
   },
   "attribution": {
     "tmdb": "Données de films et séries fournies par TMDB. Ce produit utilise l'API TMDB sans être approuvé ni certifié par TMDB."
+  },
+  "search": {
+    "scope": {
+      "all": "tout",
+      "movies": "films",
+      "series": "séries"
+    },
+    "placeholderAdd": "Ajouter ou rechercher dans {{scope}}…",
+    "placeholderFilter": "Filtrer ou ajouter dans {{scope}}…",
+    "moreTypesSoon": "animes, livres, audiobooks, musique — bientôt",
+    "clear": "Effacer la recherche",
+    "count_one": "{{count}} résultat · {{scope}} · tmdb",
+    "count_other": "{{count}} résultats · {{scope}} · tmdb",
+    "noPaging": "première page seulement",
+    "inLibrary": "▸ DÉJÀ DANS TA BIBLIOTHÈQUE",
+    "results": "▸ RÉSULTATS",
+    "empty": "Aucun titre ne correspond.",
+    "emptyHint": "Vérifie l'orthographe, ou essaie le titre original.",
+    "unavailable": "Recherche indisponible",
+    "unavailableHint": "Le service ne répond pas. Tes titres déjà ajoutés restent accessibles.",
+    "offline": "Pas de réseau",
+    "offlineHint": "Mets le titre de côté : tu le confirmeras au retour du réseau.",
+    "rateLimited": "Trop de recherches",
+    "rateLimitedHint": "Réessaie dans {{count}} seconde.",
+    "rateLimitedHint_other": "Réessaie dans {{count}} secondes.",
+    "addLabel": "Ajouter {{title}}",
+    "added": "✓ ajouté",
+    "undo": "annuler",
+    "kindMovie": "film",
+    "kindSeries": "série",
+    "unknownYear": "année inconnue",
+    "setAside": "Mettre « {{text}} » de côté",
+    "pendingBadge_one": "{{count}} titre à confirmer",
+    "pendingBadge_other": "{{count}} titres à confirmer",
+    "confirmPending": "Confirmer les titres mis de côté",
+    "dismissPending": "abandonner"
+  },
+  "status": {
+    "to-watch": "à voir",
+    "watching": "en cours",
+    "seen": "vu",
+    "dropped": "abandonné"
   }
 }

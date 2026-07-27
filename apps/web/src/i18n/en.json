@@ -68,5 +68,47 @@
   },
   "attribution": {
     "tmdb": "Movie and TV data provided by TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB."
+  },
+  "search": {
+    "scope": {
+      "all": "all",
+      "movies": "movies",
+      "series": "series"
+    },
+    "placeholderAdd": "Add or search in {{scope}}…",
+    "placeholderFilter": "Filter or add in {{scope}}…",
+    "moreTypesSoon": "anime, books, audiobooks, music — coming",
+    "clear": "Clear search",
+    "count_one": "{{count}} result · {{scope}} · tmdb",
+    "count_other": "{{count}} results · {{scope}} · tmdb",
+    "noPaging": "first page only",
+    "inLibrary": "▸ ALREADY IN YOUR LIBRARY",
+    "results": "▸ RESULTS",
+    "empty": "No title matches.",
+    "emptyHint": "Check the spelling, or try the original title.",
+    "unavailable": "Search unavailable",
+    "unavailableHint": "The service is not responding. Titles you already added stay available.",
+    "offline": "No network",
+    "offlineHint": "Set the title aside: you'll confirm it when the network is back.",
+    "rateLimited": "Too many searches",
+    "rateLimitedHint": "Try again in {{count}} second.",
+    "rateLimitedHint_other": "Try again in {{count}} seconds.",
+    "addLabel": "Add {{title}}",
+    "added": "✓ added",
+    "undo": "undo",
+    "kindMovie": "movie",
+    "kindSeries": "series",
+    "unknownYear": "year unknown",
+    "setAside": "Set “{{text}}” aside",
+    "pendingBadge_one": "{{count}} title to confirm",
+    "pendingBadge_other": "{{count}} titles to confirm",
+    "confirmPending": "Confirm the titles you set aside",
+    "dismissPending": "discard"
+  },
+  "status": {
+    "to-watch": "to watch",
+    "watching": "watching",
+    "seen": "seen",
+    "dropped": "dropped"
   }
 }

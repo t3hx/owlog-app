@@ -66,7 +66,7 @@ export function Welcome() {
       </header>
 
       <form onSubmit={submit} className="flex flex-col gap-3">
-        <label htmlFor="prenom" className="font-mono text-[10px] text-subtle">
+        <label htmlFor="firstName" className="font-mono text-[10px] text-subtle">
           {t('welcome.firstNameLabel')}
         </label>
 
@@ -75,8 +75,8 @@ export function Welcome() {
             ›
           </span>
           <input
-            id="prenom"
-            name="prenom"
+            id="firstName"
+            name="firstName"
             type="text"
             value={firstName}
             onChange={(event) => setPrenom(event.target.value)}

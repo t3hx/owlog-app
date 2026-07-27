@@ -1,6 +1,7 @@
 import { db } from '@/adapters/dexie/db'
 import { mediaState, type MediaStateRow } from '@/domain/reducers/mediaState'
 import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
+import type { MediaCacheRow } from '@/ports/MediaCache'
 import type { EventStore } from '@/ports/EventStore'
 
 /**
@@ -22,18 +23,40 @@ export function createEventStore(): EventStore {
      * deux, l'app afficherait alors deux statuts différents pour le même
      * titre, sans que rien ne le signale.
      */
-    async append(events: readonly DomainEvent[]): Promise<void> {
+    async append(
+      events: readonly DomainEvent[],
+      options?: { readonly cacheRows?: readonly MediaCacheRow[] },
+    ): Promise<void> {
       if (events.length === 0) return
 
       const touchedRefs = [...new Set(events.map((e) => e.media_ref))]
+      const cacheRows = options?.cacheRows ?? []
 
-      await db.transaction('rw', db.events, db.media_state, async () => {
-        await db.events.bulkAdd([...events])
+      await db.transaction(
+        'rw',
+        db.events,
+        db.media_state,
+        db.media_cache,
+        async () => {
+          await db.events.bulkAdd([...events])
 
-        for (const ref of touchedRefs) {
-          await refreshMediaState(ref)
-        }
-      })
+          // Les lignes de cache entrent dans LA MEME transaction. Sans ca,
+          // couper le reseau juste apres un ajout laisserait une
+          // bibliotheque de references nues, sans titre ni affiche.
+          if (cacheRows.length > 0) {
+            await db.media_cache.bulkPut([...cacheRows])
+          }
+
+          for (const ref of touchedRefs) {
+            await refreshMediaState(ref)
+          }
+        },
+      )
+    },
+
+    async mediaCache(refs: readonly MediaRef[]): Promise<readonly MediaCacheRow[]> {
+      if (refs.length === 0) return []
+      return db.media_cache.where('ref').anyOf([...refs]).toArray()
     },
 
     async eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]> {
