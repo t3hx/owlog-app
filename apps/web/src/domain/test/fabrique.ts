@@ -49,7 +49,19 @@ export interface Fabrique {
   dernierId(): string
 }
 
+/**
+ * Compteur d'instances.
+ *
+ * Deux fabriques doivent produire des identifiants distincts : `events` a
+ * une clé primaire unique, et un test multi-médias qui persiste réellement
+ * échouerait sur une collision. Les réducteurs, eux, ne persistent rien —
+ * c'est l'adaptateur qui a révélé le défaut.
+ */
+let instances = 0
+
 export function creerFabrique(ref: MediaRef = FILM): Fabrique {
+  instances += 1
+  const prefixe = `f${instances}`
   let compteur = 0
   let dernier = ''
 
@@ -64,7 +76,7 @@ export function creerFabrique(ref: MediaRef = FILM): Fabrique {
    */
   function base(occurredAt: Horodatage | null | undefined, precision: Precision) {
     compteur += 1
-    dernier = `e${String(compteur).padStart(4, '0')}`
+    dernier = `${prefixe}e${String(compteur).padStart(4, '0')}`
     // Une seconde d'écart par appel : l'ordre d'écriture est l'ordre d'appel.
     const seconde = String(compteur).padStart(2, '0')
     const ecritLe = `2026-01-01T00:00:${seconde}.000Z` as Horodatage
