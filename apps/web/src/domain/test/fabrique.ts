@@ -15,9 +15,10 @@ import type {
  * - `created_at` suit l'ordre d'appel. Écrire les événements dans l'ordre
  *   où on les construit modélise l'ordre d'écriture réel, ce qui est
  *   exactement la dimension que la règle de rang départage.
- * - `occurred_at` est toujours explicite. Le piège central du modèle vient
- *   de la divergence entre les deux dates ; laisser l'une implicite dans un
- *   test la rendrait invisible au moment de lire le test.
+ * - `occurred_at` omis vaut `created_at`, ce qui est exactement la règle du
+ *   domaine pour un événement live. Un test qui veut exercer la divergence
+ *   entre les deux dates — le piège central du modèle — la rend donc
+ *   explicite, et cette explicitation se voit à la lecture.
  *
  * `id` est séquentiel et lisible (`e0001`), pas un vrai UUIDv7 : ce qui
  * compte pour les règles, c'est qu'il soit ordonnable, et un compteur
@@ -29,8 +30,8 @@ export const SERIE: MediaRef = 'tmdb:tv/95396'
 export interface Fabrique {
   watch(occurredAt?: Horodatage | null): Evenement
   remove(occurredAt?: Horodatage | null): Evenement
-  start(cycle: CycleKey, occurredAt: Horodatage | null, precision?: Precision): Evenement
-  rewatch(cycle: CycleKey, occurredAt: Horodatage | null, precision?: Precision): Evenement
+  start(cycle: CycleKey, occurredAt?: Horodatage | null, precision?: Precision): Evenement
+  rewatch(cycle: CycleKey, occurredAt?: Horodatage | null, precision?: Precision): Evenement
   seen(cycle: CycleKey, occurredAt?: Horodatage | null): Evenement
   drop(cycle: CycleKey, occurredAt?: Horodatage | null): Evenement
   prog(
@@ -52,30 +53,38 @@ export function creerFabrique(ref: MediaRef = FILM): Fabrique {
   let compteur = 0
   let dernier = ''
 
-  function base(occurredAt: Horodatage | null, precision: Precision) {
+  /**
+   * `occurredAt` omis (et non `null`) signifie « événement live » : la
+   * fabrique pose alors `occurred_at = created_at`, ce qui est la règle du
+   * domaine pour tout geste fait dans l'app.
+   *
+   * Sans ça, un `seen()` sans date explicite se retrouverait horodaté avant
+   * le `start()` qu'il termine, et les tests d'ordre vérifieraient une
+   * chronologie impossible.
+   */
+  function base(occurredAt: Horodatage | null | undefined, precision: Precision) {
     compteur += 1
     dernier = `e${String(compteur).padStart(4, '0')}`
     // Une seconde d'écart par appel : l'ordre d'écriture est l'ordre d'appel.
     const seconde = String(compteur).padStart(2, '0')
+    const ecritLe = `2026-01-01T00:00:${seconde}.000Z` as Horodatage
     return {
       id: dernier,
       device_id: 'test',
-      created_at: `2026-01-01T00:00:${seconde}.000Z` as Horodatage,
-      occurred_at: occurredAt,
+      created_at: ecritLe,
+      occurred_at: occurredAt === undefined ? ecritLe : occurredAt,
       occurred_precision: precision,
       media_ref: ref,
     }
   }
 
-  const MAINTENANT = '2026-01-01T00:00:00.000Z'
-
   return {
-    watch: (occurredAt = MAINTENANT) => ({
+    watch: (occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'WATCH',
       cycle_key: null,
     }),
-    remove: (occurredAt = MAINTENANT) => ({
+    remove: (occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'REMOVE',
       cycle_key: null,
@@ -90,18 +99,18 @@ export function creerFabrique(ref: MediaRef = FILM): Fabrique {
       type: 'REWATCH',
       cycle_key: cycle,
     }),
-    seen: (cycle, occurredAt = MAINTENANT) => ({
+    seen: (cycle, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'SEEN',
       cycle_key: cycle,
     }),
-    drop: (cycle, occurredAt = MAINTENANT) => ({
+    drop: (cycle, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'DROP',
       cycle_key: cycle,
     }),
     prog: (cycle, percent, options = {}) => ({
-      ...base(options.occurredAt ?? MAINTENANT, 'exact'),
+      ...base(options.occurredAt, 'exact'),
       type: 'PROG',
       cycle_key: cycle,
       payload: {
@@ -112,35 +121,35 @@ export function creerFabrique(ref: MediaRef = FILM): Fabrique {
           : { label_created_at: options.labelCreatedAt }),
       },
     }),
-    rate: (cycle, rating, occurredAt = MAINTENANT) => ({
+    rate: (cycle, rating, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'RATE',
       cycle_key: cycle,
       payload: { rating },
     }),
-    note: (cycle, text, occurredAt = MAINTENANT) => ({
+    note: (cycle, text, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'NOTE',
       cycle_key: cycle,
       payload: { text },
     }),
-    fav: (occurredAt = MAINTENANT) => ({
+    fav: (occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'FAV',
       cycle_key: null,
     }),
-    unfav: (occurredAt = MAINTENANT) => ({
+    unfav: (occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'UNFAV',
       cycle_key: null,
     }),
-    annule: (cible, occurredAt = MAINTENANT) => ({
+    annule: (cible, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type: 'VOID',
       cycle_key: null,
       payload: { target: cible },
     }),
-    inconnu: (type, occurredAt = MAINTENANT) => ({
+    inconnu: (type, occurredAt) => ({
       ...base(occurredAt, 'exact'),
       type,
       cycle_key: null,

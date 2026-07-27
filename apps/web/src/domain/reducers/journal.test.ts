@@ -79,12 +79,8 @@ describe('journal', () => {
 
   it('exclut les événements de progression', () => {
     const f = creerFabrique()
-    const evenements = [
-      f.start('c1', '2026-01-01T20:00:00.000Z'),
-      f.prog('c1', 30),
-      f.prog('c1', 60),
-      f.seen('c1'),
-    ]
+    // Tout est live : les dates de survenue suivent l'ordre d'appel.
+    const evenements = [f.start('c1'), f.prog('c1', 30), f.prog('c1', 60), f.seen('c1')]
 
     const types = journal(evenements)
       .filter((e) => e.genre === 'evenement')
