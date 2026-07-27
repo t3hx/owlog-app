@@ -61,5 +61,12 @@
     "label": "Language",
     "fr": "FR",
     "en": "EN"
+  },
+  "update": {
+    "available": "New version available",
+    "reload": "RELOAD"
+  },
+  "attribution": {
+    "tmdb": "Movie and TV data provided by TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB."
   }
 }

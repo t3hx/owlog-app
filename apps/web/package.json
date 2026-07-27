@@ -12,6 +12,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@owlog/contracts": "workspace:*",
     "dexie": "^4.0.11",
     "dexie-react-hooks": "^1.1.7",
     "i18next": "^26.3.6",
@@ -38,6 +39,8 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0",
     "vite": "^6.0.5",
-    "vitest": "^2.1.8"
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^2.1.8",
+    "workbox-window": "^7.4.1"
   }
 }

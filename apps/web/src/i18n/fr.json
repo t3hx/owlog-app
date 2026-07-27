@@ -61,5 +61,12 @@
     "label": "Langue",
     "fr": "FR",
     "en": "EN"
+  },
+  "update": {
+    "available": "Nouvelle version disponible",
+    "reload": "RECHARGER"
+  },
+  "attribution": {
+    "tmdb": "Données de films et séries fournies par TMDB. Ce produit utilise l'API TMDB sans être approuvé ni certifié par TMDB."
   }
 }

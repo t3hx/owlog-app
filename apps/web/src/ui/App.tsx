@@ -4,6 +4,7 @@ import { Route, Switch, useRoute } from 'wouter'
 import { UnderConstruction } from '@/ui/components/UnderConstruction'
 import { Header } from '@/ui/components/Header'
 import { TabBar } from '@/ui/components/TabBar'
+import { UpdateBanner } from '@/ui/components/UpdateBanner'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
 import { Welcome } from '@/ui/screens/Welcome'
@@ -88,6 +89,7 @@ export function App() {
         </Route>
       </Switch>
 
+      <UpdateBanner />
       <TabBar />
     </div>
   )
