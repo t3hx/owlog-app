@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { eventStore } from '@/adapters/dexie/eventStore'
+import { liveQueries } from '@/adapters/dexie/hooks'
+import { pendingAdds } from '@/adapters/dexie/pendingAdds'
 import { settingsStore } from '@/adapters/dexie/settingsStore'
 import { createMediaCatalog } from '@/adapters/tmdb-http/mediaCatalog'
 import '@/i18n'
@@ -40,7 +42,13 @@ const catalog = createMediaCatalog({
 
 createRoot(container).render(
   <StrictMode>
-    <PortsProvider ports={{ settings: settingsStore, events: eventStore, catalog }}>
+    <PortsProvider ports={{
+        settings: settingsStore,
+        events: eventStore,
+        catalog,
+        pending: pendingAdds,
+        live: liveQueries,
+      }}>
       <App />
     </PortsProvider>
   </StrictMode>,

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
+import { Search } from '@/ui/components/search/Search'
 import { UnderConstruction } from '@/ui/components/UnderConstruction'
 
 /**
@@ -16,19 +17,23 @@ export function Home({ firstName }: { firstName: string }) {
   const { t } = useTranslation()
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-1 px-5 pt-8">
-      <h1 className="font-display text-[25px] font-semibold text-text">
-        {t('home.greeting', { firstName })}
-      </h1>
-      <p className="font-mono text-[11px] text-muted">
-        {t('home.counters', { watching: 0, toWatch: 0 })}
-      </p>
+    <div className="mx-auto flex max-w-md flex-col gap-1 pt-6">
+      <Search context="add">
+        <div className="px-5 pt-2">
+          <h1 className="font-display text-[25px] font-semibold text-text">
+            {t('home.greeting', { firstName })}
+          </h1>
+          <p className="font-mono text-[11px] text-muted">
+            {t('home.counters', { watching: 0, toWatch: 0 })}
+          </p>
 
-      <UnderConstruction
-        title={t('home.watchingTitle')}
-        step={8}
-        what={t('home.watchingWhat')}
-      />
+          <UnderConstruction
+            title={t('home.watchingTitle')}
+            step={8}
+            what={t('home.watchingWhat')}
+          />
+        </div>
+      </Search>
     </div>
   )
 }

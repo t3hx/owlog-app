@@ -60,6 +60,8 @@
 
   /* --- Ombres et halos --- */
   --shadow-glow-sm: 0 0 10px rgb(39 255 147 / 0.35); /* icone de nav active */
+  /* Barre de recherche : menthe en interne, bleu en externe. Releve du prototype. */
+  --shadow-search: 0 0 20px rgb(39 255 147 / 0.1) inset, 0 0 16px rgb(47 123 255 / 0.12);
   --shadow-glow: 0 0 12px rgb(39 255 147 / 0.35);
   --shadow-glow-strong: 0 0 18px rgb(39 255 147 / 0.35);
 }
