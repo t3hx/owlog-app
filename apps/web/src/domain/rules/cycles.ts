@@ -88,7 +88,7 @@ function buildCycle(key: CycleKey, events: DomainEvent[]): UnrankedCycle & { ran
     [...events].sort((a, b) => compareStrings(a.created_at, b.created_at))[0]
 
   if (!reference) {
-    throw new Error(`Cycle ${key} sans aucun événement, ce qui est impossible`)
+    throw new Error(`Cycle ${key} has no events at all, which cannot happen`)
   }
 
   return {

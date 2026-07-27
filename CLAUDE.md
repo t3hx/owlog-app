@@ -124,6 +124,38 @@ Les tokens du handoff **sont** le thème Tailwind (`@theme` en v4). Les classes 
 
 **Interdit :** les valeurs arbitraires sur les tokens (`bg-[#121724]`, `text-[#27FF93]`). Elles dupliquent le design system et le font diverger. Les valeurs arbitraires de géométrie ponctuelle (`w-[104px]` pour une affiche) sont tolérées.
 
+## Internationalisation
+
+Deux langues au lancement : français et anglais. **Aucune chaîne affichable n'est écrite en dur dans un composant** — tout passe par `src/i18n/fr.json` et `en.json`, via `react-i18next`.
+
+Les clés sont typées sur le catalogue français : une clé absente échoue à la compilation plutôt que d'afficher son propre nom à l'écran.
+
+La langue est persistée en `localStorage` (`owlog.language`), pas dans `settings` : elle doit être connue avant le premier rendu, et une lecture IndexedDB est asynchrone.
+
+Le sélecteur de langue dans le header est **temporaire**, le temps de la construction. Sa place définitive est un écran de réglages qui n'existe pas encore.
+
+Les messages d'erreur levés par le code sont en anglais : ils s'adressent au développeur, pas à l'utilisateur, et ne passent pas par l'i18n.
+
+## Secrets
+
+**Doppler**, projet `owlog-app`. Aucun secret n'est versionné, ni en clair ni chiffré, et aucun `.env` n'est commité.
+
+```bash
+doppler run -- pnpm dev          # développement
+doppler secrets download --no-file --format env   # inspection
+```
+
+Secrets attendus à l'étape 3, côté `owlog-api` uniquement :
+
+| Nom | Rôle |
+|---|---|
+| `TMDB_API_KEY` | Clé v3 de The Movie Database |
+| `TMDB_READ_TOKEN` | Jeton de lecture v4 |
+
+**À faire avant l'étape 3 :** les secrets existants s'appellent `TVDB_API_KEY` et `TVDB_API_TOKEN`. TheTVDB et TMDB sont deux APIs différentes ; le projet est bâti sur TMDB, jusqu'au format de référence `tmdb:movie/…` gravé dans le type `MediaRef` et dans les 126 tests du domaine. Les secrets sont donc à renommer côté Doppler.
+
+La clé ne quitte jamais `owlog-api`. Elle n'entre à aucun moment dans le bundle client, qui ne connaît que `/search` et `/media/:ref`.
+
 ## Déploiement
 
 Dokploy sur VPS personnel, domaine chez Cloudflare. Deux services : `owlog-web` (statique, servi par Caddy) et `owlog-api` (Hono). Cible temps 2 : Postgres auto-hébergé sur le même Dokploy, avec une API maison — pas Supabase.
