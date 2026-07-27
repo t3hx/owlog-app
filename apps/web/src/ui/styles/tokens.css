@@ -1,24 +1,139 @@
 @import 'tailwindcss';
 
-/**
- * Socle de styles.
+/*
+ * Design system Owlog.
  *
- * Les tokens du handoff arrivent au commit suivant. Ce fichier ne porte pour
- * l'instant que le strict nécessaire pour que l'application se construise.
+ * Les tokens de `design_handoff_owlog/design-system.md` SONT le theme
+ * Tailwind. C'est la regle DRY appliquee aux couleurs : ecrire une valeur
+ * arbitraire (`bg-[#121724]`) recreerait le design system a un second
+ * endroit, et les deux divergeraient au troisieme ecran.
+ *
+ * Les valeurs arbitraires de geometrie ponctuelle (`w-[104px]` pour une
+ * affiche) restent tolerees : ce ne sont pas des tokens.
  */
 @theme {
+  /* --- Fonds et surfaces --- */
   --color-bg: #070a12;
+  --color-surface: #121724;
+  --color-surface-translucent: rgb(18 23 36 / 0.75);
+  --color-tabbar: rgb(10 14 23 / 0.92);
+
+  /* --- Bordures --- */
+  --color-border: #212a3d;
+  --color-border-active: #2c3448;
+  --color-border-accent: rgb(39 255 147 / 0.35);
+
+  /* --- Texte --- */
   --color-text: #eaeef2;
   --color-muted: #8a8f9c;
+  --color-subtle: #5f6474;
+  --color-icon-dim: #4d5468;
+
+  /* --- Accents --- */
+  --color-accent: #27ff93; /* menthe */
+  --color-blue: #2f7bff;
+
+  /* --- Statuts ---
+   * A voir jaune, en cours menthe, vu bleu, abandonne rouge.
+   * Les chips utilisent la couleur a 10-12 % en fond et 40-45 % en bordure.
+   */
+  --color-status-watch: #ffd64a;
+  --color-status-current: #27ff93;
+  --color-status-seen: #7eb0ff;
+  --color-status-dropped: #ff5e5e;
+
+  /* --- Typographies ---
+   * Auto-hebergees : Google Fonts casserait le mode avion et la conformite
+   * au pixel des la premiere ouverture hors-ligne. Voir polices.css.
+   */
+  --font-display: 'Chakra Petch', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* --- Rayons --- */
+  --radius-card: 14px;
+  --radius-action: 12px;
+  --radius-poster: 10px;
+  --radius-tab: 10px 10px 0 0;
+  --radius-searchbar: 0 14px 14px 14px;
+
+  /* --- Ombres et halos --- */
+  --shadow-glow: 0 0 12px rgb(39 255 147 / 0.35);
+  --shadow-glow-strong: 0 0 18px rgb(39 255 147 / 0.35);
 }
 
-html,
-body,
-#root {
-  height: 100%;
+/*
+ * Degrades. Toujours 90deg.
+ *
+ * Actions (bouton play, REVOIR, icone de nav active, CTA) : menthe vers bleu.
+ * Progression : bleu vers menthe. L'inversion est voulue, elle distingue
+ * l'action de l'avancement.
+ *
+ * Le coup de coeur est le seul element non-action autorise a porter un
+ * degrade, et il utilise celui des actions.
+ */
+@utility bg-gradient-action {
+  background-image: linear-gradient(90deg, var(--color-accent), var(--color-blue));
 }
 
-body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
+@utility bg-gradient-progress {
+  background-image: linear-gradient(90deg, var(--color-blue), var(--color-accent));
+}
+
+/* Texte en degrade : le mot « log » du titre, les gros chiffres des stats. */
+@utility text-gradient-action {
+  background-image: linear-gradient(90deg, var(--color-accent), var(--color-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/*
+ * Liseré en degrade pour les affiches en coup de coeur.
+ * Technique du handoff : bordure transparente, fond en padding-box, degrade
+ * en border-box. Jamais sur la card conteneur, jamais un badge.
+ */
+@utility border-gradient {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(90deg, var(--color-accent), var(--color-blue)) border-box;
+}
+
+/* Placeholder d'affiche, en attendant les visuels TMDB. */
+@utility bg-poster-placeholder {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    #1a2032,
+    #1a2032 6px,
+    #151a29 6px,
+    #151a29 12px
+  );
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    /* Halo de page : menthe en haut a droite, bleu en haut a gauche. */
+    background-image:
+      radial-gradient(60rem 40rem at 70% -10%, rgb(39 255 147 / 0.1), transparent),
+      radial-gradient(60rem 40rem at 15% -10%, rgb(47 123 255 / 0.14), transparent);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Toute cible tactile fait au moins 44 x 44 px (contrainte du handoff). */
+  button,
+  a[role='button'] {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
 }
