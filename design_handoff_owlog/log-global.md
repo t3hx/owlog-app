@@ -28,7 +28,7 @@ Le critère d'acceptation est littéral : **le flux montre la même chose que l'
 
 | Bloc | Contenu | Règle |
 |---|---|---|
-| En-tête | `LOG` Chakra Petch 25px, sous-ligne mono `› N entrées` | pas de barre de recherche : ce n'est pas un écran d'ajout |
+| En-tête | `LOG` Chakra Petch 25px, sous-ligne mono `› N entrées affichées` | pas de barre de recherche : ce n'est pas un écran d'ajout. **« affichées » et non « entrées » tout court** : le flux est paginé, et un total qui ne compte que la page chargée serait le compteur faux que l'accueil a déjà produit une fois |
 | Ligne | `2026-07-28 · vu · Severance` en mono 10.5px, `border-left #212A3D` | date en `subtle`, verbe coloré par type, titre en `text` |
 | Repli | `charger plus` en mono 10px, centré | disparaît quand le flux est épuisé |
 | Vide | `ton log est vide` + une phrase | même ton que les autres états vides |

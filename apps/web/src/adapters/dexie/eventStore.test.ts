@@ -111,6 +111,29 @@ describe('EventStore (adaptateur Dexie)', () => {
     expect(second.map((e) => e.type)).toEqual(['SEEN'])
   })
 
+  /**
+   * Le LOG global se lit du plus récent au plus ancien.
+   *
+   * Le servir avec la pagination croissante obligerait à tirer toute la
+   * table pour en afficher les vingt dernières lignes — le vidage que le
+   * port interdit explicitement.
+   */
+  it('pagine aussi par identifiant decroissant', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+    await store.append([f.watch(), f.start('c1'), f.seen('c1')] as DomainEvent[])
+
+    const firstPage = await store.eventsRecent(null, 2)
+    expect(firstPage.map((e) => e.type)).toEqual(['SEEN', 'START'])
+
+    const second = await store.eventsRecent(firstPage[1]?.id ?? null, 2)
+    expect(second.map((e) => e.type)).toEqual(['WATCH'])
+
+    // Le curseur est exclusif des deux cotes : rejouer la meme page ne doit
+    // pas reafficher la ligne qui l'a bornee.
+    expect(await store.eventsRecent(second[0]?.id ?? null, 2)).toHaveLength(0)
+  })
+
   it('reconstruit media_state a l identique', async () => {
     const store = createEventStore()
     const f = createFactory()

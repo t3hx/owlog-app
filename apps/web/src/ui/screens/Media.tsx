@@ -4,6 +4,7 @@ import { useLocation } from 'wouter'
 
 import { journal as journalOf } from '@/domain/reducers/journal'
 import type { MediaRef, Status, StoredEvent } from '@/domain/types'
+import { EventText } from '@/ui/components/journal/EventText'
 import { useLongPress } from '@/ui/hooks/useLongPress'
 import { useMedia } from '@/ui/hooks/useMedia'
 
@@ -290,7 +291,6 @@ function JournalLine({
   event: StoredEvent
   onCancel: (id: string) => void
 }) {
-  const { t } = useTranslation()
   const longPress = useLongPress(() => onCancel(event.id))
 
   return (
@@ -299,35 +299,9 @@ function JournalLine({
       {...longPress}
       className="min-h-0 min-w-0 text-left font-mono text-[10.5px] text-muted"
     >
-      <span className="text-subtle">{shortDate(event.occurred_at)}</span>
-      {' · '}
-      <span className={eventColor(event.type)}>
-        {t(`journal.${event.type}` as 'journal.WATCH', { defaultValue: event.type })}
-      </span>
+      <EventText event={event} />
     </button>
   )
-}
-
-function eventColor(type: string): string {
-  switch (type) {
-    case 'WATCH':
-      return 'text-status-watch'
-    case 'START':
-    case 'REWATCH':
-      return 'text-status-current'
-    case 'SEEN':
-      return 'text-status-seen'
-    case 'DROP':
-    case 'REMOVE':
-      return 'text-status-dropped'
-    default:
-      return 'text-muted'
-  }
-}
-
-/** `null` quand la précision est inconnue : on ne fabrique pas une date. */
-function shortDate(at: string | null): string {
-  return at === null ? '····-··-··' : at.slice(0, 10)
 }
 
 function meta(

@@ -24,6 +24,8 @@ export function fakePorts(overrides: {
   mediaStates?: readonly MediaStateRow[]
   pendingAdds?: readonly PendingAdd[]
   mediaEvents?: readonly StoredEvent[]
+  /** Ce que le LOG global reçoit à sa première page. */
+  recentEvents?: readonly StoredEvent[]
   mediaCache?: readonly MediaCacheRow[]
   /** Reçoit ce que les commandes écrivent, pour l'affirmer dans un test. */
   onAppend?: (produced: readonly StoredEvent[]) => void
@@ -57,6 +59,7 @@ export function fakePorts(overrides: {
     eventsForMedia: () => Promise.resolve(overrides.mediaEvents ?? []),
     allMediaStates: () => Promise.resolve(mediaStates),
     eventsSince: () => Promise.resolve([]),
+    eventsRecent: () => Promise.resolve(overrides.recentEvents ?? []),
     upsertMediaCache: () => Promise.resolve(),
     restore: () => Promise.resolve({ added: 0, skipped: 0 }),
     rebuildAllState: () => Promise.resolve(),

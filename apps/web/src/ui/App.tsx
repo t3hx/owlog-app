@@ -7,6 +7,7 @@ import { TabBar } from '@/ui/components/TabBar'
 import { UpdateBanner } from '@/ui/components/UpdateBanner'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
+import { Log } from '@/ui/screens/Log'
 import { Media } from '@/ui/screens/Media'
 import { Welcome } from '@/ui/screens/Welcome'
 import { Debug } from '@/ui/screens/Debug'
@@ -71,11 +72,7 @@ export function App() {
           />
         </Route>
         <Route path="/log">
-          <UnderConstruction
-            title={t('log.title')}
-            step={9}
-            what={t('log.what')}
-          />
+          <Log />
         </Route>
         <Route path="/stats">
           <UnderConstruction

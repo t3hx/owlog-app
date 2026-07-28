@@ -67,6 +67,20 @@ export interface EventStore {
   eventsSince(cursor: EventId | null, limit: number): Promise<readonly StoredEvent[]>
 
   /**
+   * Page d'événements **avant** un curseur, par identifiant décroissant.
+   *
+   * Sert le LOG global, qui se lit du plus récent au plus ancien. La
+   * pagination croissante ne peut pas le servir : afficher les vingt
+   * dernières lignes obligerait à tirer toute la table pour en atteindre la
+   * fin, c'est-à-dire le vidage que ce port interdit.
+   *
+   * Le curseur est **exclusif** — passer le dernier identifiant reçu rend la
+   * page suivante, jamais la même ligne deux fois. Côté Postgres :
+   * `WHERE id < $1 ORDER BY id DESC LIMIT $2`, requête indexée.
+   */
+  eventsRecent(before: EventId | null, limit: number): Promise<readonly StoredEvent[]>
+
+  /**
    * Réinjecte des événements venus d'une sauvegarde `.log`.
    *
    * **Ce n'est pas `append`.** Les événements arrivent déjà écrits, avec

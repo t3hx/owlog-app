@@ -33,8 +33,13 @@
     "what": "Tout ce que tu as logué, filtrable par statut et par coup de cœur."
   },
   "log": {
-    "title": "Log",
-    "what": "Le flux horodaté de tout ce que tu as fait. Le tail -f de ta vie de spectateur."
+    "title": "LOG",
+    "loaded": "› {{count}} entrée affichée",
+    "loaded_other": "› {{count}} entrées affichées",
+    "more": "charger plus",
+    "loading": "…",
+    "empty": "Ton log est vide",
+    "emptyHint": "Ajoute un titre, ou enregistre un souvenir : tout ce que tu feras s'écrira ici."
   },
   "stats": {
     "title": "Stats",

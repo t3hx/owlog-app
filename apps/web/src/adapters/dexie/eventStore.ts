@@ -89,6 +89,23 @@ export function createEventStore(): EventStore {
     },
 
     /**
+     * Même parcours, dans l'autre sens, pour le flux du LOG global.
+     *
+     * `reverse()` s'applique à la collection déjà bornée : borner après
+     * aurait renversé la page et non le parcours, donc rendu les vingt plus
+     * anciens événements affichés à l'envers.
+     */
+    async eventsRecent(
+      before: EventId | null,
+      limit: number,
+    ): Promise<readonly StoredEvent[]> {
+      const collection =
+        before === null ? db.events.orderBy('id') : db.events.where('id').below(before)
+
+      return collection.reverse().limit(limit).toArray()
+    },
+
+    /**
      * Réinjecte une sauvegarde, sans jamais lever sur un doublon.
      *
      * Le tri des connus et des inconnus se fait **dans la transaction** : le

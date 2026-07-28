@@ -33,8 +33,13 @@
     "what": "Everything you've logged, filterable by status and by favourite."
   },
   "log": {
-    "title": "Log",
-    "what": "The timestamped feed of everything you've done. The tail -f of your viewing life."
+    "title": "LOG",
+    "loaded": "› {{count}} entry shown",
+    "loaded_other": "› {{count}} entries shown",
+    "more": "load more",
+    "loading": "…",
+    "empty": "Your log is empty",
+    "emptyHint": "Add a title, or record a memory: everything you do lands here."
   },
   "stats": {
     "title": "Stats",
