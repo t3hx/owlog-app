@@ -7,6 +7,7 @@ import { TabBar } from '@/ui/components/TabBar'
 import { UpdateBanner } from '@/ui/components/UpdateBanner'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
+import { Library } from '@/ui/screens/Library'
 import { Log } from '@/ui/screens/Log'
 import { Media } from '@/ui/screens/Media'
 import { Welcome } from '@/ui/screens/Welcome'
@@ -65,11 +66,7 @@ export function App() {
           {(params) => <Media ref={`tmdb:${params.kind === 'tv' ? 'tv' : 'movie'}/${Number(params.id)}`} />}
         </Route>
         <Route path="/library">
-          <UnderConstruction
-            title={t('library.title')}
-            step={10}
-            what={t('library.what')}
-          />
+          <Library />
         </Route>
         <Route path="/log">
           <Log />

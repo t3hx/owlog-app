@@ -30,7 +30,19 @@
   },
   "library": {
     "title": "Bibliothèque",
-    "what": "Tout ce que tu as logué, filtrable par statut et par coup de cœur."
+    "count": "{{count}} titre",
+    "count_other": "{{count}} titres",
+    "filterAll": "tous",
+    "filterFavorites": "♥ coups de cœur",
+    "cycleLabel": "Statut de {{title}} — tap pour avancer, appui long pour choisir",
+    "hint": "tap sur la pastille = statut suivant · appui long = choisir",
+    "menuClose": "fermer",
+    "menuHint": "choisir directement un statut",
+    "menuCurrent": "actuel",
+    "empty": "Ta bibliothèque est vide",
+    "emptyHint": "Cherche un titre ci-dessus : un tap sur + l'ajoute en « à voir ».",
+    "emptyFilter": "Rien sous ce filtre",
+    "emptyFilterHint": "Aucun titre n'a ce statut pour l'instant."
   },
   "log": {
     "title": "LOG",

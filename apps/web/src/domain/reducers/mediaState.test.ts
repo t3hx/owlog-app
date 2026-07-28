@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { homeCounters, mediaState, library } from '@/domain/reducers/mediaState'
+import {
+  filterLibrary,
+  homeCounters,
+  mediaState,
+  library,
+} from '@/domain/reducers/mediaState'
 import { createFactory, MOVIE, SERIES } from '@/domain/test/factory'
 
 /**
@@ -136,6 +141,71 @@ describe('bibliotheque', () => {
 
     // Le coup de coeur n'est pas un statut : il se cumule avec les quatre.
     expect(library(states).counts.favorites).toBe(2)
+  })
+})
+
+/**
+ * Filtre des chips de la bibliothèque.
+ *
+ * Il vit dans le domaine et non dans l'écran pour une raison précise : le
+ * compteur d'une chip et la liste qu'elle ouvre doivent sortir du **même**
+ * prédicat. Deux implémentations feraient une chip qui annonce trois titres
+ * au-dessus d'une liste qui en montre deux — le défaut que l'accueil a déjà
+ * produit une fois, et qu'on ne diagnostique pas comme un défaut d'affichage.
+ */
+describe('filtre de la bibliotheque', () => {
+  function sample() {
+    const toWatch = createFactory(MOVIE)
+    const watching = createFactory(SERIES)
+    const seenFav = createFactory('tmdb:movie/603')
+
+    return [
+      mediaState([toWatch.watch()], MOVIE),
+      mediaState([watching.watch(), watching.start('c1')], SERIES),
+      mediaState(
+        [seenFav.watch(), seenFav.start('c1'), seenFav.seen('c1'), seenFav.fav()],
+        'tmdb:movie/603',
+      ),
+    ]
+  }
+
+  it('rend tout sur « tous »', () => {
+    expect(filterLibrary(sample(), 'all')).toHaveLength(3)
+  })
+
+  it('rend un seul statut', () => {
+    expect(filterLibrary(sample(), 'watching').map((row) => row.ref)).toEqual([SERIES])
+  })
+
+  it('rend les coups de coeur quel que soit leur statut', () => {
+    expect(filterLibrary(sample(), 'favorites').map((row) => row.ref)).toEqual([
+      'tmdb:movie/603',
+    ])
+  })
+
+  it('ecarte les medias absents comme la liste elle-meme', () => {
+    const gone = createFactory(SERIES)
+    const states = [mediaState([gone.watch(), gone.remove()], SERIES)]
+
+    expect(filterLibrary(states, 'all')).toHaveLength(0)
+  })
+
+  it('accorde chaque chip avec son compteur', () => {
+    // L'invariant qui justifie que le filtre vive ici. Il tient pour les six
+    // chips a la fois, donc une septieme ajoutee plus tard le verifiera aussi.
+    const states = sample()
+    const { counts } = library(states)
+
+    for (const filter of [
+      'all',
+      'to-watch',
+      'watching',
+      'seen',
+      'dropped',
+      'favorites',
+    ] as const) {
+      expect(filterLibrary(states, filter)).toHaveLength(counts[filter])
+    }
   })
 })
 

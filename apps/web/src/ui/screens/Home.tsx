@@ -1,4 +1,3 @@
-import { parseMediaRef } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
@@ -10,7 +9,7 @@ import { WatchingRow } from '@/ui/components/home/WatchingRow'
 import { Search } from '@/ui/components/search/Search'
 import { usePlay } from '@/ui/hooks/usePlay'
 import { usePorts } from '@/ui/PortsProvider'
-import type { MediaCacheRow } from '@/ports/MediaCache'
+import { placeholderCacheRow, type MediaCacheRow } from '@/ports/MediaCache'
 
 /**
  * Accueil.
@@ -41,7 +40,7 @@ export function Home({ firstName }: { firstName: string }) {
 
   const byRef = new Map(cache.map((row) => [row.ref, row]))
   const cacheFor = (ref: MediaRef): MediaCacheRow =>
-    byRef.get(ref) ?? placeholder(ref, t('home.uncached'))
+    byRef.get(ref) ?? placeholderCacheRow(ref, t('home.uncached'))
 
   const watching = states.filter((row) => row.status === 'watching').sort(byRecency)
   const toWatch = states.filter((row) => row.status === 'to-watch').sort(byRecency)
@@ -127,29 +126,3 @@ function byRecency(a: MediaStateRow, b: MediaStateRow): number {
   return (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '')
 }
 
-/**
- * Ligne de cache de secours, quand le cache ne connaît pas le titre.
- *
- * Le cas est réel : une restauration depuis un `.log` rejoue les événements,
- * pas le cache TMDB. Sauter ces titres ferait dire « 3 en cours » à la ligne
- * de compteurs au-dessus d'une section vide — le défaut exact que ce même
- * écran a déjà produit une fois. La rangée reste donc affichée et cliquable :
- * ouvrir la fiche appelle `/media/:ref` et répare le cache.
- */
-function placeholder(ref: MediaRef, title: string): MediaCacheRow {
-  return {
-    ref,
-    kind: parseMediaRef(ref)?.kind ?? 'movie',
-    title,
-    year: null,
-    posterPath: null,
-    backdropPath: null,
-    genres: [],
-    totalRuntime: null,
-    numberOfEpisodes: null,
-    overview: '',
-    externalRatings: { tmdb: null },
-    fetchedAt: '',
-    complete: false,
-  }
-}

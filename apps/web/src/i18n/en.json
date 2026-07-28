@@ -30,7 +30,19 @@
   },
   "library": {
     "title": "Library",
-    "what": "Everything you've logged, filterable by status and by favourite."
+    "count": "{{count}} title",
+    "count_other": "{{count}} titles",
+    "filterAll": "all",
+    "filterFavorites": "♥ favourites",
+    "cycleLabel": "Status of {{title}} — tap to advance, long press to choose",
+    "hint": "tap the pill = next status · long press = choose",
+    "menuClose": "close",
+    "menuHint": "pick a status directly",
+    "menuCurrent": "current",
+    "empty": "Your library is empty",
+    "emptyHint": "Search for a title above: one tap on + adds it to « to watch ».",
+    "emptyFilter": "Nothing under this filter",
+    "emptyFilterHint": "No title has this status yet."
   },
   "log": {
     "title": "LOG",

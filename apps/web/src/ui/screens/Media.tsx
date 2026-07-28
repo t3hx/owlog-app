@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
 import { journal as journalOf } from '@/domain/reducers/journal'
-import type { MediaRef, Status, StoredEvent } from '@/domain/types'
+import type { MediaRef, StoredEvent } from '@/domain/types'
 import { EventText } from '@/ui/components/journal/EventText'
+import { STATUS_CHIP, STATUSES } from '@/ui/components/status/statusStyle'
 import { useLongPress } from '@/ui/hooks/useLongPress'
 import { useMedia } from '@/ui/hooks/useMedia'
 
@@ -20,34 +21,6 @@ import { useMedia } from '@/ui/hooks/useMedia'
  * de notes, et un emplacement vide annonce une fonctionnalité qui ne viendra
  * pas. Seul `tmdb` s'affiche.
  */
-const STATUSES: readonly Status[] = ['to-watch', 'watching', 'seen', 'dropped']
-
-/**
- * Classes des chips, en dur et non composées.
- *
- * Tailwind analyse le source en texte : une classe fabriquée à l'exécution
- * (`border-status-${option}`) n'existe dans aucun fichier, donc la règle
- * n'est jamais générée et la chip sort sans couleur.
- */
-const CHIP: Record<Status, { readonly on: string; readonly off: string }> = {
-  'to-watch': {
-    on: 'border-status-watch bg-status-watch/10 text-status-watch',
-    off: 'border-border text-muted',
-  },
-  watching: {
-    on: 'border-status-current bg-status-current/10 text-status-current',
-    off: 'border-border text-muted',
-  },
-  seen: {
-    on: 'border-status-seen bg-status-seen/10 text-status-seen',
-    off: 'border-border text-muted',
-  },
-  dropped: {
-    on: 'border-status-dropped bg-status-dropped/10 text-status-dropped',
-    off: 'border-border text-muted',
-  },
-}
-
 export function Media({ ref: mediaRef }: { ref: MediaRef }) {
   const { t } = useTranslation()
   const [, navigate] = useLocation()
@@ -101,7 +74,7 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
             aria-pressed={status === option}
             className={[
               'flex-none whitespace-nowrap rounded-full border px-[13px] py-2 font-mono text-[10.5px]',
-              status === option ? CHIP[option].on : CHIP[option].off,
+              status === option ? STATUS_CHIP[option].on : STATUS_CHIP[option].off,
             ].join(' ')}
           >
             {t(`status.${option}` as 'status.to-watch')}

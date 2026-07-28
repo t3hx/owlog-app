@@ -1,4 +1,4 @@
-import type { MediaDetail, MediaKind, MediaRef } from '@owlog/contracts'
+import { parseMediaRef, type MediaDetail, type MediaKind, type MediaRef } from '@owlog/contracts'
 
 /**
  * Ligne de cache d'un média.
@@ -49,6 +49,37 @@ export function partialCacheRow(
     overview: '',
     externalRatings: { tmdb: null },
     fetchedAt: now,
+    complete: false,
+  }
+}
+
+/**
+ * Ligne de secours, quand le cache ne connaît pas du tout le titre.
+ *
+ * Le cas est réel et pas défensif : une restauration depuis un `.log` rejoue
+ * les événements et **pas** le cache TMDB. Les écrans qui listent des médias
+ * s'en servent pour afficher la ligne quand même plutôt que de la sauter —
+ * un compteur qui annonce trois titres au-dessus d'une liste qui en montre
+ * deux se diagnostique comme une perte de données, pas comme un défaut
+ * d'affichage. Ouvrir la fiche appelle `/media/:ref` et répare le cache.
+ *
+ * `complete: false` et `fetchedAt` vide : rien n'a été récupéré, et les
+ * stats doivent pouvoir distinguer cette ligne d'une vraie.
+ */
+export function placeholderCacheRow(ref: MediaRef, title: string): MediaCacheRow {
+  return {
+    ref,
+    kind: parseMediaRef(ref)?.kind ?? 'movie',
+    title,
+    year: null,
+    posterPath: null,
+    backdropPath: null,
+    genres: [],
+    totalRuntime: null,
+    numberOfEpisodes: null,
+    overview: '',
+    externalRatings: { tmdb: null },
+    fetchedAt: '',
     complete: false,
   }
 }

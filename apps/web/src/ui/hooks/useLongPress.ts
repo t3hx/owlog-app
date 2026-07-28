@@ -13,7 +13,16 @@ import { useCallback, useEffect, useRef } from 'react'
  */
 const HOLD_MS = 550
 
-export function useLongPress(onLongPress: () => void) {
+/**
+ * @param onLongPress action de l'appui long.
+ * @param onTap action du tap court. **La passer ici plutôt qu'en `onClick`
+ * sur l'élément** : c'est la seule façon que l'appui long ne déclenche pas
+ * aussi le tap. La pastille de la bibliothèque porte les deux gestes, et
+ * sans cette garde un appui long ouvrirait le menu **et** ferait tourner le
+ * statut d'un cran — c'est-à-dire écrirait un événement définitif que
+ * personne n'a demandé.
+ */
+export function useLongPress(onLongPress: () => void, onTap?: () => void) {
   const timer = useRef<number | null>(null)
   const fired = useRef(false)
 
@@ -37,6 +46,15 @@ export function useLongPress(onLongPress: () => void) {
   }, [clear, onLongPress])
 
   return {
+    onClick: () => {
+      // Le clic qui suit un appui long est avalé, puis le drapeau retombe :
+      // le tap suivant doit repartir d'un état neuf.
+      if (fired.current) {
+        fired.current = false
+        return
+      }
+      onTap?.()
+    },
     onPointerDown: start,
     onPointerUp: clear,
     onPointerLeave: clear,
