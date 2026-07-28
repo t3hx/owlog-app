@@ -24,7 +24,7 @@ export interface MediaStateRow {
   readonly percent: number
   readonly label: string | null
   readonly labelStale: boolean
-  readonly note: number | null
+  readonly rating: number | null
   readonly comment: string | null
   readonly favorite: boolean
   readonly seenCount: number
@@ -64,7 +64,7 @@ export function mediaState(
     percent: progressValue.percent,
     label: progressValue.label,
     labelStale: progressValue.stale,
-    note: current ? ratingOfCycle(events, current.key) : null,
+    rating: current ? ratingOfCycle(events, current.key) : null,
     comment: current ? comment(events, current.key) : null,
     favorite: isFavorite(events),
     seenCount: seenCount(events),
@@ -81,7 +81,7 @@ export function mediaState(
  * forme de vidage, et donc à la promesse Postgres de tenir.
  */
 export function library(states: readonly MediaStateRow[]): LibraryView {
-  const rows = states.filter((etat) => etat.status !== 'absent')
+  const rows = states.filter((row) => row.status !== 'absent')
 
   return {
     rows,
@@ -93,20 +93,20 @@ export function library(states: readonly MediaStateRow[]): LibraryView {
       dropped: countBy(rows, 'dropped'),
       // Le coup de cœur n'est pas un statut : il se cumule avec les quatre,
       // donc il se compte à part et la somme des chips dépasse `all`.
-      favorites: rows.filter((etat) => etat.favorite).length,
+      favorites: rows.filter((row) => row.favorite).length,
     },
   }
 }
 
 /** Sous-ligne `› N en cours · N à voir` de l'accueil. */
 export function homeCounters(states: readonly MediaStateRow[]): {
-  enCours: number
-  aVoir: number
+  watching: number
+  toWatch: number
 } {
-  const rows = states.filter((etat) => etat.status !== 'absent')
+  const rows = states.filter((row) => row.status !== 'absent')
   return {
-    enCours: countBy(rows, 'watching'),
-    aVoir: countBy(rows, 'to-watch'),
+    watching: countBy(rows, 'watching'),
+    toWatch: countBy(rows, 'to-watch'),
   }
 }
 

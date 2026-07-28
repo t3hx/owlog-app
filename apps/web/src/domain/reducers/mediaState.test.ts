@@ -20,9 +20,9 @@ describe('etatMedia', () => {
     const f = createFactory()
     const events = [f.watch(), f.start('c1'), f.prog('c1', 40, { label: 'S02E05' })]
 
-    const etat = mediaState(events, MOVIE)
+    const state = mediaState(events, MOVIE)
 
-    expect(etat).toMatchObject({
+    expect(state).toMatchObject({
       ref: MOVIE,
       status: 'watching',
       percent: 40,
@@ -46,7 +46,7 @@ describe('etatMedia', () => {
 
     // C'est la these du produit : la note evolue dans le temps, et la fiche
     // montre celle du visionnage en cours.
-    expect(mediaState(events, MOVIE).note).toBe(5)
+    expect(mediaState(events, MOVIE).rating).toBe(5)
   })
 
   it('compte les visionnages aboutis', () => {
@@ -72,9 +72,9 @@ describe('etatMedia', () => {
     // L'ordre de construction fait foi : la fabrique horodate a l'appel.
     const watch = f.watch()
     const last = f.start('c1')
-    const etat = mediaState([watch, last], MOVIE)
+    const state = mediaState([watch, last], MOVIE)
 
-    expect(etat.updatedAt).toBe(last.created_at)
+    expect(state.updatedAt).toBe(last.created_at)
   })
 
   it('est identique quel que soit l ordre du tableau d entree', () => {
@@ -149,14 +149,14 @@ describe('compteursAccueil', () => {
       mediaState([f2.watch(), f2.start('c1')], SERIES),
     ]
 
-    expect(homeCounters(states)).toEqual({ enCours: 1, aVoir: 1 })
+    expect(homeCounters(states)).toEqual({ watching: 1, toWatch: 1 })
   })
 
   it('ignore les medias retires', () => {
     const f = createFactory()
     expect(homeCounters([mediaState([f.watch(), f.remove()], MOVIE)])).toEqual({
-      enCours: 0,
-      aVoir: 0,
+      watching: 0,
+      toWatch: 0,
     })
   })
 })

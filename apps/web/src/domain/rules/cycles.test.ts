@@ -49,13 +49,13 @@ describe('cycles — rang et numérotation', () => {
     const events = [
       f.start('troisieme', '2024-01-01T20:00:00.000Z'),
       f.start('deuxieme', '2021-01-01T20:00:00.000Z'),
-      f.start('premier', '2019-01-01T20:00:00.000Z'),
+      f.start('first', '2019-01-01T20:00:00.000Z'),
     ]
 
     const result = cycles(events)
 
     expect(result.map((c) => [c.key, c.rank])).toEqual([
-      ['premier', 1],
+      ['first', 1],
       ['deuxieme', 2],
       ['troisieme', 3],
     ])
@@ -65,13 +65,13 @@ describe('cycles — rang et numérotation', () => {
     const f = createFactory()
     // Deux titres rétro-datés à l'année : même occurred_at, à la seconde près.
     const events = [
-      f.start('ecrit-en-premier', '2019-01-01T00:00:00.000Z', 'year'),
-      f.start('ecrit-ensuite', '2019-01-01T00:00:00.000Z', 'year'),
+      f.start('written-first', '2019-01-01T00:00:00.000Z', 'year'),
+      f.start('written-next', '2019-01-01T00:00:00.000Z', 'year'),
     ]
 
     const result = cycles(events)
 
-    expect(result.map((c) => c.key)).toEqual(['ecrit-en-premier', 'ecrit-ensuite'])
+    expect(result.map((c) => c.key)).toEqual(['written-first', 'written-next'])
   })
 
   it('classe les cycles sans date avant tous les autres', () => {

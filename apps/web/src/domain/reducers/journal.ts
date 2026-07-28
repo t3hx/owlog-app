@@ -4,14 +4,14 @@ import { isKnownEvent, type CycleKey, type StoredEvent, type Timestamp } from '@
 
 /** Marqueur `— visionnage #N —` ouvrant le bloc d'un cycle. */
 export interface CycleMarker {
-  readonly kind: 'marqueur'
+  readonly kind: 'marker'
   readonly number: number
   readonly cycle: CycleKey
 }
 
 /** Une ligne du journal. */
 export interface JournalLine {
-  readonly kind: 'evenement'
+  readonly kind: 'event'
   readonly event: StoredEvent
   /** Faux pour un type écrit par une version ultérieure du client. */
   readonly known: boolean
@@ -63,7 +63,7 @@ export function journal(events: readonly StoredEvent[]): readonly JournalEntry[]
 
     blocks.push({
       key: event.occurred_at,
-      entries: [{ kind: 'evenement', event, known: isKnownEvent(event) }],
+      entries: [{ kind: 'event', event, known: isKnownEvent(event) }],
     })
   }
 
@@ -75,12 +75,12 @@ export function journal(events: readonly StoredEvent[]): readonly JournalEntry[]
 function cycleBlock(cycle: Cycle): Block {
   const rows = [...cycle.events]
     .sort(compareEventsDesc)
-    .map<JournalLine>((event) => ({ kind: 'evenement', event, known: true }))
+    .map<JournalLine>((event) => ({ kind: 'event', event, known: true }))
 
   return {
     key: cycle.rankDate,
     entries: [
-      { kind: 'marqueur', number: cycle.rank, cycle: cycle.key },
+      { kind: 'marker', number: cycle.rank, cycle: cycle.key },
       ...rows,
     ],
   }

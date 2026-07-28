@@ -31,7 +31,7 @@ export interface CommandContext {
 export interface BackdateEntry {
   readonly date: Timestamp | null
   readonly precision: DatePrecision
-  readonly note?: number | null
+  readonly rating?: number | null
   readonly comment?: string
 }
 
@@ -89,14 +89,14 @@ export function advanceProgress(
   options: { increment: number; label?: string },
 ): readonly DomainEvent[] {
   const status = currentStatus(context.events)
-  const existant = currentCycle(context.events)
-  const isOpen = existant !== null && status !== 'to-watch' && status !== 'absent'
+  const existing = currentCycle(context.events)
+  const isOpen = existing !== null && status !== 'to-watch' && status !== 'absent'
 
   const produced: DomainEvent[] = []
   let key: CycleKey
 
-  if (isOpen && existant) {
-    key = existant.key
+  if (isOpen && existing) {
+    key = existing.key
   } else {
     const opening = liveEvent(context, { type: 'START', cycle_key: context.ids.next() })
     produced.push(opening)
@@ -108,7 +108,7 @@ export function advanceProgress(
 
   const at = context.clock.now()
   const label = options.label ?? previous?.label ?? undefined
-  const labelPoseLe =
+  const labelSetAt =
     options.label !== undefined
       ? at
       : label === undefined
@@ -124,7 +124,7 @@ export function advanceProgress(
         payload: {
           percent: percent,
           ...(label === undefined ? {} : { label }),
-          ...(labelPoseLe === undefined ? {} : { label_created_at: labelPoseLe }),
+          ...(labelSetAt === undefined ? {} : { label_created_at: labelSetAt }),
         },
       },
       at,
@@ -173,11 +173,11 @@ export function backdate(context: CommandContext, entry: BackdateEntry): readonl
 
   produced.push(pastEvent(context, { type: 'SEEN', cycle_key: key }, date))
 
-  if (entry.note !== undefined) {
+  if (entry.rating !== undefined) {
     produced.push(
       pastEvent(
         context,
-        { type: 'RATE', cycle_key: key, payload: { rating: entry.note } },
+        { type: 'RATE', cycle_key: key, payload: { rating: entry.rating } },
         date,
       ),
     )
@@ -202,20 +202,20 @@ export function rewatch(context: CommandContext): readonly DomainEvent[] {
 }
 
 /** Note le cycle courant. `null` efface — c'est le re-tap sur l'étoile. */
-export function rate(context: CommandContext, note: number | null): readonly DomainEvent[] {
+export function rate(context: CommandContext, rating: number | null): readonly DomainEvent[] {
   return onCurrentCycle(context, (key) => ({
     type: 'RATE',
     cycle_key: key,
-    payload: { rating: note },
+    payload: { rating },
   }))
 }
 
 /** Commente le cycle courant. */
-export function addComment(context: CommandContext, texte: string): readonly DomainEvent[] {
+export function addComment(context: CommandContext, text: string): readonly DomainEvent[] {
   return onCurrentCycle(context, (key) => ({
     type: 'NOTE',
     cycle_key: key,
-    payload: { text: texte },
+    payload: { text },
   }))
 }
 
@@ -250,9 +250,9 @@ type EventBody = Pick<DomainEvent, 'type' | 'cycle_key'> & { payload?: unknown }
  * `occurred_at = created_at` et précision `exact`. Sans cette règle, un
  * `START` live laissé sans date serait classé avant tous les autres cycles.
  */
-function liveEvent(context: CommandContext, corps: EventBody): DomainEvent {
+function liveEvent(context: CommandContext, body: EventBody): DomainEvent {
   const at = context.clock.now()
-  return build(context, corps, at, {
+  return build(context, body, at, {
     occurred_at: at,
     occurred_precision: 'exact',
   })
@@ -261,15 +261,15 @@ function liveEvent(context: CommandContext, corps: EventBody): DomainEvent {
 /** Événement décrivant un moment passé, avec sa précision assumée. */
 function pastEvent(
   context: CommandContext,
-  corps: EventBody,
+  body: EventBody,
   date: { occurred_at: Timestamp | null; occurred_precision: DatePrecision },
 ): DomainEvent {
-  return build(context, corps, context.clock.now(), date)
+  return build(context, body, context.clock.now(), date)
 }
 
 function build(
   context: CommandContext,
-  corps: EventBody,
+  body: EventBody,
   writtenAt: Timestamp,
   date: { occurred_at: Timestamp | null; occurred_precision: DatePrecision },
 ): DomainEvent {
@@ -279,7 +279,7 @@ function build(
     created_at: writtenAt,
     media_ref: context.mediaRef,
     ...date,
-    ...corps,
+    ...body,
   } as DomainEvent
 }
 
@@ -324,15 +324,15 @@ function openCycleStartedBefore(
  */
 function onCurrentCycle(
   context: CommandContext,
-  corps: (key: CycleKey) => EventBody,
+  body: (key: CycleKey) => EventBody,
 ): readonly DomainEvent[] {
   const current = currentCycle(context.events)
-  if (current) return [liveEvent(context, corps(current.key))]
+  if (current) return [liveEvent(context, body(current.key))]
 
   const key = context.ids.next()
   return [
     liveEvent(context, { type: 'START', cycle_key: key }),
-    liveEvent(context, corps(key)),
+    liveEvent(context, body(key)),
   ]
 }
 
