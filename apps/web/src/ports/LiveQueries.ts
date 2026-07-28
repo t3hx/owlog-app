@@ -39,4 +39,13 @@ export interface LiveQueries {
 
   /** Ligne de cache d'un média, réactive : titre, affiche, genres, durée. */
   useMediaCacheRow(ref: MediaRef): MediaCacheRow | undefined
+
+  /**
+   * Tout le cache, réactif.
+   *
+   * L'accueil affiche deux listes de titres et d'affiches, et les hooks ne
+   * s'appellent pas dans une boucle : une lecture par média est impossible
+   * là où le nombre de médias change à chaque ajout.
+   */
+  useMediaCacheRows(): readonly MediaCacheRow[]
 }

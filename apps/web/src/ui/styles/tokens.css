@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import './polices.css';
+@import './fonts.css';
 
 /*
  * Design system Owlog.
@@ -45,7 +45,7 @@
 
   /* --- Typographies ---
    * Auto-hebergees : Google Fonts casserait le mode avion et la conformite
-   * au pixel des la premiere ouverture hors-ligne. Voir polices.css.
+   * au pixel des la premiere ouverture hors-ligne. Voir fonts.css.
    */
   --font-display: 'Chakra Petch', system-ui, sans-serif;
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
@@ -54,6 +54,12 @@
   /* --- Rayons --- */
   --radius-card: 14px;
   --radius-action: 12px;
+  /*
+   * Deux rayons d'affiche, releves du prototype : 8px sur les vignettes de
+   * rangee (48x72, 56x84), 10px sur les grandes (96x144, 104x156). Un rayon
+   * unique parait juste sur l'une des deux tailles et lourd sur l'autre.
+   */
+  --radius-poster-sm: 8px;
   --radius-poster: 10px;
   --radius-tag: 6px;
   --radius-sheet: 18px;
@@ -65,6 +71,8 @@
   /* Barre de recherche : menthe en interne, bleu en externe. Releve du prototype. */
   --shadow-search: 0 0 20px rgb(39 255 147 / 0.1) inset, 0 0 16px rgb(47 123 255 / 0.12);
   --shadow-glow: 0 0 12px rgb(39 255 147 / 0.35);
+  /* Barre de progression : halo court et franc, releve du prototype. */
+  --shadow-glow-progress: 0 0 8px rgb(39 255 147 / 0.5);
   --shadow-glow-strong: 0 0 18px rgb(39 255 147 / 0.35);
   /* Affiche en surimpression sur le backdrop de la page media. */
   --shadow-poster: 0 8px 24px rgb(0 0 0 / 0.5);

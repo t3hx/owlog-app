@@ -47,10 +47,10 @@ export function MediaRow({ hit, status, onAdd, onLog, onUndo, justAdded, onOpen 
           // réponse opaque compte plusieurs mégaoctets dans le quota, et
           // dépasser le quota déclenche l'éviction d'IndexedDB.
           crossOrigin="anonymous"
-          className="h-[72px] w-12 flex-none rounded-poster object-cover"
+          className="h-[72px] w-12 flex-none rounded-poster-sm object-cover"
         />
       ) : (
-        <span className="h-[72px] w-12 flex-none rounded-poster bg-poster-placeholder" />
+        <span className="h-[72px] w-12 flex-none rounded-poster-sm bg-poster-placeholder" />
       )}
 
       <button

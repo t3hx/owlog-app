@@ -22,7 +22,7 @@ export function useMediaStates(): readonly MediaStateRow[] {
   return useLiveQuery(() => db.media_state.toArray(), [], [])
 }
 
-export function useMediaCache(): readonly MediaCacheRow[] {
+export function useMediaCacheRows(): readonly MediaCacheRow[] {
   return useLiveQuery(() => db.media_cache.toArray(), [], [])
 }
 
@@ -49,4 +49,5 @@ export const liveQueries: LiveQueries = {
   useMediaEvents,
   useMediaState,
   useMediaCacheRow,
+  useMediaCacheRows,
 }

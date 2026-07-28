@@ -1,6 +1,7 @@
 import { applyVoids } from '@/domain/reducers/applyVoids'
 import { progress } from '@/domain/reducers/projections'
 import { cycles, type Cycle } from '@/domain/rules/cycles'
+import { advancePercent, COMPLETE_PERCENT } from '@/domain/rules/progression'
 import { currentStatus } from '@/domain/rules/status'
 import type {
   CycleKey,
@@ -185,7 +186,7 @@ export function advanceProgress(
   }
 
   const previous = isOpen ? progress(context.events) : null
-  const percent = Math.min(100, (previous?.percent ?? 0) + options.increment)
+  const percent = advancePercent(previous?.percent ?? 0, options.increment)
 
   const at = context.clock.now()
   const label = options.label ?? previous?.label ?? undefined
@@ -213,7 +214,7 @@ export function advanceProgress(
     ),
   )
 
-  if (percent >= 100) {
+  if (percent >= COMPLETE_PERCENT) {
     produced.push(liveEvent(context, { type: 'SEEN', cycle_key: key }))
   }
 

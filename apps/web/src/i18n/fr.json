@@ -21,8 +21,12 @@
   "home": {
     "greeting": "Bonsoir, {{firstName}}",
     "counters": "› {{watching}} en cours · {{toWatch}} à voir",
-    "watchingTitle": "En cours",
-    "watchingWhat": "Les titres que tu regardes, avec leur progression et le bouton pour avancer."
+    "watching": "▸ EN COURS",
+    "toWatch": "▸ À VOIR",
+    "seeAll": "voir tout →",
+    "percent": "{{percent}}%",
+    "play": "Avancer {{title}}",
+    "uncached": "titre à recharger"
   },
   "library": {
     "title": "Bibliothèque",

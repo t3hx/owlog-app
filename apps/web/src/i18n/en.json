@@ -21,8 +21,12 @@
   "home": {
     "greeting": "Good evening, {{firstName}}",
     "counters": "› {{watching}} watching · {{toWatch}} to watch",
-    "watchingTitle": "Watching",
-    "watchingWhat": "What you're currently watching, with its progress and the button to move it forward."
+    "watching": "▸ WATCHING",
+    "toWatch": "▸ TO WATCH",
+    "seeAll": "see all →",
+    "percent": "{{percent}}%",
+    "play": "Advance {{title}}",
+    "uncached": "title to reload"
   },
   "library": {
     "title": "Library",

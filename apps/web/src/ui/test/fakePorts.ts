@@ -25,6 +25,8 @@ export function fakePorts(overrides: {
   pendingAdds?: readonly PendingAdd[]
   mediaEvents?: readonly StoredEvent[]
   mediaCache?: readonly MediaCacheRow[]
+  /** Reçoit ce que les commandes écrivent, pour l'affirmer dans un test. */
+  onAppend?: (produced: readonly StoredEvent[]) => void
 } = {}): Ports {
   const mediaStates = overrides.mediaStates ?? []
   const pendingAdds = overrides.pendingAdds ?? []
@@ -35,6 +37,7 @@ export function fakePorts(overrides: {
     useMediaEvents: () => overrides.mediaEvents ?? [],
     useMediaState: (ref) => mediaStates.find((row) => row.ref === ref),
     useMediaCacheRow: (ref) => overrides.mediaCache?.find((row) => row.ref === ref),
+    useMediaCacheRows: () => overrides.mediaCache ?? [],
   }
 
   const settings: SettingsStore = {
@@ -44,9 +47,14 @@ export function fakePorts(overrides: {
   }
 
   const events: EventStore = {
-    append: () => Promise.resolve(),
+    append: (produced) => {
+      overrides.onAppend?.(produced)
+      return Promise.resolve()
+    },
     mediaCache: () => Promise.resolve([]),
-    eventsForMedia: () => Promise.resolve([]),
+    // Même source que la lecture réactive : une commande qui relit le journal
+    // au moment d'écrire doit voir ce que l'écran affichait.
+    eventsForMedia: () => Promise.resolve(overrides.mediaEvents ?? []),
     allMediaStates: () => Promise.resolve(mediaStates),
     eventsSince: () => Promise.resolve([]),
     upsertMediaCache: () => Promise.resolve(),
