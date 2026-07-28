@@ -36,7 +36,11 @@ EXPOSE 8787
 # n'apporte rien ici et coûte cher le jour où une dépendance déraille.
 USER node
 
+# La sonde suit le préfixe de montage : avec `OWLOG_BASE_PATH=/api`, le
+# service ne répond plus à `/health`, et une sonde figée à la racine
+# déclarerait le conteneur mort alors qu'il sert parfaitement. La forme
+# shell est nécessaire ici — la forme exec n'interpole pas les variables.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-  CMD wget -qO- http://127.0.0.1:8787/health || exit 1
+  CMD wget -qO- "http://127.0.0.1:8787${OWLOG_BASE_PATH}/health" || exit 1
 
 CMD ["node", "--experimental-strip-types", "src/server.ts"]

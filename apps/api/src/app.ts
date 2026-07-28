@@ -55,8 +55,20 @@ export function createApp(options: AppOptions) {
 
   const app = new Hono()
 
+  /**
+   * Toutes les routes se déclarent ici, préfixe compris.
+   *
+   * `basePath` rend une vue de la même application dont les chemins sont
+   * décalés ; `app` reste le point d'entrée. Déclarer les routes sur cette
+   * vue plutôt que d'ajouter le préfixe à la main dans chaque appel évite
+   * la seule erreur qui compte : préfixer les routes en oubliant les
+   * middlewares, qui sont montés par motif de chemin et laisseraient alors
+   * `/api/search` ouvert sans authentification.
+   */
+  const routes = config.basePath === '' ? app : app.basePath(config.basePath)
+
   if (config.allowedOrigins.length > 0) {
-    app.use('*', cors({ origin: [...config.allowedOrigins] }))
+    routes.use('*', cors({ origin: [...config.allowedOrigins] }))
   }
 
   /**
@@ -65,12 +77,12 @@ export function createApp(options: AppOptions) {
    * Avant l'authentification : Dokploy doit pouvoir vérifier que le
    * conteneur répond sans détenir le jeton partagé.
    */
-  app.get('/health', (c) => c.json({ status: 'ok' }))
+  routes.get('/health', (c) => c.json({ status: 'ok' }))
 
-  app.use('/search', authenticate(config), rateLimit(config, limiter))
-  app.use('/media/*', authenticate(config), rateLimit(config, limiter))
+  routes.use('/search', authenticate(config), rateLimit(config, limiter))
+  routes.use('/media/*', authenticate(config), rateLimit(config, limiter))
 
-  app.get('/search', async (c) => {
+  routes.get('/search', async (c) => {
     const query = c.req.query('q')?.trim()
     if (!query) return fail(c, 400, 'bad-request')
 
@@ -89,7 +101,7 @@ export function createApp(options: AppOptions) {
     }
   })
 
-  app.get('/media/:ref{.+}', async (c) => {
+  routes.get('/media/:ref{.+}', async (c) => {
     const parsed = parseMediaRef(c.req.param('ref'))
     if (!parsed) return fail(c, 400, 'bad-request')
 

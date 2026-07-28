@@ -14,10 +14,11 @@ import { UpstreamError, type TmdbClient } from './tmdb.ts'
  */
 const CONFIG: Config = {
   port: 0,
-  tmdbToken: 'jeton-tmdb-de-test',
-  sharedToken: 'jeton-partage-de-test',
+  tmdbToken: 'tmdb-test-token',
+  sharedToken: 'shared-test-token',
   allowedOrigins: [],
   trustedProxies: ['10.0.0.1'],
+  basePath: '',
 }
 
 const HIT: SearchResponse = {
