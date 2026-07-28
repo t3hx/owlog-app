@@ -38,11 +38,22 @@ if (!container) {
  * Les valeurs de repli servent au développement local, où Vite ne reçoit
  * aucune variable : `local-token` doit être la valeur passée en
  * `OWLOG_SHARED_TOKEN` au service, sans quoi chaque recherche répond 401.
+ *
+ * Une chaîne vide compte comme absente. `??` ne rattrape que `null` et
+ * `undefined`, or un `ARG` Docker non fourni vaut la chaîne vide : le repli
+ * ne se déclenchait pas, et le bundle sortait avec une base d'API vide qui
+ * appelait `/search` au lieu de `/api/search`. Le Dockerfile refuse
+ * désormais de construire sans ces arguments ; ceci reste la seconde
+ * barrière, pour toute autre voie qui produirait la même valeur vide.
  */
 const catalog = createMediaCatalog({
-  baseUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:8787',
-  sharedToken: import.meta.env.VITE_SHARED_TOKEN ?? 'local-token',
+  baseUrl: orFallback(import.meta.env.VITE_API_URL, 'http://localhost:8787'),
+  sharedToken: orFallback(import.meta.env.VITE_SHARED_TOKEN, 'local-token'),
 })
+
+function orFallback(value: string | undefined, fallback: string): string {
+  return value === undefined || value.trim() === '' ? fallback : value
+}
 
 createRoot(container).render(
   <StrictMode>

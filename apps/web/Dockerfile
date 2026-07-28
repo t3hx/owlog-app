@@ -37,6 +37,25 @@ ARG VITE_SHARED_TOKEN
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_SHARED_TOKEN=$VITE_SHARED_TOKEN
 
+# L'image refuse de se construire sans ces deux arguments.
+#
+# Un `ARG` non fourni vaut la chaine vide, pas « absent » : le `??` du code
+# ne le rattrape donc pas, et le bundle sort avec une base d'API vide. Il
+# appelle alors `/search` au lieu de `/api/search`, Caddy repond `index.html`
+# avec un `200`, et l'application echoue a lire du HTML comme du JSON. Tout
+# marche jusqu'a la premiere frappe dans la barre de recherche.
+#
+# Une image est un artefact de production : mieux vaut ne pas la construire
+# que la construire fausse et silencieuse.
+RUN test -n "$VITE_API_URL" || { \
+      echo "VITE_API_URL is required. Set it as a build argument (e.g. /api)." >&2; \
+      exit 1; \
+    }; \
+    test -n "$VITE_SHARED_TOKEN" || { \
+      echo "VITE_SHARED_TOKEN is required. Use the same value as OWLOG_SHARED_TOKEN." >&2; \
+      exit 1; \
+    }
+
 RUN pnpm --filter @owlog/web build
 
 # --- Image finale -----------------------------------------------------------
