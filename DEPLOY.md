@@ -48,11 +48,21 @@ doppler secrets set OWLOG_TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12" --project o
 
 **Par un copier-coller, et il n'y a pas de magie derrière.** Dokploy n'a aucune intégration avec un gestionnaire de secrets externe — c'est une demande de fonctionnalité ouverte, pas une fonction existante. Doppler n'est donc pas *injecté* en production : il est le **registre**, l'endroit où l'on sait ce que valent ces variables et depuis lequel on les recopie.
 
-Une commande produit le bloc prêt à coller dans l'onglet **Environment** de `owlog-api`, qui accepte le format `.env` :
+Une commande produit le bloc prêt à coller dans l'onglet **Environment** de `owlog-api` :
 
 ```bash
-doppler secrets download --no-file --format env --project owlog-app --config prd
+doppler secrets download --no-file --format docker --project owlog-app --config prd
 ```
+
+**`--format docker`, pas `--format env`.** Le format `env` entoure chaque valeur de guillemets — `OWLOG_BASE_PATH="/api"` — et un champ de formulaire qui ne les retire pas les fait entrer dans la valeur. Le service se monte alors sous `/"/api"` et répond `404` sur tout. Le format `docker` rend `OWLOG_BASE_PATH=/api`, sans guillemets.
+
+Depuis, `owlog-api` refuse de démarrer sur un préfixe qui n'est pas un chemin, en nommant la cause. Et sa première ligne de log dit sous quel chemin il s'est monté :
+
+```
+owlog-api listening on :8787, routes mounted at /api
+```
+
+C'est la ligne à lire en premier quand `/api/health` répond `404` : elle distingue en un coup d'œil un problème de routage d'un problème de configuration.
 
 Deux choses à savoir, et elles ne sont pas anodines :
 

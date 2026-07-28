@@ -14,5 +14,10 @@ import { loadConfig } from './config.ts'
 const config = loadConfig()
 
 serve({ fetch: createApp({ config }).fetch, port: config.port }, (info) => {
-  console.log(`owlog-api listening on :${info.port}`)
+  // Le chemin de montage figure dans le log de demarrage, et pas seulement
+  // le port. C'est la seule ligne que Dokploy montre sans effort, et sans
+  // elle un service monte au mauvais endroit repond 404 sans jamais dire
+  // sous quel prefixe il ecoute.
+  const mount = config.basePath === '' ? 'root' : config.basePath
+  console.log(`owlog-api listening on :${info.port}, routes mounted at ${mount}`)
 })
