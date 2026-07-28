@@ -9,6 +9,7 @@ import type {
   Timestamp,
   MediaRef,
   DatePrecision,
+  Status,
 } from '@/domain/types'
 import type { IdGenerator, Clock } from '@/ports/Clock'
 
@@ -65,6 +66,86 @@ export function advanceStatus(context: CommandContext): readonly DomainEvent[] {
     case 'seen':
       return current ? [liveEvent(context, { type: 'DROP', cycle_key: current.key })] : []
   }
+}
+
+/**
+ * Pose directement un statut cible.
+ *
+ * C'est le geste des quatre chips de la page média, là où la pastille de la
+ * bibliothèque fait tourner la boucle d'un cran avec `advanceStatus`. Sauter
+ * de « à voir » à « vu » demande donc d'ouvrir un cycle **et** de le clore,
+ * en un seul lot d'événements.
+ *
+ * Trois règles qui ne se devinent pas :
+ *
+ * - **Un cycle clos ne se rouvre jamais.** Repasser en « en cours » depuis
+ *   « vu » minte un cycle neuf, comme `rewatch`. Rouvrir effacerait le
+ *   visionnage précédent du compteur `✓ vu ×N`.
+ * - **Le premier cycle s'ouvre par un `START`, les suivants par un
+ *   `REWATCH`.** Deux `START` sur un même média rendraient la numérotation
+ *   `#N` ambiguë.
+ * - **Le retour à « à voir » est un `WATCH` hors cycle.** C'est ce qui lui
+ *   permet de ne pas toucher à l'historique déjà écrit.
+ */
+export function setStatus(
+  context: CommandContext,
+  target: Status,
+): readonly DomainEvent[] {
+  const status = currentStatus(context.events)
+  if (status === target) return []
+
+  const produced: DomainEvent[] = []
+  let events = context.events
+
+  // Un média retiré n'est dans aucun statut : il faut d'abord le remettre en
+  // bibliothèque, sans quoi le cycle qu'on ouvrirait appartiendrait à un
+  // titre absent de la bibliothèque.
+  if (status === 'absent') {
+    const back = liveEvent(context, { type: 'WATCH', cycle_key: null })
+    produced.push(back)
+    events = [...events, back]
+  }
+
+  if (target === 'to-watch') {
+    // Rien à ajouter quand le `WATCH` de retour vient déjà d'être écrit.
+    if (produced.length === 0) {
+      produced.push(liveEvent(context, { type: 'WATCH', cycle_key: null }))
+    }
+    return produced
+  }
+
+  const key = openCycleOr(context, events, produced)
+
+  if (target === 'seen') produced.push(liveEvent(context, { type: 'SEEN', cycle_key: key }))
+  if (target === 'dropped') produced.push(liveEvent(context, { type: 'DROP', cycle_key: key }))
+
+  return produced
+}
+
+/**
+ * Rend le cycle sur lequel écrire, en l'ouvrant si nécessaire.
+ *
+ * Pousse l'événement d'ouverture dans `produced` : l'appelant a besoin des
+ * deux, et les rendre séparément ferait un couple qu'un appelant distrait
+ * peut désolidariser.
+ */
+function openCycleOr(
+  context: CommandContext,
+  events: readonly StoredEvent[],
+  produced: DomainEvent[],
+): CycleKey {
+  const all = cycles(applyVoids(events))
+  const current = all[all.length - 1] ?? null
+
+  if (current && !current.hasSeen && !current.hasDrop) return current.key
+
+  const opening = liveEvent(context, {
+    type: all.length === 0 ? 'START' : 'REWATCH',
+    cycle_key: context.ids.next(),
+  })
+  produced.push(opening)
+
+  return opening.cycle_key as CycleKey
 }
 
 /**

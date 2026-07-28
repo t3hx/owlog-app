@@ -59,6 +59,11 @@ export function createEventStore(): EventStore {
       return db.media_cache.where('ref').anyOf([...refs]).toArray()
     },
 
+    async upsertMediaCache(rows: readonly MediaCacheRow[]): Promise<void> {
+      if (rows.length === 0) return
+      await db.media_cache.bulkPut([...rows])
+    },
+
     async eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]> {
       return db.events.where('media_ref').equals(ref).toArray()
     },

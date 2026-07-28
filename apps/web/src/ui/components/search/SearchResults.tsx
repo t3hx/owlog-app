@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'wouter'
 
 import type { Status } from '@/domain/types'
 import type { CatalogFailure } from '@/ports/MediaCatalog'
@@ -37,7 +38,12 @@ export function SearchResults({
   onAdded,
 }: SearchResultsProps) {
   const { t } = useTranslation()
+  const [, navigate] = useLocation()
   const { live } = usePorts()
+
+  /** `tmdb:movie/603` devient `/media/movie/603` : deux-points et barre ne
+   *  passent pas tels quels dans un chemin. */
+  const open = (ref: string) => () => navigate(`/media/${ref.replace('tmdb:', '')}`)
   const states = live.useMediaStates()
   const { add, undoLast, forget, lastAdded } = useAddMedia()
 
@@ -93,7 +99,12 @@ export function SearchResults({
           </h2>
           <div className="mb-4 flex flex-col gap-2">
             {inLibrary.map((hit) => (
-              <MediaRow key={hit.ref} hit={hit} {...statusProp(known.get(hit.ref))} />
+              <MediaRow
+                key={hit.ref}
+                hit={hit}
+                onOpen={open(hit.ref)}
+                {...statusProp(known.get(hit.ref))}
+              />
             ))}
           </div>
         </>
@@ -109,6 +120,7 @@ export function SearchResults({
               <MediaRow
                 key={hit.ref}
                 hit={hit}
+                onOpen={open(hit.ref)}
                 justAdded={lastAdded?.ref === hit.ref}
                 onAdd={() => {
                   forget()

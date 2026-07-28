@@ -118,5 +118,33 @@
     "watching": "en cours",
     "seen": "vu",
     "dropped": "abandonné"
+  },
+  "media": {
+    "back": "retour",
+    "journal": "▸ JOURNAL",
+    "journalEmpty": "rien encore. le premier geste écrira la première ligne.",
+    "cycleMarker": "— visionnage #{{number}} —",
+    "noRating": "pas encore noté",
+    "rating": "ton avis · {{rating}}/5",
+    "star": "noter {{count}} sur 5",
+    "favorite": "coup de cœur",
+    "tmdb": "tmdb {{rating}}",
+    "rewatch": "REVOIR",
+    "rewatchHint": "repasse en « en cours » · ouvre le visionnage #{{number}} dans le journal",
+    "seenCount": "✓ vu ×{{count}}",
+    "cancelHint": "appui long sur une entrée pour l'annuler"
+  },
+  "journal": {
+    "WATCH": "ajouté en « à voir »",
+    "REMOVE": "retiré de la bibliothèque",
+    "START": "commencé",
+    "REWATCH": "revisionnage ouvert",
+    "SEEN": "vu",
+    "DROP": "abandonné",
+    "RATE": "noté",
+    "NOTE": "commenté",
+    "FAV": "coup de cœur",
+    "UNFAV": "coup de cœur retiré",
+    "VOID": "entrée annulée"
   }
 }
