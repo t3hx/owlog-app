@@ -168,14 +168,24 @@ Même projet, même environnement → **Create Service** → **Application**.
 | Docker File | `apps/web/Dockerfile` |
 | Docker Context Path | `.` — **la racine du dépôt** |
 
-**Build Arguments** — des *arguments*, pas des variables d'exécution : ils sont figés dans le bundle au moment du build.
+**Build Arguments** — des *arguments*, pas des variables d'exécution : ils sont figés dans le bundle au moment du build. Champ **Build Args** de l'onglet General, pas l'onglet Environment.
 
 ```
 VITE_API_URL=/api
 VITE_SHARED_TOKEN=<la même valeur que OWLOG_SHARED_TOKEN, recopiée depuis Doppler>
 ```
 
+**Les oublier fait échouer le build**, volontairement. Un `ARG` Docker non fourni vaut la chaîne vide et non « absent » : le repli du code ne se déclenche pas, et le bundle sort avec une base d'API vide. Il appelle alors `/search` au lieu de `/api/search`, Caddy répond `index.html` avec un `200`, et l'application échoue à lire du HTML comme du JSON. Tout paraît fonctionner jusqu'à la première frappe dans la barre de recherche. Une image est un artefact de production : mieux vaut ne pas la construire que la construire fausse et muette.
+
 Changer `OWLOG_SHARED_TOKEN` demande donc de **reconstruire** `owlog-web`, pas seulement de le redémarrer — et de le reconstruire *après* l'API, sinon le client envoie l'ancien jeton et récolte des `401`.
+
+**Vérifier ce que le bundle appelle réellement**, une fois déployé :
+
+```bash
+JS=$(curl -s https://owlog.nspace.link/ | grep -oE '/assets/[A-Za-z0-9._-]+\.js' | head -1)
+curl -s "https://owlog.nspace.link$JS" | grep -oE '"/api"' | head -1
+# "/api"  attendu. Rien ici veut dire que les Build Args n'ont pas ete pris.
+```
 
 **Domains → Create :**
 
