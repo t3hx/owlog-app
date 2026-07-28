@@ -55,6 +55,14 @@ export default defineConfig({
         // comme en ligne. C'est le pendant du rewrite SPA du Caddyfile.
         navigateFallback: '/index.html',
 
+        // Sauf `/api`, qui est owlog-api servi sur la même origine. Les
+        // appels du client sont des `fetch`, que ce repli n'intercepte pas ;
+        // c'est la navigation directe qui pose problème. Sans cette
+        // exception, ouvrir `/api/health` dans le navigateur affiche
+        // l'application — `curl` répond correctement, le navigateur ment, et
+        // on cherche la panne du mauvais côté.
+        navigateFallbackDenylist: [/^\/api\//],
+
         runtimeCaching: [
           {
             // Les affiches TMDB. `CacheFirst` parce qu'une affiche ne change

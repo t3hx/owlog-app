@@ -1,104 +1,159 @@
 # Déploiement
 
-Deux services sur Dokploy, un domaine chez Cloudflare. **Seule `main` est déployée** — `dev` ne l'est jamais, et `main` ne reçoit `dev` qu'au moment d'une mise en ligne.
+Deux services sur Dokploy, **un seul domaine**. `owlog-web` sert la racine, `owlog-api` répond sous `/api`. **Seule `main` est déployée** — `dev` ne l'est jamais, et `main` ne reçoit `dev` qu'au moment d'une mise en ligne.
 
-> Cette procédure n'a **pas été exécutée**. Elle est écrite depuis le code et les contraintes du plan ; les Dockerfiles n'ont pas pu être construits localement, faute de Docker sur la machine de développement. Attends-toi à ajuster une ligne ou deux au premier passage, et corrige ce document quand tu le fais.
+Une seule origine, donc : pas de CORS, pas de second certificat, pas de second enregistrement DNS. Le navigateur voit une requête de même origine, ce qui supprime aussi la requête de contrôle préalable que le jeton partagé — un en-tête non standard — déclencherait sur un sous-domaine.
 
-## Ce qu'il faut avant de commencer
+> Les images n'ont pas pu être construites sur la machine de développement, faute de Docker. Ce qui **a** été vérifié : `owlog-api` démarre sous la commande exacte du conteneur (`node --experimental-strip-types src/server.ts`), répond `{"status":"ok"}` sur `/health`, `401` sans jeton et `502` quand TMDB refuse le jeton. Un test de fumée le rejoue à chaque exécution de la suite.
+
+## Avant de commencer
 
 | Prérequis | État |
 |---|---|
 | Dépôt GitHub | fait — `t3hx/owlog-app`, privé |
-| Clé TMDB dans Doppler | fait — `TMDB_API_KEY`, `TMDB_API_TOKEN` |
+| Jeton TMDB dans Doppler | fait — `TMDB_API_TOKEN` |
+| Trois secrets à créer dans Doppler | **à faire** — voir ci-dessous |
 | Projet Dokploy sur le VPS | **à faire** |
-| Domaine pointé vers le VPS | **à faire** |
-| Intégration Doppler ↔ Dokploy, ou secrets recopiés | **à faire** |
+| Enregistrement DNS vers le VPS | **à faire** |
 
-## Secrets
+## 1. Secrets
 
-Doppler, projet `owlog-app`. Trois secrets sont nécessaires **en plus** de ceux de TMDB :
-
-| Nom | Où | Rôle |
-|---|---|---|
-| `TMDB_API_TOKEN` | `owlog-api` | Jeton de lecture v4. **Ne quitte jamais le serveur.** |
-| `OWLOG_SHARED_TOKEN` | les deux | Jeton partagé. Public par nature — il est dans le bundle web. |
-| `OWLOG_ALLOWED_ORIGINS` | `owlog-api` | `https://ton-domaine` |
-| `OWLOG_TRUSTED_PROXIES` | `owlog-api` | IP du reverse proxy Dokploy, séparées par des virgules |
-
-`OWLOG_SHARED_TOKEN` n'est pas un secret au sens strict : il finit dans le bundle, donc lisible par quiconque ouvre les outils de développement. Il ne protège pas le service, il filtre le bruit. **La vraie protection du quota TMDB est la limitation de débit**, et celle-ci dépend entièrement de `OWLOG_TRUSTED_PROXIES` : sans cette liste, `owlog-api` refuse de faire confiance aux en-têtes d'IP et limite tout le monde sur une seule adresse — celle du proxy. Autrement dit, le premier utilisateur qui dépasse coupe le service pour tous.
-
-Pour connaître l'IP à déclarer, une fois le service déployé :
+Doppler ne contient aujourd'hui que `TMDB_API_KEY` et `TMDB_API_TOKEN`. Il en manque deux, et le troisième devient inutile dans cette disposition.
 
 ```bash
-# Depuis le VPS, en interrogeant le service à travers le proxy
-docker logs <conteneur-owlog-api> | head
+# Un jeton partagé, tiré au sort. Il n'est pas secret — il finit dans le
+# bundle web, lisible par quiconque ouvre les outils de développement.
+doppler secrets set OWLOG_SHARED_TOKEN="$(openssl rand -hex 24)" --project owlog-app --config prd
+
+# Les réseaux internes de Docker. Voir la note ci-dessous : ce sont des
+# plages, pas des adresses.
+doppler secrets set OWLOG_TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12" --project owlog-app --config prd
 ```
 
-## Service 1 — `owlog-api`
+`OWLOG_ALLOWED_ORIGINS` reste **vide** : même origine, donc aucun CORS. Le middleware ne se monte pas quand la liste est vide, ce qui est le comportement voulu.
+
+### Pourquoi des plages et non des adresses
+
+`owlog-api` ne voit jamais l'adresse du visiteur : il voit celle de Traefik, sur le réseau Docker. Sans liste de confiance, il refuse tout en-tête d'IP et compte **tout le monde dans le même seau** — le premier utilisateur qui dépasse coupe le service pour tous.
+
+Or l'adresse de Traefik est attribuée par Docker et change quand le proxy est recréé. Une adresse exacte serait juste le jour du déploiement et fausse ensuite, sans que rien ne le signale. D'où les plages : `10.0.0.0/8` couvre les réseaux `overlay` de Docker Swarm, `172.16.0.0/12` les réseaux `bridge`. Déclarer les deux couvre les deux modes de Dokploy.
+
+`CF-Connecting-IP` est préféré dès que la liste est non vide : Cloudflare l'écrase toujours, c'est la seule valeur qu'un client ne peut pas forger — **à condition que le trafic passe réellement par Cloudflare**. Garde donc le nuage orange activé, et si le VPS a un pare-feu, n'ouvre 80/443 qu'aux plages de Cloudflare. Sans cela, quelqu'un qui trouve l'IP d'origine contourne la limitation en posant l'en-tête lui-même.
+
+## 2. DNS
+
+Un seul enregistrement, chez Cloudflare :
+
+| Type | Nom | Contenu | Proxy |
+|---|---|---|---|
+| `A` | `owlog` (ou `@`) | IP du VPS | **activé** (nuage orange) |
+
+## 3. Service `owlog-api`
+
+Crée-le **en premier** : il se teste seul, alors que le web dépend de son adresse.
 
 | Réglage Dokploy | Valeur |
 |---|---|
+| Type | Application |
 | Source | GitHub, `t3hx/owlog-app`, branche `main` |
-| Type de build | Dockerfile |
-| Chemin du Dockerfile | `apps/api/Dockerfile` |
-| Contexte de build | **`.` (la racine du dépôt)** |
-| Port exposé | `8787` |
-| Domaine | `api.ton-domaine` |
-| Health check | `/health` |
+| Build Type | `Dockerfile` |
+| Docker File | `apps/api/Dockerfile` |
+| Docker Context Path | `.` — **la racine du dépôt** |
+| Container Port | `8787` |
 
-Le contexte de build est la racine et non `apps/api` : c'est un workspace pnpm, le lockfile et `@owlog/contracts` vivent à la racine. Un contexte sur `apps/api` échouerait à l'installation.
+Le contexte de build est la racine et non `apps/api` : c'est un workspace pnpm, le lockfile et `@owlog/contracts` vivent à la racine. Un contexte sur `apps/api` échoue à l'installation.
 
-**Vérification :**
+**Domaine :**
+
+| Champ | Valeur |
+|---|---|
+| Host | `<DOMAINE>` |
+| Path | `/api` |
+| **Strip Path** | **activé** |
+| Container Port | `8787` |
+| HTTPS | activé, Let's Encrypt |
+
+`Strip Path` n'est pas optionnel. Les routes de Hono sont `/health`, `/search`, `/media/:ref` — sans lui, le service reçoit `/api/search` et répond `404` sur tout. C'est le premier symptôme à reconnaître.
+
+**Variables d'environnement** (depuis Doppler) :
+
+```
+TMDB_API_TOKEN=<depuis Doppler>
+OWLOG_SHARED_TOKEN=<depuis Doppler>
+OWLOG_TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12
+PORT=8787
+```
+
+**Vérification, avant de toucher au web :**
 
 ```bash
-curl https://api.ton-domaine/health
+curl https://<DOMAINE>/api/health
 # {"status":"ok"}
+# 404 ici  ->  Strip Path n'est pas activé.
+# 502 ici  ->  le conteneur ne démarre pas : lis ses logs, la config
+#              échoue bruyamment et nomme le secret manquant.
 
-curl -o /dev/null -w "%{http_code}\n" "https://api.ton-domaine/search?q=dune"
+curl -o /dev/null -w "%{http_code}\n" "https://<DOMAINE>/api/search?q=dune"
 # 401 — sans jeton, c'est le comportement attendu
+
+curl -s -H "x-owlog-token: <OWLOG_SHARED_TOKEN>" \
+  "https://<DOMAINE>/api/search?q=dune" | head -c 200
+# la liste des résultats — si tu vois 502 ici, c'est TMDB qui refuse le
+# jeton, donc TMDB_API_TOKEN.
 ```
 
-## Service 2 — `owlog-web`
+## 4. Service `owlog-web`
 
 | Réglage Dokploy | Valeur |
 |---|---|
+| Type | Application |
 | Source | GitHub, `t3hx/owlog-app`, branche `main` |
-| Type de build | Dockerfile |
-| Chemin du Dockerfile | `apps/web/Dockerfile` |
-| Contexte de build | **`.` (la racine du dépôt)** |
-| Port exposé | `80` |
-| Domaine | `ton-domaine` |
-| Health check | `/health` |
+| Build Type | `Dockerfile` |
+| Docker File | `apps/web/Dockerfile` |
+| Docker Context Path | `.` — **la racine du dépôt** |
+| Container Port | `80` |
 
-**Arguments de build** — ce sont des arguments, pas des variables d'exécution : ils sont figés dans le bundle au moment du build.
+**Domaine :**
+
+| Champ | Valeur |
+|---|---|
+| Host | `<DOMAINE>` |
+| Path | `/` |
+| Strip Path | désactivé |
+| Container Port | `80` |
+| HTTPS | activé, Let's Encrypt |
+
+Les deux services partagent le même hôte. Traefik classe ses règles par spécificité : `Host(...) && PathPrefix(/api)` l'emporte sur `Host(...)`, donc `/api` va bien à l'API et tout le reste au web. Aucun réglage de priorité à poser à la main.
+
+**Arguments de build** — des *arguments*, pas des variables d'exécution : ils sont figés dans le bundle au moment du build.
 
 ```
-VITE_API_URL=https://api.ton-domaine
+VITE_API_URL=/api
 VITE_SHARED_TOKEN=<la même valeur que OWLOG_SHARED_TOKEN>
 ```
 
-Changer `OWLOG_SHARED_TOKEN` demande donc de **reconstruire** `owlog-web`, pas seulement de le redémarrer.
+Changer `OWLOG_SHARED_TOKEN` demande donc de **reconstruire** `owlog-web`, pas seulement de le redémarrer. Et de le reconstruire *après* avoir mis à jour l'API, sinon le client envoie l'ancien jeton et récolte des `401`.
 
-## Après la première mise en ligne
+## 5. Après la première mise en ligne
 
-Dérouler `CHECKLIST.md` sur un téléphone réel. Les six parcours indiquent l'étape à partir de laquelle ils s'appliquent ; à l'étape 3, quatre sont testables :
+Dérouler `CHECKLIST.md` sur un téléphone réel. À ce stade, les six parcours sont testables — les deux derniers, sur la file hors-ligne, sont arrivés avec l'étape 4.
 
-1. Installation depuis l'écran d'accueil
-2. Mode avion — les polices doivent être les bonnes, **pas des polices système**
-5. Bandeau de nouvelle version au retour au premier plan
-6. Conformité au design des écrans déjà construits
+## 6. Le piège à vérifier en premier
 
-Les parcours 3 et 4 (file d'ajouts hors-ligne) arrivent à l'étape 4.
+Déployer une **seconde** fois, puis vérifier qu'un client déjà ouvert voit le bandeau au retour au premier plan, et que le rechargement sert la nouvelle version **sans vider le cache**.
 
-## Le piège à vérifier en premier
+C'est le défaut le plus coûteux de cette étape, et il est silencieux : sans `Cache-Control: no-cache` sur `index.html` et sur `sw.js`, le navigateur garde l'ancien document, qui référence l'ancien bundle. L'application marche parfaitement — elle est simplement périmée, indéfiniment. Le `Caddyfile` pose ces en-têtes ; ce test vérifie qu'ils arrivent jusqu'au client à travers Cloudflare, qui applique ses propres règles.
 
-Déployer une seconde fois, puis vérifier qu'un client **déjà ouvert** voit le bandeau au retour au premier plan, et que le rechargement sert bien la nouvelle version **sans vider le cache**.
+```bash
+curl -sI https://<DOMAINE>/ | grep -i "cache-control\|cf-cache-status"
+# cache-control: no-cache        <- attendu
+curl -sI https://<DOMAINE>/sw.js | grep -i "cache-control"
+# cache-control: no-cache        <- attendu
+```
 
-C'est le défaut le plus coûteux de cette étape, et il est silencieux : sans `Cache-Control: no-cache` sur `index.html` et sur `sw.js`, le navigateur garde l'ancien document, qui référence l'ancien bundle. L'application marche parfaitement — elle est simplement périmée, indéfiniment. Le `Caddyfile` pose ces en-têtes ; ce test vérifie qu'ils arrivent bien jusqu'au client à travers Cloudflare, qui peut avoir ses propres règles de cache.
+Si Cloudflare écrase ces en-têtes, créer une règle de cache qui contourne `/`, `/index.html`, `/sw.js`, `/registerSW.js` et `/manifest.webmanifest`.
 
-Si Cloudflare écrase les en-têtes, créer une règle de cache qui contourne `index.html`, `sw.js` et `manifest.webmanifest`.
-
-## Passage de `dev` à `main`
+## 7. Passage de `dev` à `main`
 
 ```bash
 git switch main
@@ -107,3 +162,7 @@ git push origin main
 ```
 
 Dokploy déclenche le build sur `main`. `git log main` répond alors à la question « qu'est-ce qui tourne en ligne, maintenant ? », ce qui est le seul rôle de cette branche.
+
+## Corriger ce document
+
+Il décrit une procédure dont la partie Dokploy n'a pas encore été exécutée. **Au premier passage, corrige-le dans le même commit** que le déploiement : un document de mise en ligne faux coûte plus cher que pas de document, parce qu'on lui fait confiance à trois heures du matin.
