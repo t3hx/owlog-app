@@ -48,11 +48,21 @@ doppler secrets set OWLOG_TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12" --project o
 
 **Par un copier-coller, et il n'y a pas de magie derrière.** Dokploy n'a aucune intégration avec un gestionnaire de secrets externe — c'est une demande de fonctionnalité ouverte, pas une fonction existante. Doppler n'est donc pas *injecté* en production : il est le **registre**, l'endroit où l'on sait ce que valent ces variables et depuis lequel on les recopie.
 
-Une commande produit le bloc prêt à coller dans l'onglet **Environment** de `owlog-api`, qui accepte le format `.env` :
+Une commande produit le bloc prêt à coller dans l'onglet **Environment** de `owlog-api` :
 
 ```bash
-doppler secrets download --no-file --format env --project owlog-app --config prd
+doppler secrets download --no-file --format docker --project owlog-app --config prd
 ```
+
+**`--format docker`, pas `--format env`.** Le format `env` entoure chaque valeur de guillemets — `OWLOG_BASE_PATH="/api"` — et un champ de formulaire qui ne les retire pas les fait entrer dans la valeur. Le service se monte alors sous `/"/api"` et répond `404` sur tout. Le format `docker` rend `OWLOG_BASE_PATH=/api`, sans guillemets.
+
+Depuis, `owlog-api` refuse de démarrer sur un préfixe qui n'est pas un chemin, en nommant la cause. Et sa première ligne de log dit sous quel chemin il s'est monté :
+
+```
+owlog-api listening on :8787, routes mounted at /api
+```
+
+C'est la ligne à lire en premier quand `/api/health` répond `404` : elle distingue en un coup d'œil un problème de routage d'un problème de configuration.
 
 Deux choses à savoir, et elles ne sont pas anodines :
 
@@ -95,7 +105,18 @@ Cloudflare → **Zero Trust → Networks → Connectors → `nspace-tunnel` → 
 | Type | `HTTP` |
 | URL | `dokploy-traefik:80` |
 
-**Une seule route pour les deux services.** Elle amène tout `owlog.nspace.link` jusqu'à Traefik, qui répartit ensuite sur l'en-tête `Host` et le chemin. Ajouter une seconde route pour `/api` ne servirait à rien et introduirait un endroit de plus où se tromper.
+**Une seule route pour les deux services**, et c'est important. Elle amène tout `owlog.nspace.link` jusqu'à Traefik, qui répartit ensuite sur l'en-tête `Host` et le chemin. Le découpage `/` contre `/api` se fait **dans Dokploy**, par les domaines des deux services — pas dans Cloudflare.
+
+Ajouter une seconde route pour `/api` n'apporte rien et peut tout casser : les routes du tunnel sont évaluées dans l'ordre, et une entrée mal placée ou dont l'URL de service est fausse détourne aussi le trafic de la première. Le symptôme est un `502` sur **tout le domaine**, y compris les chemins qui fonctionnaient.
+
+Si ça arrive, la remise en état est de revenir à une seule entrée pointant sur `http://dokploy-traefik:80`, puis de vérifier depuis le VPS que le chemin est bon :
+
+```bash
+docker logs --tail 50 $(docker ps -q --filter name=cloudflared)
+docker run --rm --network dokploy-network curlimages/curl -sI http://dokploy-traefik:80
+```
+
+Une réponse HTTP, même un `404`, prouve que cloudflared atteint Traefik. Un `Could not resolve host` désigne le réseau, pas la route.
 
 Le nuage sera orange, et c'est normal : les `CNAME` de tunnel sont obligatoirement proxifiés.
 
@@ -168,7 +189,9 @@ Même projet, même environnement → **Create Service** → **Application**.
 | Docker File | `apps/web/Dockerfile` |
 | Docker Context Path | `.` — **la racine du dépôt** |
 
-**Build Arguments** — des *arguments*, pas des variables d'exécution : ils sont figés dans le bundle au moment du build. Champ **Build Args** de l'onglet General, pas l'onglet Environment.
+**Build Time Arguments** — des *arguments*, pas des variables d'exécution : ils sont figés dans le bundle au moment du build, et n'existent plus dans le conteneur qui tourne.
+
+Ils se saisissent dans l'onglet **Environment**, dans le champ **« Build Time Arguments »** — distinct du champ des variables d'environnement, juste au-dessous. Il n'apparaît **que si le Build Type est `Dockerfile`** : si tu ne le vois pas, c'est que le type de build n'est pas encore réglé.
 
 ```
 VITE_API_URL=/api

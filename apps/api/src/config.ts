@@ -70,13 +70,32 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
  * `/` seul vaut absence de préfixe : dans un champ « chemin », il désigne
  * la racine. Le monter tel quel doublerait la barre et plus aucune route ne
  * correspondrait.
+ *
+ * Ce qui n'est pas un chemin fait **échouer le démarrage**. Le cas vu en
+ * vrai : une valeur recopiée depuis un export `.env`, guillemets compris,
+ * qui monte le service sous `/"/api"`. Il répond alors `404` sur tout — et
+ * un `404` ressemble à un problème de routage, si bien qu'on cherche du
+ * côté du proxy pendant que la cause est dans un champ de formulaire. Mieux
+ * vaut ne pas démarrer que démarrer sous un chemin que personne n'appellera.
  */
+const VALID_BASE_PATH = /^\/[A-Za-z0-9\-._~/]*$/
+
 function normalizeBasePath(value: string | undefined): string {
   const trimmed = value?.trim() ?? ''
   if (trimmed === '' || trimmed === '/') return ''
 
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
-  return withLeadingSlash.replace(/\/+$/, '')
+  const withoutTrailingSlash = withLeadingSlash.replace(/\/+$/, '')
+
+  if (!VALID_BASE_PATH.test(withoutTrailingSlash)) {
+    throw new Error(
+      `OWLOG_BASE_PATH is not a usable path: ${JSON.stringify(value)}. ` +
+        'Enter it unquoted, as /api — surrounding quotes from a .env export ' +
+        'become part of the value.',
+    )
+  }
+
+  return withoutTrailingSlash
 }
 
 function splitList(value: string | undefined): readonly string[] {
