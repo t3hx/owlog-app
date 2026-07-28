@@ -11,16 +11,21 @@ Une seule origine, donc : pas de CORS, pas de second certificat, pas de second e
 | Prérequis | État |
 |---|---|
 | Dépôt GitHub | fait — `t3hx/owlog-app`, privé |
-| Jeton TMDB dans Doppler | fait — `TMDB_API_TOKEN` |
-| Trois secrets à créer dans Doppler | **à faire** — voir ci-dessous |
+| Jeton TMDB dans Doppler | fait — `TMDB_API_TOKEN`, mais **dans `dev` seulement** |
+| Trois secrets à créer dans la config `prd` | **à faire** — voir ci-dessous |
 | Projet Dokploy sur le VPS | **à faire** |
 | Enregistrement DNS vers le VPS | **à faire** |
 
 ## 1. Secrets
 
-Doppler ne contient aujourd'hui que `TMDB_API_KEY` et `TMDB_API_TOKEN`. Il en manque deux, et le troisième devient inutile dans cette disposition.
+La config `prd` est **vide** : `TMDB_API_KEY` et `TMDB_API_TOKEN` n'existent que dans `dev`. Trois secrets sont donc à poser.
 
 ```bash
+# Le jeton TMDB, recopié depuis dev. C'est le seul vrai secret des trois,
+# et il ne quitte jamais owlog-api.
+doppler secrets set TMDB_API_TOKEN="$(doppler secrets get TMDB_API_TOKEN --plain \
+  --project owlog-app --config dev)" --project owlog-app --config prd
+
 # Un jeton partagé, tiré au sort. Il n'est pas secret — il finit dans le
 # bundle web, lisible par quiconque ouvre les outils de développement.
 doppler secrets set OWLOG_SHARED_TOKEN="$(openssl rand -hex 24)" --project owlog-app --config prd
