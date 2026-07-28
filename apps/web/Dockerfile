@@ -16,7 +16,10 @@ WORKDIR /repo
 
 # Les manifestes d'abord : tant qu'ils ne changent pas, Docker réutilise la
 # couche d'installation, qui est de loin la plus lente.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# `.npmrc` fait partie des manifestes : sans lui, l'image installe sous des
+# reglages differents de ceux du poste de developpement, et l'ecart ne se
+# decouvre qu'au build du conteneur.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/web/package.json apps/web/
 COPY apps/api/package.json apps/api/
 COPY packages/contracts/package.json packages/contracts/

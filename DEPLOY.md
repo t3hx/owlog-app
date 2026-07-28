@@ -44,6 +44,25 @@ doppler secrets set OWLOG_TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12" --project o
 
 `OWLOG_ALLOWED_ORIGINS` reste **vide** : même origine, donc aucun CORS. Le middleware ne se monte pas quand la liste est vide, ce qui est le comportement voulu.
 
+### Comment ces valeurs arrivent sur le VPS
+
+**Par un copier-coller, et il n'y a pas de magie derrière.** Dokploy n'a aucune intégration avec un gestionnaire de secrets externe — c'est une demande de fonctionnalité ouverte, pas une fonction existante. Doppler n'est donc pas *injecté* en production : il est le **registre**, l'endroit où l'on sait ce que valent ces variables et depuis lequel on les recopie.
+
+Une commande produit le bloc prêt à coller dans l'onglet **Environment** de `owlog-api`, qui accepte le format `.env` :
+
+```bash
+doppler secrets download --no-file --format env --project owlog-app --config prd
+```
+
+Deux choses à savoir, et elles ne sont pas anodines :
+
+- **Dokploy stocke ses variables en clair dans sa base.** Le jeton TMDB vivra donc en clair sur le VPS. C'est acceptable ici parce que le serveur est verrouillé — aucun port entrant, admin par Tailscale uniquement — mais ce n'est pas la même chose que « géré par Doppler ».
+- **Un écart devient possible.** Modifier une valeur dans Doppler ne change rien en ligne tant qu'on n'a pas recollé et redéployé. Doppler cesse d'être la vérité au moment où on l'oublie.
+
+Sur quatre variables, une seule est un vrai secret — `TMDB_API_TOKEN`. `OWLOG_SHARED_TOKEN` est public par construction, `OWLOG_BASE_PATH` et `OWLOG_TRUSTED_PROXIES` sont de la configuration. C'est ce qui rend le copier-coller raisonnable ici.
+
+> **L'alternative, et pourquoi elle n'est pas retenue.** On pourrait installer le client Doppler dans l'image et démarrer par `doppler run -- node …`, en ne posant qu'un `DOPPLER_TOKEN` dans Dokploy. Doppler redeviendrait autoritatif — mais ce jeton de service, lui aussi en clair dans la base de Dokploy, ouvre l'accès à **tous** les secrets du projet. On échangerait quatre valeurs de faible portée contre une de portée maximale, plus un appel réseau à chaque démarrage de conteneur : Doppler injoignable, le service ne démarre plus. Le calcul ne penche pas du bon côté pour une application à un seul utilisateur.
+
 ### Pourquoi le service se monte lui-même sous `/api`
 
 Le montage aurait pu reposer sur un « Strip Path » du proxy. Le runbook n'en mentionne aucun, et une hypothèse sur l'infrastructure ne se vérifie qu'après un cycle de déploiement complet — pour un échec qui ressemble à un problème de routage alors qu'il n'en est pas un.
@@ -95,15 +114,17 @@ Crée-le **en premier** : il se teste seul, alors que le web dépend de lui.
 
 Le contexte de build est la racine et non `apps/api` : c'est un workspace pnpm, le lockfile et `@owlog/contracts` vivent à la racine. Un contexte sur `apps/api` échoue à l'installation.
 
-**Environment :**
+**Environment** — colle le bloc rendu par `doppler secrets download` (§1), puis ajoute `PORT` :
 
 ```
-TMDB_API_TOKEN=<depuis Doppler>
-OWLOG_SHARED_TOKEN=<depuis Doppler>
-OWLOG_BASE_PATH=/api
-OWLOG_TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12
+TMDB_API_TOKEN="..."
+OWLOG_SHARED_TOKEN="..."
+OWLOG_BASE_PATH="/api"
+OWLOG_TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12"
 PORT=8787
 ```
+
+`DOPPLER_PROJECT`, `DOPPLER_CONFIG` et `DOPPLER_ENVIRONMENT` figurent aussi dans l'export : ils sont sans effet ici, on peut les laisser ou les retirer.
 
 **Domains → Create :**
 
@@ -151,7 +172,7 @@ Même projet, même environnement → **Create Service** → **Application**.
 
 ```
 VITE_API_URL=/api
-VITE_SHARED_TOKEN=<la même valeur que OWLOG_SHARED_TOKEN>
+VITE_SHARED_TOKEN=<la même valeur que OWLOG_SHARED_TOKEN, recopiée depuis Doppler>
 ```
 
 Changer `OWLOG_SHARED_TOKEN` demande donc de **reconstruire** `owlog-web`, pas seulement de le redémarrer — et de le reconstruire *après* l'API, sinon le client envoie l'ancien jeton et récolte des `401`.

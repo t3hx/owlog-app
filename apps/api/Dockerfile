@@ -15,7 +15,10 @@ RUN corepack enable
 
 WORKDIR /repo
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# `.npmrc` fait partie des manifestes : sans lui, l'image installe sous des
+# reglages differents de ceux du poste de developpement, et l'ecart ne se
+# decouvre qu'au build du conteneur.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/web/package.json apps/web/
 COPY apps/api/package.json apps/api/
 COPY packages/contracts/package.json packages/contracts/
