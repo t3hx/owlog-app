@@ -1,3 +1,4 @@
+import type { SearchHit } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
@@ -6,6 +7,7 @@ import type { CatalogFailure } from '@/ports/MediaCatalog'
 import { MediaRow } from '@/ui/components/search/MediaRow'
 import { usePorts } from '@/ui/PortsProvider'
 import { useAddMedia } from '@/ui/hooks/useAddMedia'
+import type { SearchMode } from '@/ui/components/search/Search'
 import type { SearchScope, SearchState } from '@/ui/hooks/useSearch'
 
 /**
@@ -15,6 +17,11 @@ import type { SearchScope, SearchState } from '@/ui/hooks/useSearch'
  * d'abord, avec son statut, puis les résultats de l'API. L'ordre n'est pas
  * cosmétique — c'est ce qui évite d'ajouter deux fois un titre qu'on a
  * oublié avoir logué.
+ *
+ * Le groupe « déjà en bibliothèque » n'offre pas le `+`, mais **offre le
+ * `✓`** : un titre déjà là est précisément celui dont on veut enregistrer un
+ * visionnage passé. Refuser le geste obligerait à passer par la fiche, soit
+ * trois écrans par titre là où la session en demande un.
  *
  * Le compteur affiche le nombre d'éléments **après filtrage**, sur cette
  * page seulement. TMDB compte les `person` dans son total, et la pagination
@@ -28,6 +35,9 @@ export interface SearchResultsProps {
   onSetAside: (text: string) => void
   /** Appelé après un ajout abouti, pour retirer l'entrée de file résolue. */
   onAdded?: () => void
+  /** `log` remplace le `+` par la saisie d'un souvenir. */
+  mode?: SearchMode
+  onLog?: (hit: SearchHit) => void
 }
 
 export function SearchResults({
@@ -36,6 +46,8 @@ export function SearchResults({
   query,
   onSetAside,
   onAdded,
+  mode = 'add',
+  onLog,
 }: SearchResultsProps) {
   const { t } = useTranslation()
   const [, navigate] = useLocation()
@@ -104,6 +116,7 @@ export function SearchResults({
                 hit={hit}
                 onOpen={open(hit.ref)}
                 {...statusProp(known.get(hit.ref))}
+                {...(mode === 'log' && onLog ? { onLog: () => onLog(hit) } : {})}
               />
             ))}
           </div>
@@ -122,10 +135,14 @@ export function SearchResults({
                 hit={hit}
                 onOpen={open(hit.ref)}
                 justAdded={lastAdded?.ref === hit.ref}
-                onAdd={() => {
-                  forget()
-                  void add(hit).then(() => onAdded?.())
-                }}
+                {...(mode === 'log' && onLog
+                  ? { onLog: () => onLog(hit) }
+                  : {
+                      onAdd: () => {
+                        forget()
+                        void add(hit).then(() => onAdded?.())
+                      },
+                    })}
                 onUndo={() => void undoLast()}
               />
             ))}
@@ -163,6 +180,9 @@ function Failure({
   onSetAside: (text: string) => void
   /** Appelé après un ajout abouti, pour retirer l'entrée de file résolue. */
   onAdded?: () => void
+  /** `log` remplace le `+` par la saisie d'un souvenir. */
+  mode?: SearchMode
+  onLog?: (hit: SearchHit) => void
 }) {
   const { t } = useTranslation()
 

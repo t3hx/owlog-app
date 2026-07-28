@@ -56,6 +56,7 @@
   --radius-action: 12px;
   --radius-poster: 10px;
   --radius-tag: 6px;
+  --radius-sheet: 18px;
   --radius-tab: 10px 10px 0 0;
   --radius-searchbar: 0 14px 14px 14px;
 
@@ -67,6 +68,9 @@
   --shadow-glow-strong: 0 0 18px rgb(39 255 147 / 0.35);
   /* Affiche en surimpression sur le backdrop de la page media. */
   --shadow-poster: 0 8px 24px rgb(0 0 0 / 0.5);
+  /* La feuille de saisie se detache du fond sans bordure sur trois cotes. */
+  --shadow-sheet: 0 -18px 50px rgb(0 0 0 / 0.6);
+  --color-scrim: rgb(5 7 12 / 0.66);
 }
 
 /*

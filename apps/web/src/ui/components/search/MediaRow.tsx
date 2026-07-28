@@ -18,12 +18,14 @@ export interface MediaRowProps {
   status?: Status
   /** Absent quand le titre est déjà là : on n'ajoute pas deux fois. */
   onAdd?: () => void
+  /** Ouvre la saisie d'un souvenir. Remplace `onAdd` en mode « logger ». */
+  onLog?: () => void
   /** Présent juste après un ajout, le temps de pouvoir revenir en arrière. */
   onUndo?: () => void
   justAdded?: boolean
 }
 
-export function MediaRow({ hit, status, onAdd, onUndo, justAdded, onOpen }: MediaRowProps) {
+export function MediaRow({ hit, status, onAdd, onLog, onUndo, justAdded, onOpen }: MediaRowProps) {
   const { t } = useTranslation()
   const poster = posterUrl(hit.posterPath, 'w185')
 
@@ -80,6 +82,15 @@ export function MediaRow({ hit, status, onAdd, onUndo, justAdded, onOpen }: Medi
             {t('search.undo')}
           </button>
         </div>
+      ) : onLog ? (
+        <button
+          type="button"
+          onClick={onLog}
+          aria-label={t('backdate.open', { title: hit.title })}
+          className="size-11 flex-none rounded-action border border-status-seen/45 text-[17px] text-status-seen"
+        >
+          ✓
+        </button>
       ) : onAdd ? (
         <button
           type="button"
