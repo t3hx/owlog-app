@@ -167,7 +167,8 @@
     "pendingBadge_one": "{{count}} title to confirm",
     "pendingBadge_other": "{{count}} titles to confirm",
     "confirmPending": "Confirm the titles you set aside",
-    "dismissPending": "discard"
+    "dismissPending": "discard",
+    "retry": "try again"
   },
   "status": {
     "to-watch": "to watch",

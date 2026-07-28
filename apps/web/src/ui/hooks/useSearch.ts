@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { SearchHit } from '@owlog/contracts'
@@ -32,12 +32,25 @@ const DEBOUNCE_MS = 300
  * La langue courante voyage avec la requête : TMDB renvoie des titres et
  * des synopsis traduits, et basculer FR/EN doit changer ce qu'on lit.
  */
-export function useSearch(query: string, scope: SearchScope): SearchState {
+export function useSearch(
+  query: string,
+  scope: SearchScope,
+): { readonly state: SearchState; readonly retry: () => void } {
   const { catalog } = usePorts()
   const { i18n } = useTranslation()
   const language = i18n.resolvedLanguage ?? 'fr'
 
   const [state, setState] = useState<SearchState>({ status: 'idle' })
+  /**
+   * Numéro de tentative.
+   *
+   * Il existe pour une raison précise, et elle a coûté une session de
+   * diagnostic : sans lui, l'effet ne se relance que si le **texte** change.
+   * Une recherche qui échoue hors-ligne reste donc en échec pour ce texte,
+   * définitivement — retaper le même titre au retour du réseau ne fait
+   * rien, et l'app donne l'impression d'avoir perdu l'API pour de bon.
+   */
+  const [attempt, setAttempt] = useState(0)
 
   const trimmed = query.trim()
 
@@ -65,13 +78,38 @@ export function useSearch(query: string, scope: SearchScope): SearchState {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [trimmed, catalog, language])
+  }, [trimmed, catalog, language, attempt])
 
-  if (state.status !== 'done') return state
+  const retry = useCallback(() => setAttempt((previous) => previous + 1), [])
+
+  /**
+   * Le retour du réseau relance la recherche en échec.
+   *
+   * C'est le geste que l'utilisateur attend et ne fait pas : il coupe le
+   * mode avion et regarde l'écran. Lui demander de modifier son texte pour
+   * réamorcer une requête serait une règle que rien n'annonce.
+   *
+   * Conditionné à un échec en cours : sans ce garde, chaque bascule réseau
+   * relancerait une requête même sur un écran au repos, donc consommerait
+   * le quota TMDB pour rien.
+   */
+  useEffect(() => {
+    if (state.status !== 'failed') return
+
+    const onOnline = () => retry()
+    window.addEventListener('online', onOnline)
+
+    return () => window.removeEventListener('online', onOnline)
+  }, [state.status, retry])
+
+  if (state.status !== 'done') return { state, retry }
 
   return {
-    status: 'done',
-    hits: scope === 'all' ? state.hits : state.hits.filter((hit) => hit.kind === scope),
+    state: {
+      status: 'done',
+      hits: scope === 'all' ? state.hits : state.hits.filter((hit) => hit.kind === scope),
+    },
+    retry,
   }
 }
 
