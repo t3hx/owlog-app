@@ -57,6 +57,26 @@ export interface EventStore {
   eventsSince(cursor: EventId | null, limit: number): Promise<readonly StoredEvent[]>
 
   /**
+   * Réinjecte des événements venus d'une sauvegarde `.log`.
+   *
+   * **Ce n'est pas `append`.** Les événements arrivent déjà écrits, avec
+   * leurs identifiants d'origine, et le fichier peut en contenir que la base
+   * connaît déjà — on réimporte deux fois, on fusionne deux appareils. Un
+   * `append` lèverait sur le premier doublon et laisserait la base à moitié
+   * restaurée, ce qui est précisément le résultat qu'une sauvegarde existe
+   * pour éviter. `restore` est donc **idempotent par identifiant**.
+   *
+   * Les lignes de cache réamorcent les titres pour un retour hors ligne,
+   * mais n'écrasent jamais une ligne `complete` : le fichier ne porte qu'un
+   * titre et une année, et les stats distinguent une durée absente d'une
+   * durée nulle.
+   */
+  restore(
+    events: readonly StoredEvent[],
+    cacheRows: readonly MediaCacheRow[],
+  ): Promise<RestoreReport>
+
+  /**
    * Reconstruit intégralement `media_state` depuis les événements.
    *
    * Ce n'est pas un utilitaire de confort : depuis que la page média lit
@@ -64,4 +84,10 @@ export interface EventStore {
    * testé et déclenchable depuis `/debug`.
    */
   rebuildAllState(): Promise<void>
+}
+
+/** Ce qu'une réinjection a réellement fait, pour le dire à l'écran. */
+export interface RestoreReport {
+  readonly added: number
+  readonly skipped: number
 }
