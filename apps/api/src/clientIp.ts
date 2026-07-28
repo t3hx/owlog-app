@@ -20,6 +20,13 @@
  * Sans proxies déclarés, on ne fait confiance à aucun en-tête : en
  * développement local, il n'y a pas de proxy, et accepter un en-tête
  * forgeable rendrait le limiteur trivialement contournable.
+ *
+ * Une entrée peut être une adresse exacte ou une **plage CIDR**. La plage
+ * n'est pas un confort : sur Dokploy, l'adresse de Traefik est attribuée par
+ * le réseau Docker et change quand le proxy est recréé. Une liste d'adresses
+ * exactes est donc juste le jour du déploiement et fausse ensuite — et cette
+ * dérive ne se signale pas, elle se contente de faire retomber tout le monde
+ * dans le même seau de limitation.
  */
 export function clientIp(options: {
   headers: Headers
@@ -46,8 +53,59 @@ export function clientIp(options: {
   // inconnu rencontré est le client réel, ou le dernier proxy hors liste.
   for (let index = chain.length - 1; index >= 0; index -= 1) {
     const candidate = chain[index]
-    if (candidate && !trustedProxies.includes(candidate)) return candidate
+    if (candidate && !isTrusted(candidate, trustedProxies)) return candidate
   }
 
   return fallback
+}
+
+/** Vrai si l'adresse figure dans la liste, par égalité ou par plage. */
+function isTrusted(address: string, trustedProxies: readonly string[]): boolean {
+  return trustedProxies.some((entry) =>
+    entry.includes('/') ? isInRange(address, entry) : entry === address,
+  )
+}
+
+/**
+ * Appartenance d'une adresse IPv4 à une plage CIDR.
+ *
+ * IPv4 seulement : les réseaux Docker de Dokploy le sont, et une adresse
+ * IPv6 confrontée à une plage IPv4 doit répondre « non », pas « peut-être ».
+ *
+ * Une entrée mal formée — faute de frappe dans Doppler — rend `false`. Une
+ * liste de confiance qui échoue doit se fermer, jamais s'ouvrir : la
+ * conséquence d'un refus est une limitation trop stricte, celle d'une
+ * acceptation est un limiteur contournable.
+ */
+function isInRange(address: string, cidr: string): boolean {
+  const [network, prefixText] = cidr.split('/')
+  const prefix = Number(prefixText)
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) return false
+
+  const target = toIpv4Int(address)
+  const base = toIpv4Int(network ?? '')
+  if (target === null || base === null) return false
+
+  // Un préfixe de 0 couvre tout ; le décalage de 32 bits en JavaScript
+  // équivaut à un décalage de 0, il faut donc traiter ce cas à part.
+  if (prefix === 0) return true
+
+  const mask = (-1 << (32 - prefix)) >>> 0
+  return ((target & mask) >>> 0) === ((base & mask) >>> 0)
+}
+
+/** Adresse IPv4 pointée vers son entier non signé, ou `null` si ce n'en est pas une. */
+function toIpv4Int(address: string): number | null {
+  const octets = address.split('.')
+  if (octets.length !== 4) return null
+
+  let value = 0
+  for (const octet of octets) {
+    if (!/^\d{1,3}$/.test(octet)) return null
+    const number = Number(octet)
+    if (number > 255) return null
+    value = value * 256 + number
+  }
+
+  return value
 }
