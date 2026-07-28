@@ -1,0 +1,114 @@
+{
+  "app": {
+    "tagline": "Tout ce que tu regardes. Un seul log."
+  },
+  "nav": {
+    "home": "accueil",
+    "library": "bibliothèque",
+    "log": "log",
+    "stats": "stats",
+    "ariaLabel": "Navigation principale"
+  },
+  "welcome": {
+    "eyebrow": "// PREMIÈRE OUVERTURE",
+    "title": "Ton <0>log</0> est vide.",
+    "body": "Chaque titre que tu ajoutes écrit une ligne datée. Chaque fois que tu revois quelque chose, c'est un visionnage de plus, avec sa propre date et sa propre note. Au bout d'un moment, tu ne regardes plus une liste : tu relis ton histoire.",
+    "firstNameLabel": "on t'appelle comment ?",
+    "firstNamePlaceholder": "ton prénom",
+    "submit": "COMMENCER",
+    "legal": "reste sur cet appareil · aucun compte · données exportables"
+  },
+  "home": {
+    "greeting": "Bonsoir, {{firstName}}",
+    "counters": "› {{watching}} en cours · {{toWatch}} à voir",
+    "watchingTitle": "En cours",
+    "watchingWhat": "Les titres que tu regardes, avec leur progression et le bouton pour avancer."
+  },
+  "library": {
+    "title": "Bibliothèque",
+    "what": "Tout ce que tu as logué, filtrable par statut et par coup de cœur."
+  },
+  "log": {
+    "title": "Log",
+    "what": "Le flux horodaté de tout ce que tu as fait. Le tail -f de ta vie de spectateur."
+  },
+  "stats": {
+    "title": "Stats",
+    "what": "Temps total, répartition, notes, genres. Tout calculé depuis tes visionnages."
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "what": "Cette adresse ne correspond à aucun écran."
+  },
+  "underConstruction": {
+    "step": "étape {{step}} du plan"
+  },
+  "debug": {
+    "title": "/debug",
+    "measuring": "mesure…",
+    "mediaCount": "medias",
+    "cyclesBeyondFirst": "cycles_ouverts_au_dela_du_premier",
+    "journalEntries": "entrees_de_journal",
+    "entriesPerDay": "entrees_de_journal_par_jour",
+    "voidedEvents": "evenements_annules",
+    "unknownEvents": "evenements_de_type_inconnu",
+    "rebuild": "reconstruire media_state depuis les événements",
+    "rebuilding": "reconstruction…",
+    "rebuilt": "reconstruit.",
+    "note": "media_state est dérivée : la reconstruire ne perd aucune donnée. events est la source de vérité et n'est jamais modifiée."
+  },
+  "language": {
+    "label": "Langue",
+    "fr": "FR",
+    "en": "EN"
+  },
+  "update": {
+    "available": "Nouvelle version disponible",
+    "reload": "RECHARGER"
+  },
+  "attribution": {
+    "tmdb": "Données de films et séries fournies par TMDB. Ce produit utilise l'API TMDB sans être approuvé ni certifié par TMDB."
+  },
+  "search": {
+    "scope": {
+      "all": "tout",
+      "movies": "films",
+      "series": "séries"
+    },
+    "placeholderAdd": "Ajouter ou rechercher dans {{scope}}…",
+    "placeholderFilter": "Filtrer ou ajouter dans {{scope}}…",
+    "moreTypesSoon": "animes, livres, audiobooks, musique — bientôt",
+    "clear": "Effacer la recherche",
+    "count_one": "{{count}} résultat · {{scope}} · tmdb",
+    "count_other": "{{count}} résultats · {{scope}} · tmdb",
+    "noPaging": "première page seulement",
+    "inLibrary": "▸ DÉJÀ DANS TA BIBLIOTHÈQUE",
+    "results": "▸ RÉSULTATS",
+    "empty": "Aucun titre ne correspond.",
+    "emptyHint": "Vérifie l'orthographe, ou essaie le titre original.",
+    "unavailable": "Recherche indisponible",
+    "unavailableHint": "Le service ne répond pas. Tes titres déjà ajoutés restent accessibles.",
+    "offline": "Pas de réseau",
+    "offlineHint": "Mets le titre de côté : tu le confirmeras au retour du réseau.",
+    "rateLimited": "Trop de recherches",
+    "rateLimitedHint": "Réessaie dans {{count}} seconde.",
+    "rateLimitedHint_other": "Réessaie dans {{count}} secondes.",
+    "addLabel": "Ajouter {{title}}",
+    "added": "✓ ajouté",
+    "undo": "annuler",
+    "kindMovie": "film",
+    "kindSeries": "série",
+    "unknownYear": "année inconnue",
+    "setAside": "Mettre « {{text}} » de côté",
+    "pendingBadge_one": "{{count}} titre à confirmer",
+    "pendingBadge_other": "{{count}} titres à confirmer",
+    "confirmPending": "Confirmer les titres mis de côté",
+    "dismissPending": "abandonner"
+  },
+  "status": {
+    "to-watch": "à voir",
+    "watching": "en cours",
+    "seen": "vu",
+    "dropped": "abandonné"
+  }
+}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#070a12" />
+    <meta name="description" content="Tout ce que tu regardes. Un seul log." />
+    <!--
+      Preload des deux polices du premier rendu : le corps de texte et la
+      police mono des metadonnees. Sans ca, le shell s'affiche en police
+      systeme le temps que le CSS soit parse puis bascule, ce qui se voit.
+    -->
+    <link
+      rel="preload"
+      href="/fonts/ibm-plex-sans-var.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/jetbrains-mono-var.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <title>Owlog</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
