@@ -47,11 +47,11 @@ Or l'adresse de Traefik est attribuée par Docker et change quand le proxy est r
 
 ## 2. DNS
 
-Un seul enregistrement, chez Cloudflare :
+Un seul enregistrement, dans la zone `nspace.link` chez Cloudflare :
 
 | Type | Nom | Contenu | Proxy |
 |---|---|---|---|
-| `A` | `owlog` (ou `@`) | IP du VPS | **activé** (nuage orange) |
+| `A` | `owlog` | IP du VPS | **activé** (nuage orange) |
 
 ## 3. Service `owlog-api`
 
@@ -72,7 +72,7 @@ Le contexte de build est la racine et non `apps/api` : c'est un workspace pnpm, 
 
 | Champ | Valeur |
 |---|---|
-| Host | `<DOMAINE>` |
+| Host | `owlog.nspace.link` |
 | Path | `/api` |
 | **Strip Path** | **activé** |
 | Container Port | `8787` |
@@ -92,17 +92,17 @@ PORT=8787
 **Vérification, avant de toucher au web :**
 
 ```bash
-curl https://<DOMAINE>/api/health
+curl https://owlog.nspace.link/api/health
 # {"status":"ok"}
 # 404 ici  ->  Strip Path n'est pas activé.
 # 502 ici  ->  le conteneur ne démarre pas : lis ses logs, la config
 #              échoue bruyamment et nomme le secret manquant.
 
-curl -o /dev/null -w "%{http_code}\n" "https://<DOMAINE>/api/search?q=dune"
+curl -o /dev/null -w "%{http_code}\n" "https://owlog.nspace.link/api/search?q=dune"
 # 401 — sans jeton, c'est le comportement attendu
 
 curl -s -H "x-owlog-token: <OWLOG_SHARED_TOKEN>" \
-  "https://<DOMAINE>/api/search?q=dune" | head -c 200
+  "https://owlog.nspace.link/api/search?q=dune" | head -c 200
 # la liste des résultats — si tu vois 502 ici, c'est TMDB qui refuse le
 # jeton, donc TMDB_API_TOKEN.
 ```
@@ -122,7 +122,7 @@ curl -s -H "x-owlog-token: <OWLOG_SHARED_TOKEN>" \
 
 | Champ | Valeur |
 |---|---|
-| Host | `<DOMAINE>` |
+| Host | `owlog.nspace.link` |
 | Path | `/` |
 | Strip Path | désactivé |
 | Container Port | `80` |
@@ -150,9 +150,9 @@ Déployer une **seconde** fois, puis vérifier qu'un client déjà ouvert voit l
 C'est le défaut le plus coûteux de cette étape, et il est silencieux : sans `Cache-Control: no-cache` sur `index.html` et sur `sw.js`, le navigateur garde l'ancien document, qui référence l'ancien bundle. L'application marche parfaitement — elle est simplement périmée, indéfiniment. Le `Caddyfile` pose ces en-têtes ; ce test vérifie qu'ils arrivent jusqu'au client à travers Cloudflare, qui applique ses propres règles.
 
 ```bash
-curl -sI https://<DOMAINE>/ | grep -i "cache-control\|cf-cache-status"
+curl -sI https://owlog.nspace.link/ | grep -i "cache-control\|cf-cache-status"
 # cache-control: no-cache        <- attendu
-curl -sI https://<DOMAINE>/sw.js | grep -i "cache-control"
+curl -sI https://owlog.nspace.link/sw.js | grep -i "cache-control"
 # cache-control: no-cache        <- attendu
 ```
 
