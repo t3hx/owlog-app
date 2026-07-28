@@ -1,0 +1,16 @@
+# Frontal de la pile locale de production.
+#
+# Il tient le rôle du tunnel Cloudflare et de Dokploy réunis : une seule
+# origine, `owlog-web` à la racine, `owlog-api` sous `/api`. C'est cette
+# topologie-là qu'il faut reproduire, et pas seulement « le web d'un côté,
+# l'API de l'autre » — la moitié des pannes de mise en ligne vient de ce
+# que le client appelle `/api/search` sur sa propre origine.
+:80 {
+	handle /api/* {
+		reverse_proxy owlog-api:8787
+	}
+
+	handle {
+		reverse_proxy owlog-web:80
+	}
+}
