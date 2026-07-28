@@ -12,6 +12,8 @@ import type { Status } from '@/domain/types'
  */
 export interface MediaRowProps {
   hit: SearchHit
+  /** Ouvre la fiche. Absent quand la rangée n'est pas navigable. */
+  onOpen?: () => void
   /** Statut si le titre est déjà en bibliothèque. */
   status?: Status
   /** Absent quand le titre est déjà là : on n'ajoute pas deux fois. */
@@ -21,7 +23,7 @@ export interface MediaRowProps {
   justAdded?: boolean
 }
 
-export function MediaRow({ hit, status, onAdd, onUndo, justAdded }: MediaRowProps) {
+export function MediaRow({ hit, status, onAdd, onUndo, justAdded, onOpen }: MediaRowProps) {
   const { t } = useTranslation()
   const poster = posterUrl(hit.posterPath, 'w185')
 
@@ -49,8 +51,13 @@ export function MediaRow({ hit, status, onAdd, onUndo, justAdded }: MediaRowProp
         <span className="h-[72px] w-12 flex-none rounded-poster bg-poster-placeholder" />
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="truncate text-sm font-semibold text-text">{hit.title}</span>
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={!onOpen}
+        className="flex min-w-0 flex-1 flex-col items-start gap-1.5 text-left disabled:cursor-default"
+      >
+        <span className="w-full truncate text-sm font-semibold text-text">{hit.title}</span>
         <span className="font-mono text-[10px] text-muted">
           {[
             hit.year ?? t('search.unknownYear'),
@@ -60,7 +67,7 @@ export function MediaRow({ hit, status, onAdd, onUndo, justAdded }: MediaRowProp
             .filter(Boolean)
             .join(' · ')}
         </span>
-      </div>
+      </button>
 
       {justAdded && onUndo ? (
         <div className="flex flex-none flex-col items-end gap-1">

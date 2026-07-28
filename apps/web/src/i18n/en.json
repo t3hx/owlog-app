@@ -118,5 +118,33 @@
     "watching": "watching",
     "seen": "seen",
     "dropped": "dropped"
+  },
+  "media": {
+    "back": "back",
+    "journal": "▸ JOURNAL",
+    "journalEmpty": "nothing yet. the first move writes the first line.",
+    "cycleMarker": "— watch #{{number}} —",
+    "noRating": "not rated yet",
+    "rating": "your call · {{rating}}/5",
+    "star": "rate {{count}} out of 5",
+    "favorite": "favourite",
+    "tmdb": "tmdb {{rating}}",
+    "rewatch": "WATCH AGAIN",
+    "rewatchHint": "back to « watching » · opens watch #{{number}} in the journal",
+    "seenCount": "✓ seen ×{{count}}",
+    "cancelHint": "long-press an entry to undo it"
+  },
+  "journal": {
+    "WATCH": "added to « to watch »",
+    "REMOVE": "removed from library",
+    "START": "started",
+    "REWATCH": "rewatch opened",
+    "SEEN": "seen",
+    "DROP": "dropped",
+    "RATE": "rated",
+    "NOTE": "commented",
+    "FAV": "favourite",
+    "UNFAV": "favourite removed",
+    "VOID": "entry undone"
   }
 }

@@ -55,6 +55,7 @@
   --radius-card: 14px;
   --radius-action: 12px;
   --radius-poster: 10px;
+  --radius-tag: 6px;
   --radius-tab: 10px 10px 0 0;
   --radius-searchbar: 0 14px 14px 14px;
 
@@ -64,6 +65,8 @@
   --shadow-search: 0 0 20px rgb(39 255 147 / 0.1) inset, 0 0 16px rgb(47 123 255 / 0.12);
   --shadow-glow: 0 0 12px rgb(39 255 147 / 0.35);
   --shadow-glow-strong: 0 0 18px rgb(39 255 147 / 0.35);
+  /* Affiche en surimpression sur le backdrop de la page media. */
+  --shadow-poster: 0 8px 24px rgb(0 0 0 / 0.5);
 }
 
 /*
@@ -102,6 +105,28 @@
   background:
     linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
     linear-gradient(90deg, var(--color-accent), var(--color-blue)) border-box;
+}
+
+/*
+ * Fondu du backdrop vers le fond, page media.
+ * Sans lui l'affiche en surimpression aurait besoin d'une bordure, et le
+ * handoff a tranche pour le fondu.
+ */
+@utility bg-backdrop-fade {
+  /*
+   * La derniere etape est transparente et non `--color-bg` opaque, contre la
+   * lettre du handoff. Le fond de page porte un halo radial : finir sur la
+   * couleur plate laisse une couture horizontale nette la ou le backdrop
+   * s'arrete. Transparent rend exactement la meme chose sur un fond uni, et
+   * raccorde sur un fond degrade.
+   */
+  background-image: linear-gradient(
+    180deg,
+    rgb(7 10 18 / 0.25),
+    rgb(7 10 18 / 0.55) 60%,
+    var(--color-bg) 92%,
+    transparent
+  );
 }
 
 /* Placeholder d'affiche, en attendant les visuels TMDB. */

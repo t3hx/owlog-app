@@ -1,4 +1,6 @@
 import type { MediaStateRow } from '@/domain/reducers/mediaState'
+import type { StoredEvent } from '@/domain/types'
+import type { MediaCacheRow } from '@/ports/MediaCache'
 import type { EventStore } from '@/ports/EventStore'
 import type { LiveQueries } from '@/ports/LiveQueries'
 import type { MediaCatalog } from '@/ports/MediaCatalog'
@@ -21,6 +23,8 @@ import type { Ports } from '@/ui/PortsProvider'
 export function fakePorts(overrides: {
   mediaStates?: readonly MediaStateRow[]
   pendingAdds?: readonly PendingAdd[]
+  mediaEvents?: readonly StoredEvent[]
+  mediaCache?: readonly MediaCacheRow[]
 } = {}): Ports {
   const mediaStates = overrides.mediaStates ?? []
   const pendingAdds = overrides.pendingAdds ?? []
@@ -28,6 +32,9 @@ export function fakePorts(overrides: {
   const live: LiveQueries = {
     useMediaStates: () => mediaStates,
     usePendingAdds: () => pendingAdds,
+    useMediaEvents: () => overrides.mediaEvents ?? [],
+    useMediaState: (ref) => mediaStates.find((row) => row.ref === ref),
+    useMediaCacheRow: (ref) => overrides.mediaCache?.find((row) => row.ref === ref),
   }
 
   const settings: SettingsStore = {
@@ -42,6 +49,7 @@ export function fakePorts(overrides: {
     eventsForMedia: () => Promise.resolve([]),
     allMediaStates: () => Promise.resolve(mediaStates),
     eventsSince: () => Promise.resolve([]),
+    upsertMediaCache: () => Promise.resolve(),
     restore: () => Promise.resolve({ added: 0, skipped: 0 }),
     rebuildAllState: () => Promise.resolve(),
   }
