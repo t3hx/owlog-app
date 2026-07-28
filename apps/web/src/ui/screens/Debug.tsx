@@ -26,20 +26,18 @@ import { usePorts } from '@/ui/PortsProvider'
 export function Debug() {
   const { t } = useTranslation()
   const { events } = usePorts()
-  const [measures, setMesures] = useState<Metrics | null>(null)
-  const [rebuilding, setReconstruction] = useState<'inactif' | 'watching' | 'fait'>(
-    'inactif',
-  )
+  const [measures, setMeasures] = useState<Metrics | null>(null)
+  const [rebuilding, setRebuilding] = useState<'idle' | 'running' | 'done'>('idle')
 
   const measure = useCallback(async () => {
     const states = await events.allMediaStates()
     const byMedia = new Map<MediaRef, readonly StoredEvent[]>()
 
-    for (const etat of states) {
-      byMedia.set(etat.ref, await events.eventsForMedia(etat.ref))
+    for (const state of states) {
+      byMedia.set(state.ref, await events.eventsForMedia(state.ref))
     }
 
-    setMesures(metrics(byMedia))
+    setMeasures(metrics(byMedia))
   }, [events])
 
   useEffect(() => {
@@ -47,10 +45,10 @@ export function Debug() {
   }, [measure])
 
   async function rebuild() {
-    setReconstruction('watching')
+    setRebuilding('running')
     await events.rebuildAllState()
     await measure()
-    setReconstruction('fait')
+    setRebuilding('done')
   }
 
   return (
@@ -88,15 +86,15 @@ export function Debug() {
       <button
         type="button"
         onClick={() => void rebuild()}
-        disabled={rebuilding === 'watching'}
+        disabled={rebuilding === 'running'}
         className="mt-6 rounded-action border border-border px-3 py-2 text-left text-[11px] text-text disabled:opacity-40"
       >
-        {rebuilding === 'watching'
+        {rebuilding === 'running'
           ? t('debug.rebuilding')
           : t('debug.rebuild')}
       </button>
 
-      {rebuilding === 'fait' && <p className="mt-2 text-accent">{t('debug.rebuilt')}</p>}
+      {rebuilding === 'done' && <p className="mt-2 text-accent">{t('debug.rebuilt')}</p>}
 
       <p className="mt-6 leading-relaxed text-subtle">{t('debug.note')}</p>
     </div>
