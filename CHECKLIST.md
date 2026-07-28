@@ -73,4 +73,20 @@ Durée : environ cinq minutes.
 
 - [ ] Ouvrir `/debug` : `cycles_ouverts_au_delà_du_premier` et `entrées_de_journal / jour`
 - [ ] Vérifier le compteur d'événements de type inconnu — il doit rester à zéro tant qu'un seul appareil est en service
-- [ ] Exporter le `.log` et vérifier qu'il ne contient aucune ligne de progression
+- [ ] Exporter le `.log` et vérifier que le **corps** ne contient aucune ligne de progression
+
+Les `PROG` sont relégués sous `# --- progression ---`, en fin de fichier, et non retirés. Les retirer ferait revenir une série de 60 % à 0 % après restauration, sans que rien à l'écran ne le signale — le statut resterait « en cours ». Le corps reste narratif, le fichier reste une sauvegarde.
+
+---
+
+## Restauration — *à partir de l'étape 5*
+
+Le seul filet contre l'éviction du stockage. À vérifier **avant** la saisie de masse du rétro-datage, pas après.
+
+- [ ] Ouvrir `/debug`, exporter le `.log`
+- [ ] Le fichier s'ouvre dans un éditeur de texte et se lit : dates, titres, numéros de visionnage
+- [ ] Effacer le stockage du site (ou désinstaller puis réinstaller la PWA)
+- [ ] L'app repart sur l'écran de première ouverture
+- [ ] Réimporter le fichier depuis `/debug`
+- [ ] Le prénom, les compteurs de l'accueil et les titres avec leurs années sont revenus — **sans réseau**
+- [ ] Réimporter le même fichier une seconde fois : « 0 événement réinjecté, N déjà présent », rien n'est dupliqué
