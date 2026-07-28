@@ -2,11 +2,14 @@ packages:
   - "apps/*"
   - "packages/*"
 
-allowBuilds:
-  esbuild: set this to true or false
-
 # esbuild (via Vite) est la seule dependance autorisee a executer un script
 # d'installation. Tout le reste est installe sans script : une dependance qui
 # en reclame un doit etre ajoutee ici explicitement, apres examen.
-onlyBuiltDependencies:
-  - esbuild
+#
+# La cle est `allowBuilds` depuis pnpm 11 — elle s'appelait
+# `onlyBuiltDependencies` et prenait une liste. L'ancienne n'est pas rejetee,
+# elle est ignoree : la politique parait en place et ne s'applique plus. Ca ne
+# se voit pas en local, ou node_modules est deja construit — seulement a la
+# premiere installation propre, c'est-a-dire dans le conteneur.
+allowBuilds:
+  esbuild: true
