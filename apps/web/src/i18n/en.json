@@ -146,5 +146,32 @@
     "FAV": "favourite",
     "UNFAV": "favourite removed",
     "VOID": "entry undone"
+  },
+  "backdate": {
+    "modeAdd": "+ add to « to watch »",
+    "modeLog": "✓ log a memory",
+    "open": "Log a memory of {{title}}",
+    "when": "WHEN?",
+    "earlier": "← earlier",
+    "exactDate": "exact date",
+    "unknown": "can't remember",
+    "ratingLabel": "YOUR CALL — OPTIONAL",
+    "addComment": "+ add a comment",
+    "commentPlaceholder": "what stayed with you…",
+    "save": "SAVE THIS WATCH",
+    "saving": "saving…",
+    "hintYear": "« year » precision · the journal will show « {{year}} »",
+    "hintDay": "« day » precision · the journal will show « {{date}} »",
+    "hintUnknown": "no date · the journal will place it last",
+    "hintNone": "pick a date to save",
+    "attached": "✓ watch #{{number}} closed",
+    "attachedWhy": "a watch was open and older than this date: it was closed, not duplicated.",
+    "created": "✓ watch #{{number}} saved",
+    "createdWhy": "no open watch preceded this date: a new cycle was opened.",
+    "again": "↻ another watch",
+    "next": "next title →",
+    "count_one": "{{count}} title logged tonight",
+    "count_other": "{{count}} titles logged tonight",
+    "close": "close"
   }
 }

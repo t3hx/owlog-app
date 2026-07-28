@@ -146,5 +146,32 @@
     "FAV": "coup de cœur",
     "UNFAV": "coup de cœur retiré",
     "VOID": "entrée annulée"
+  },
+  "backdate": {
+    "modeAdd": "+ ajouter en « à voir »",
+    "modeLog": "✓ logger un souvenir",
+    "open": "Loguer un souvenir de {{title}}",
+    "when": "QUAND ?",
+    "earlier": "← plus tôt",
+    "exactDate": "date exacte",
+    "unknown": "je ne sais plus",
+    "ratingLabel": "TON AVIS — OPTIONNEL",
+    "addComment": "+ ajouter un commentaire",
+    "commentPlaceholder": "ce que tu en as gardé…",
+    "save": "ENREGISTRER CE VISIONNAGE",
+    "saving": "enregistrement…",
+    "hintYear": "précision « année » · le journal l'affichera « {{year}} »",
+    "hintDay": "précision « jour » · le journal l'affichera « {{date}} »",
+    "hintUnknown": "sans date · le journal la placera en fin de liste",
+    "hintNone": "choisis une date pour enregistrer",
+    "attached": "✓ visionnage #{{number}} clos",
+    "attachedWhy": "un visionnage était ouvert et antérieur à cette date : il a été clos, pas dupliqué.",
+    "created": "✓ visionnage #{{number}} enregistré",
+    "createdWhy": "aucun visionnage ouvert ne précédait cette date : un nouveau cycle a été ouvert.",
+    "again": "↻ encore un visionnage",
+    "next": "titre suivant →",
+    "count_one": "{{count}} titre logué ce soir",
+    "count_other": "{{count}} titres logués ce soir",
+    "close": "fermer"
   }
 }
