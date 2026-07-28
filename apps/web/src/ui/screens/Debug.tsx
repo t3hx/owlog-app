@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { metrics, type Metrics } from '@/domain/reducers/metrics'
+import { entriesPerDay, metrics, type Metrics } from '@/domain/reducers/metrics'
 import type { StoredEvent, MediaRef } from '@/domain/types'
 import { useBackup } from '@/ui/hooks/useBackup'
 import { usePorts } from '@/ui/PortsProvider'
@@ -24,6 +24,21 @@ import { usePorts } from '@/ui/PortsProvider'
  * 3. **La table dérivée est-elle réparable ?** Le bouton de reconstruction
  *    est le chemin de réparation, pas un utilitaire de confort.
  */
+/**
+ * Jours écoulés entre la première et la dernière écriture.
+ *
+ * Calculé ici et non dans le réducteur : `Date` est interdit au domaine, et
+ * une soustraction d'horodatages le lui ferait connaître. Même partage que
+ * les fenêtres de l'écran de stats — l'arithmétique de calendrier reste
+ * dehors, la règle reste dedans.
+ */
+function elapsedDays(measures: Metrics): number {
+  if (measures.firstAt === null || measures.lastAt === null) return 0
+
+  const span = new Date(measures.lastAt).getTime() - new Date(measures.firstAt).getTime()
+  return span / 86_400_000
+}
+
 export function Debug() {
   const { t } = useTranslation()
   const { events } = usePorts()
@@ -67,7 +82,10 @@ export function Debug() {
             warning={measures.cyclesBeyondFirst === 0 && measures.mediaCount > 0}
           />
           <Metric name={t('debug.journalEntries')} value={measures.journalEntries} />
-          <Metric name={t('debug.entriesPerDay')} value={measures.entriesPerDay} />
+          <Metric
+            name={t('debug.entriesPerDay')}
+            value={entriesPerDay(measures.journalEntries, elapsedDays(measures))}
+          />
           <Metric name={t('debug.voidedEvents')} value={measures.voidedEvents} />
           <Metric
             name={t('debug.unknownEvents')}

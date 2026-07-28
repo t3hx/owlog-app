@@ -198,8 +198,7 @@
     "RATE": "rated",
     "NOTE": "commented",
     "FAV": "favourite",
-    "UNFAV": "favourite removed",
-    "VOID": "entry undone"
+    "UNFAV": "favourite removed"
   },
   "backdate": {
     "modeAdd": "+ add to « to watch »",

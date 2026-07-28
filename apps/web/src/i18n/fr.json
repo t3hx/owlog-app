@@ -198,8 +198,7 @@
     "RATE": "noté",
     "NOTE": "commenté",
     "FAV": "coup de cœur",
-    "UNFAV": "coup de cœur retiré",
-    "VOID": "entrée annulée"
+    "UNFAV": "coup de cœur retiré"
   },
   "backdate": {
     "modeAdd": "+ ajouter en « à voir »",
