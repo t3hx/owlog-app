@@ -261,17 +261,17 @@ describe('limitation de débit', () => {
 
   it('coupe au-delà de la limite, sur la même IP', async () => {
     const app = createApp({ config: CONFIG, tmdb: fakeTmdb(), now: () => maintenant })
-    const entete = { 'cf-connecting-ip': '203.0.113.7' }
+    const headers = { 'cf-connecting-ip': '203.0.113.7' }
 
-    let dernier = new Response()
+    let last = new Response()
     for (let index = 0; index < 61; index += 1) {
       // Une requête distincte à chaque fois, sinon le cache répondrait avant
       // d'atteindre le limiteur.
-      dernier = await app.fetch(authenticated(`/search?q=titre${index}`, entete))
+      last = await app.fetch(authenticated(`/search?q=titre${index}`, headers))
     }
 
-    expect(dernier.status).toBe(429)
-    expect(Number(dernier.headers.get('Retry-After'))).toBeGreaterThan(0)
+    expect(last.status).toBe(429)
+    expect(Number(last.headers.get('Retry-After'))).toBeGreaterThan(0)
   })
 
   it('compte séparément deux IP distinctes', async () => {

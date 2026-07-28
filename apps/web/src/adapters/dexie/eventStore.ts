@@ -2,7 +2,7 @@ import { db } from '@/adapters/dexie/db'
 import { mediaState, type MediaStateRow } from '@/domain/reducers/mediaState'
 import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
 import type { MediaCacheRow } from '@/ports/MediaCache'
-import type { EventStore } from '@/ports/EventStore'
+import type { EventStore, RestoreReport } from '@/ports/EventStore'
 
 /**
  * Implémentation Dexie du port EventStore.
@@ -59,6 +59,11 @@ export function createEventStore(): EventStore {
       return db.media_cache.where('ref').anyOf([...refs]).toArray()
     },
 
+    async upsertMediaCache(rows: readonly MediaCacheRow[]): Promise<void> {
+      if (rows.length === 0) return
+      await db.media_cache.bulkPut([...rows])
+    },
+
     async eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]> {
       return db.events.where('media_ref').equals(ref).toArray()
     },
@@ -81,6 +86,65 @@ export function createEventStore(): EventStore {
         cursor === null ? db.events.orderBy('id') : db.events.where('id').above(cursor)
 
       return collection.limit(limit).toArray()
+    },
+
+    /**
+     * Même parcours, dans l'autre sens, pour le flux du LOG global.
+     *
+     * `reverse()` s'applique à la collection déjà bornée : borner après
+     * aurait renversé la page et non le parcours, donc rendu les vingt plus
+     * anciens événements affichés à l'envers.
+     */
+    async eventsRecent(
+      before: EventId | null,
+      limit: number,
+    ): Promise<readonly StoredEvent[]> {
+      const collection =
+        before === null ? db.events.orderBy('id') : db.events.where('id').below(before)
+
+      return collection.reverse().limit(limit).toArray()
+    },
+
+    /**
+     * Réinjecte une sauvegarde, sans jamais lever sur un doublon.
+     *
+     * Le tri des connus et des inconnus se fait **dans la transaction** : le
+     * lire avant l'ouvrir laisserait une fenêtre où un ajout concurrent
+     * rendrait le compte faux, et le rapport affiché mentirait.
+     */
+    async restore(
+      events: readonly StoredEvent[],
+      cacheRows: readonly MediaCacheRow[],
+    ): Promise<RestoreReport> {
+      return db.transaction(
+        'rw',
+        db.events,
+        db.media_state,
+        db.media_cache,
+        async () => {
+          const existing = new Set(
+            await db.events
+              .where('id')
+              .anyOf(events.map((event) => event.id))
+              .primaryKeys(),
+          )
+
+          const fresh = events.filter((event) => !existing.has(event.id))
+          if (fresh.length > 0) await db.events.bulkAdd(fresh)
+
+          for (const row of cacheRows) {
+            // Une ligne complete vaut mieux que le titre nu du fichier.
+            const known = await db.media_cache.get(row.ref)
+            if (!known?.complete) await db.media_cache.put(row)
+          }
+
+          for (const ref of new Set(fresh.map((event) => event.media_ref))) {
+            await refreshMediaState(ref)
+          }
+
+          return { added: fresh.length, skipped: events.length - fresh.length }
+        },
+      )
     },
 
     /**

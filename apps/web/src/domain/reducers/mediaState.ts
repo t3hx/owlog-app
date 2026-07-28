@@ -24,7 +24,7 @@ export interface MediaStateRow {
   readonly percent: number
   readonly label: string | null
   readonly labelStale: boolean
-  readonly note: number | null
+  readonly rating: number | null
   readonly comment: string | null
   readonly favorite: boolean
   readonly seenCount: number
@@ -32,9 +32,22 @@ export interface MediaStateRow {
   readonly updatedAt: Timestamp | null
 }
 
+/** Une chip de filtre de la bibliothèque. */
+export type LibraryFilter = Status | 'all' | 'favorites'
+
+/** Les six chips, dans l'ordre du handoff. */
+export const LIBRARY_FILTERS: readonly LibraryFilter[] = [
+  'all',
+  'to-watch',
+  'watching',
+  'seen',
+  'dropped',
+  'favorites',
+]
+
 export interface LibraryView {
   readonly rows: readonly MediaStateRow[]
-  readonly counts: Record<Status | 'all' | 'favorites', number>
+  readonly counts: Record<LibraryFilter, number>
 }
 
 /**
@@ -64,7 +77,7 @@ export function mediaState(
     percent: progressValue.percent,
     label: progressValue.label,
     labelStale: progressValue.stale,
-    note: current ? ratingOfCycle(events, current.key) : null,
+    rating: current ? ratingOfCycle(events, current.key) : null,
     comment: current ? comment(events, current.key) : null,
     favorite: isFavorite(events),
     seenCount: seenCount(events),
@@ -81,37 +94,64 @@ export function mediaState(
  * forme de vidage, et donc à la promesse Postgres de tenir.
  */
 export function library(states: readonly MediaStateRow[]): LibraryView {
-  const rows = states.filter((etat) => etat.status !== 'absent')
+  const rows = inLibrary(states)
 
   return {
     rows,
+    // Comptés **par le filtre lui-même**, jamais par un prédicat parallèle.
+    // C'est ce qui interdit à une chip d'annoncer trois titres au-dessus
+    // d'une liste qui en montre deux.
     counts: {
       all: rows.length,
-      'to-watch': countBy(rows, 'to-watch'),
-      'watching': countBy(rows, 'watching'),
-      seen: countBy(rows, 'seen'),
-      dropped: countBy(rows, 'dropped'),
-      // Le coup de cœur n'est pas un statut : il se cumule avec les quatre,
-      // donc il se compte à part et la somme des chips dépasse `all`.
-      favorites: rows.filter((etat) => etat.favorite).length,
+      'to-watch': filterLibrary(rows, 'to-watch').length,
+      watching: filterLibrary(rows, 'watching').length,
+      seen: filterLibrary(rows, 'seen').length,
+      dropped: filterLibrary(rows, 'dropped').length,
+      favorites: filterLibrary(rows, 'favorites').length,
     },
   }
 }
 
-/** Sous-ligne `› N en cours · N à voir` de l'accueil. */
-export function homeCounters(states: readonly MediaStateRow[]): {
-  enCours: number
-  aVoir: number
-} {
-  const rows = states.filter((etat) => etat.status !== 'absent')
-  return {
-    enCours: countBy(rows, 'watching'),
-    aVoir: countBy(rows, 'to-watch'),
-  }
+/**
+ * Lignes retenues par une chip de filtre.
+ *
+ * **Le coup de cœur n'est pas un statut** : il se cumule avec les quatre,
+ * donc il se filtre à part et la somme des chips dépasse `tous`.
+ *
+ * Vit dans le domaine et non dans l'écran parce que le compteur d'une chip
+ * et la liste qu'elle ouvre doivent sortir du même prédicat. Deux
+ * implémentations divergeraient, et l'écart se lirait comme une perte de
+ * données plutôt que comme un défaut d'affichage.
+ */
+export function filterLibrary(
+  states: readonly MediaStateRow[],
+  filter: LibraryFilter,
+): readonly MediaStateRow[] {
+  const rows = inLibrary(states)
+
+  if (filter === 'all') return rows
+  if (filter === 'favorites') return rows.filter((row) => row.favorite)
+
+  return rows.filter((row) => row.status === filter)
 }
 
-function countBy(rows: readonly MediaStateRow[], status: Status): number {
-  return rows.filter((row) => row.status === status).length
+/** Un média retiré n'est dans aucune chip, pas même dans « tous ». */
+function inLibrary(states: readonly MediaStateRow[]): readonly MediaStateRow[] {
+  return states.filter((row) => row.status !== 'absent')
+}
+
+/** Sous-ligne `› N en cours · N à voir` de l'accueil. */
+export function homeCounters(states: readonly MediaStateRow[]): {
+  watching: number
+  toWatch: number
+} {
+  // Même prédicat que les chips de la bibliothèque : la sous-ligne de
+  // l'accueil et la chip `● en cours` ne peuvent pas annoncer deux nombres
+  // différents pour la même chose.
+  return {
+    watching: filterLibrary(states, 'watching').length,
+    toWatch: filterLibrary(states, 'to-watch').length,
+  }
 }
 
 function lastWrittenAt(events: readonly StoredEvent[]): Timestamp | null {

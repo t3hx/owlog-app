@@ -41,6 +41,16 @@ export interface EventStore {
    */
   mediaCache(refs: readonly MediaRef[]): Promise<readonly MediaCacheRow[]>
 
+  /**
+   * Écrit ou remplace des lignes de cache, sans toucher au journal.
+   *
+   * L'ouverture d'une fiche appelle `/media/:ref` et remonte genres, durée
+   * totale et nombre d'épisodes, que la ligne partielle écrite à l'ajout ne
+   * porte pas. `append` ne convient pas : il sort sans rien faire quand la
+   * liste d'événements est vide, et une consultation n'écrit aucun événement.
+   */
+  upsertMediaCache(rows: readonly MediaCacheRow[]): Promise<void>
+
   /** Tous les événements d'un média, pour sa fiche et son journal. */
   eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]>
 
@@ -57,6 +67,40 @@ export interface EventStore {
   eventsSince(cursor: EventId | null, limit: number): Promise<readonly StoredEvent[]>
 
   /**
+   * Page d'événements **avant** un curseur, par identifiant décroissant.
+   *
+   * Sert le LOG global, qui se lit du plus récent au plus ancien. La
+   * pagination croissante ne peut pas le servir : afficher les vingt
+   * dernières lignes obligerait à tirer toute la table pour en atteindre la
+   * fin, c'est-à-dire le vidage que ce port interdit.
+   *
+   * Le curseur est **exclusif** — passer le dernier identifiant reçu rend la
+   * page suivante, jamais la même ligne deux fois. Côté Postgres :
+   * `WHERE id < $1 ORDER BY id DESC LIMIT $2`, requête indexée.
+   */
+  eventsRecent(before: EventId | null, limit: number): Promise<readonly StoredEvent[]>
+
+  /**
+   * Réinjecte des événements venus d'une sauvegarde `.log`.
+   *
+   * **Ce n'est pas `append`.** Les événements arrivent déjà écrits, avec
+   * leurs identifiants d'origine, et le fichier peut en contenir que la base
+   * connaît déjà — on réimporte deux fois, on fusionne deux appareils. Un
+   * `append` lèverait sur le premier doublon et laisserait la base à moitié
+   * restaurée, ce qui est précisément le résultat qu'une sauvegarde existe
+   * pour éviter. `restore` est donc **idempotent par identifiant**.
+   *
+   * Les lignes de cache réamorcent les titres pour un retour hors ligne,
+   * mais n'écrasent jamais une ligne `complete` : le fichier ne porte qu'un
+   * titre et une année, et les stats distinguent une durée absente d'une
+   * durée nulle.
+   */
+  restore(
+    events: readonly StoredEvent[],
+    cacheRows: readonly MediaCacheRow[],
+  ): Promise<RestoreReport>
+
+  /**
    * Reconstruit intégralement `media_state` depuis les événements.
    *
    * Ce n'est pas un utilitaire de confort : depuis que la page média lit
@@ -64,4 +108,10 @@ export interface EventStore {
    * testé et déclenchable depuis `/debug`.
    */
   rebuildAllState(): Promise<void>
+}
+
+/** Ce qu'une réinjection a réellement fait, pour le dire à l'écran. */
+export interface RestoreReport {
+  readonly added: number
+  readonly skipped: number
 }

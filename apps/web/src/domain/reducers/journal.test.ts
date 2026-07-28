@@ -24,9 +24,9 @@ describe('journal', () => {
     ]
 
     const entries = journal(events)
-    const markers = entries.filter((e) => e.kind === 'marqueur')
+    const markers = entries.filter((e) => e.kind === 'marker')
 
-    expect(markers.map((m) => m.kind === 'marqueur' && m.number)).toEqual([2, 1])
+    expect(markers.map((m) => m.kind === 'marker' && m.number)).toEqual([2, 1])
   })
 
   it('groupe les événements d un cycle sous son marqueur', () => {
@@ -39,8 +39,8 @@ describe('journal', () => {
 
     const entries = journal(events)
 
-    expect(entries[0]?.kind).toBe('marqueur')
-    expect(entries.filter((e) => e.kind === 'evenement')).toHaveLength(3)
+    expect(entries[0]?.kind).toBe('marker')
+    expect(entries.filter((e) => e.kind === 'event')).toHaveLength(3)
   })
 
   it('commenter aujourd hui un cycle de 2019 ne le remonte pas', () => {
@@ -54,10 +54,10 @@ describe('journal', () => {
     ]
 
     const entries = journal(events)
-    const markers = entries.filter((e) => e.kind === 'marqueur')
+    const markers = entries.filter((e) => e.kind === 'marker')
 
     // Le cycle 2026 (#2) reste au-dessus du cycle 2019 (#1).
-    expect(markers.map((m) => m.kind === 'marqueur' && m.number)).toEqual([2, 1])
+    expect(markers.map((m) => m.kind === 'marker' && m.number)).toEqual([2, 1])
   })
 
   it('place les événements hors cycle à leur position chronologique', () => {
@@ -70,7 +70,7 @@ describe('journal', () => {
 
     const entries = journal(events)
     const types = entries.map((e) =>
-      e.kind === 'marqueur' ? `#${e.number}` : e.event.type,
+      e.kind === 'marker' ? `#${e.number}` : e.event.type,
     )
 
     // 2026 en haut, puis le coup de cœur de 2022, puis 2019 en bas.
@@ -83,8 +83,8 @@ describe('journal', () => {
     const events = [f.start('c1'), f.prog('c1', 30), f.prog('c1', 60), f.seen('c1')]
 
     const types = journal(events)
-      .filter((e) => e.kind === 'evenement')
-      .map((e) => e.kind === 'evenement' && e.event.type)
+      .filter((e) => e.kind === 'event')
+      .map((e) => e.kind === 'event' && e.event.type)
 
     // Personne ne veut relire qu'il a poussé la barre à 30 % un mardi soir.
     expect(types).not.toContain('PROG')
@@ -97,8 +97,8 @@ describe('journal', () => {
     const events = [f.start('c1', '2026-01-01T20:00:00.000Z'), drop, f.voided(drop.id)]
 
     const types = journal(events)
-      .filter((e) => e.kind === 'evenement')
-      .map((e) => e.kind === 'evenement' && e.event.type)
+      .filter((e) => e.kind === 'event')
+      .map((e) => e.kind === 'event' && e.event.type)
 
     expect(types).toEqual(['START'])
   })
@@ -111,12 +111,12 @@ describe('journal', () => {
     ]
 
     const entries = journal(events)
-    const markers = entries.filter((e) => e.kind === 'marqueur')
+    const markers = entries.filter((e) => e.kind === 'marker')
 
     // Le cycle sans date est le #1 par rang, mais il s'affiche en dernier :
     // on ne peut pas le placer chronologiquement puisqu'on n'a pas sa date.
-    expect(markers.map((m) => m.kind === 'marqueur' && m.number)).toEqual([2, 1])
-    expect(entries[entries.length - 1]?.kind).toBe('evenement')
+    expect(markers.map((m) => m.kind === 'marker' && m.number)).toEqual([2, 1])
+    expect(entries[entries.length - 1]?.kind).toBe('event')
   })
 
   it('conserve les types inconnus en les signalant', () => {
@@ -125,13 +125,13 @@ describe('journal', () => {
 
     const entries = journal(events)
     const unknown = entries.find(
-      (e) => e.kind === 'evenement' && e.event.type === 'LEND',
+      (e) => e.kind === 'event' && e.event.type === 'LEND',
     )
 
     // Un trou dans l'historique serait pire qu'une ligne qu'on ne sait pas
     // interpréter : l'UI l'affiche en gris avec son type brut.
     expect(unknown).toBeDefined()
-    expect(unknown?.kind === 'evenement' && unknown.known).toBe(false)
+    expect(unknown?.kind === 'event' && unknown.known).toBe(false)
   })
 
   it('départage deux événements de même date par ordre d écriture', () => {
@@ -143,8 +143,8 @@ describe('journal', () => {
     ]
 
     const types = journal(events)
-      .filter((e) => e.kind === 'evenement')
-      .map((e) => e.kind === 'evenement' && e.event.type)
+      .filter((e) => e.kind === 'event')
+      .map((e) => e.kind === 'event' && e.event.type)
 
     // Le plus récemment écrit en premier, puisque l'affichage est décroissant.
     expect(types).toEqual(['SEEN', 'START'])

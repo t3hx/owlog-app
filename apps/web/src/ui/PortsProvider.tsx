@@ -29,7 +29,7 @@ export interface Ports {
   readonly live: LiveQueries
 }
 
-const ContextePorts = createContext<Ports | null>(null)
+const PortsContext = createContext<Ports | null>(null)
 
 export function PortsProvider({
   ports,
@@ -38,7 +38,7 @@ export function PortsProvider({
   ports: Ports
   children: ReactNode
 }) {
-  return <ContextePorts.Provider value={ports}>{children}</ContextePorts.Provider>
+  return <PortsContext.Provider value={ports}>{children}</PortsContext.Provider>
 }
 
 /**
@@ -49,7 +49,7 @@ export function PortsProvider({
  * développement coûte moins qu'un écran qui ne réagit pas en production.
  */
 export function usePorts(): Ports {
-  const ports = useContext(ContextePorts)
+  const ports = useContext(PortsContext)
   if (!ports) {
     throw new Error('usePorts must be used inside a PortsProvider')
   }

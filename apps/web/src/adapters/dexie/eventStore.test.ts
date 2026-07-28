@@ -74,10 +74,10 @@ describe('EventStore (adaptateur Dexie)', () => {
     await store.append([film.watch(), serie.watch(), serie.start('c1')] as DomainEvent[])
 
     const states = await store.allMediaStates()
-    const parRef = new Map(states.map((etat) => [etat.ref, etat.status]))
+    const byRef = new Map(states.map((row) => [row.ref, row.status]))
 
-    expect(parRef.get(MOVIE)).toBe('to-watch')
-    expect(parRef.get(SERIES)).toBe('watching')
+    expect(byRef.get(MOVIE)).toBe('to-watch')
+    expect(byRef.get(SERIES)).toBe('watching')
   })
 
   it('ne rend que les evenements du media demande', async () => {
@@ -109,6 +109,29 @@ describe('EventStore (adaptateur Dexie)', () => {
 
     const second = await store.eventsSince(firstPage[1]?.id ?? null, 2)
     expect(second.map((e) => e.type)).toEqual(['SEEN'])
+  })
+
+  /**
+   * Le LOG global se lit du plus récent au plus ancien.
+   *
+   * Le servir avec la pagination croissante obligerait à tirer toute la
+   * table pour en afficher les vingt dernières lignes — le vidage que le
+   * port interdit explicitement.
+   */
+  it('pagine aussi par identifiant decroissant', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+    await store.append([f.watch(), f.start('c1'), f.seen('c1')] as DomainEvent[])
+
+    const firstPage = await store.eventsRecent(null, 2)
+    expect(firstPage.map((e) => e.type)).toEqual(['SEEN', 'START'])
+
+    const second = await store.eventsRecent(firstPage[1]?.id ?? null, 2)
+    expect(second.map((e) => e.type)).toEqual(['WATCH'])
+
+    // Le curseur est exclusif des deux cotes : rejouer la meme page ne doit
+    // pas reafficher la ligne qui l'a bornee.
+    expect(await store.eventsRecent(second[0]?.id ?? null, 2)).toHaveLength(0)
   })
 
   it('reconstruit media_state a l identique', async () => {
@@ -246,5 +269,87 @@ describe('file d ajouts hors-ligne', () => {
     await queue.remove(entry!.id)
 
     await expect(queue.all()).resolves.toHaveLength(0)
+  })
+})
+
+/**
+ * Réinjection d'une sauvegarde.
+ *
+ * `restore` n'est pas `append`. Il porte des événements **déjà écrits
+ * ailleurs**, il peut en croiser qui sont déjà là, et il ne doit rien casser
+ * dans ce cas. Un `append` sur un identifiant existant lève, ce qui ferait
+ * échouer un import à mi-parcours et laisserait la base à moitié restaurée —
+ * exactement le résultat qu'une sauvegarde existe pour éviter.
+ */
+describe('restauration', () => {
+  beforeEach(async () => {
+    await db.events.clear()
+    await db.media_state.clear()
+    await db.media_cache.clear()
+  })
+
+  it('reinjecte des evenements dans une base vide', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+    const events = [f.watch(), f.start('c1'), f.seen('c1')] as DomainEvent[]
+
+    const report = await store.restore(events, [])
+
+    expect(report).toEqual({ added: 3, skipped: 0 })
+    expect(await store.eventsForMedia(MOVIE)).toHaveLength(3)
+  })
+
+  it('recalcule la table derivee apres reinjection', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+
+    await store.restore([f.watch(), f.start('c1'), f.seen('c1')] as DomainEvent[], [])
+
+    // Sans ce recalcul, la bibliotheque resterait vide apres un import
+    // parfaitement reussi : les evenements sont la, la projection non.
+    const [state] = await store.allMediaStates()
+    expect(state).toMatchObject({ ref: MOVIE, status: 'seen', seenCount: 1 })
+  })
+
+  it('ignore ce qui est deja la, sans lever', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+    const events = [f.watch(), f.start('c1')] as DomainEvent[]
+
+    await store.restore(events, [])
+    const report = await store.restore(events, [])
+
+    // Importer deux fois le meme fichier est un geste ordinaire. Il doit etre
+    // sans effet, pas destructeur et pas fatal.
+    expect(report).toEqual({ added: 0, skipped: 2 })
+    expect(await store.eventsForMedia(MOVIE)).toHaveLength(2)
+  })
+
+  it('fusionne une sauvegarde partiellement connue', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+    const first = f.watch() as DomainEvent
+    const second = f.start('c1') as DomainEvent
+
+    await store.append([first])
+    const report = await store.restore([first, second], [])
+
+    expect(report).toEqual({ added: 1, skipped: 1 })
+    expect(await store.eventsForMedia(MOVIE)).toHaveLength(2)
+  })
+
+  it('reamorce le cache des titres sans ecraser une ligne complete', async () => {
+    const store = createEventStore()
+    const f = createFactory()
+    const complete = { ...partialCacheRow(HIT, 'now'), genres: ['SF'], complete: true }
+    await store.append([f.watch()] as DomainEvent[], { cacheRows: [complete] })
+
+    await store.restore([], [partialCacheRow(HIT, 'later')])
+
+    // Le fichier ne porte que le titre et l'annee. Ecraser une ligne complete
+    // avec ca perdrait genres et durees, et les stats compteraient des
+    // durees absentes comme des durees nulles.
+    const [row] = await store.mediaCache([MOVIE])
+    expect(row).toMatchObject({ complete: true, genres: ['SF'] })
   })
 })

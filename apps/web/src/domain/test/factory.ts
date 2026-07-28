@@ -32,7 +32,7 @@ export interface Factory {
   remove(occurredAt?: Timestamp | null): DomainEvent
   start(cycle: CycleKey, occurredAt?: Timestamp | null, precision?: DatePrecision): DomainEvent
   rewatch(cycle: CycleKey, occurredAt?: Timestamp | null, precision?: DatePrecision): DomainEvent
-  seen(cycle: CycleKey, occurredAt?: Timestamp | null): DomainEvent
+  seen(cycle: CycleKey, occurredAt?: Timestamp | null, precision?: DatePrecision): DomainEvent
   drop(cycle: CycleKey, occurredAt?: Timestamp | null): DomainEvent
   prog(
     cycle: CycleKey,
@@ -111,8 +111,8 @@ export function createFactory(ref: MediaRef = MOVIE): Factory {
       type: 'REWATCH',
       cycle_key: cycle,
     }),
-    seen: (cycle, occurredAt) => ({
-      ...base(occurredAt, 'exact'),
+    seen: (cycle, occurredAt, precision = 'exact') => ({
+      ...base(occurredAt, precision),
       type: 'SEEN',
       cycle_key: cycle,
     }),

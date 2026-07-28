@@ -7,6 +7,10 @@ import { TabBar } from '@/ui/components/TabBar'
 import { UpdateBanner } from '@/ui/components/UpdateBanner'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
+import { Library } from '@/ui/screens/Library'
+import { Log } from '@/ui/screens/Log'
+import { Stats } from '@/ui/screens/Stats'
+import { Media } from '@/ui/screens/Media'
 import { Welcome } from '@/ui/screens/Welcome'
 import { Debug } from '@/ui/screens/Debug'
 
@@ -26,12 +30,12 @@ import { Debug } from '@/ui/screens/Debug'
 export function App() {
   const { t } = useTranslation()
   const { value: firstName, loading } = useSetting('firstName')
-  const [surDebug] = useRoute('/debug')
+  const [onDebug] = useRoute('/debug')
 
   // `/debug` passe avant la question du prénom. Un écran de diagnostic
   // qu'on ne peut ouvrir qu'après l'onboarding est inutile précisément
   // quand l'onboarding est ce qui ne marche pas.
-  if (surDebug) {
+  if (onDebug) {
     return <Debug />
   }
 
@@ -59,26 +63,17 @@ export function App() {
         <Route path="/">
           <Home firstName={firstName} />
         </Route>
-        <Route path="/bibliotheque">
-          <UnderConstruction
-            title={t('library.title')}
-            step={10}
-            what={t('library.what')}
-          />
+        <Route path="/media/:kind/:id">
+          {(params) => <Media ref={`tmdb:${params.kind === 'tv' ? 'tv' : 'movie'}/${Number(params.id)}`} />}
+        </Route>
+        <Route path="/library">
+          <Library />
         </Route>
         <Route path="/log">
-          <UnderConstruction
-            title={t('log.title')}
-            step={9}
-            what={t('log.what')}
-          />
+          <Log />
         </Route>
         <Route path="/stats">
-          <UnderConstruction
-            title={t('stats.title')}
-            step={11}
-            what={t('stats.what')}
-          />
+          <Stats />
         </Route>
         <Route>
           <UnderConstruction

@@ -12,16 +12,20 @@ import type { Status } from '@/domain/types'
  */
 export interface MediaRowProps {
   hit: SearchHit
+  /** Ouvre la fiche. Absent quand la rangée n'est pas navigable. */
+  onOpen?: () => void
   /** Statut si le titre est déjà en bibliothèque. */
   status?: Status
   /** Absent quand le titre est déjà là : on n'ajoute pas deux fois. */
   onAdd?: () => void
+  /** Ouvre la saisie d'un souvenir. Remplace `onAdd` en mode « logger ». */
+  onLog?: () => void
   /** Présent juste après un ajout, le temps de pouvoir revenir en arrière. */
   onUndo?: () => void
   justAdded?: boolean
 }
 
-export function MediaRow({ hit, status, onAdd, onUndo, justAdded }: MediaRowProps) {
+export function MediaRow({ hit, status, onAdd, onLog, onUndo, justAdded, onOpen }: MediaRowProps) {
   const { t } = useTranslation()
   const poster = posterUrl(hit.posterPath, 'w185')
 
@@ -43,14 +47,19 @@ export function MediaRow({ hit, status, onAdd, onUndo, justAdded }: MediaRowProp
           // réponse opaque compte plusieurs mégaoctets dans le quota, et
           // dépasser le quota déclenche l'éviction d'IndexedDB.
           crossOrigin="anonymous"
-          className="h-[72px] w-12 flex-none rounded-poster object-cover"
+          className="h-[72px] w-12 flex-none rounded-poster-sm object-cover"
         />
       ) : (
-        <span className="h-[72px] w-12 flex-none rounded-poster bg-poster-placeholder" />
+        <span className="h-[72px] w-12 flex-none rounded-poster-sm bg-poster-placeholder" />
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="truncate text-sm font-semibold text-text">{hit.title}</span>
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={!onOpen}
+        className="flex min-w-0 flex-1 flex-col items-start gap-1.5 text-left disabled:cursor-default"
+      >
+        <span className="w-full truncate text-sm font-semibold text-text">{hit.title}</span>
         <span className="font-mono text-[10px] text-muted">
           {[
             hit.year ?? t('search.unknownYear'),
@@ -60,7 +69,7 @@ export function MediaRow({ hit, status, onAdd, onUndo, justAdded }: MediaRowProp
             .filter(Boolean)
             .join(' · ')}
         </span>
-      </div>
+      </button>
 
       {justAdded && onUndo ? (
         <div className="flex flex-none flex-col items-end gap-1">
@@ -73,6 +82,15 @@ export function MediaRow({ hit, status, onAdd, onUndo, justAdded }: MediaRowProp
             {t('search.undo')}
           </button>
         </div>
+      ) : onLog ? (
+        <button
+          type="button"
+          onClick={onLog}
+          aria-label={t('backdate.open', { title: hit.title })}
+          className="size-11 flex-none rounded-action border border-status-seen/45 text-[17px] text-status-seen"
+        >
+          ✓
+        </button>
       ) : onAdd ? (
         <button
           type="button"

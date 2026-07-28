@@ -1,6 +1,7 @@
 import { applyVoids } from '@/domain/reducers/applyVoids'
 import { progress } from '@/domain/reducers/projections'
 import { cycles, type Cycle } from '@/domain/rules/cycles'
+import { advancePercent, COMPLETE_PERCENT } from '@/domain/rules/progression'
 import { currentStatus } from '@/domain/rules/status'
 import type {
   CycleKey,
@@ -9,6 +10,7 @@ import type {
   Timestamp,
   MediaRef,
   DatePrecision,
+  Status,
 } from '@/domain/types'
 import type { IdGenerator, Clock } from '@/ports/Clock'
 
@@ -31,7 +33,7 @@ export interface CommandContext {
 export interface BackdateEntry {
   readonly date: Timestamp | null
   readonly precision: DatePrecision
-  readonly note?: number | null
+  readonly rating?: number | null
   readonly comment?: string
 }
 
@@ -68,6 +70,86 @@ export function advanceStatus(context: CommandContext): readonly DomainEvent[] {
 }
 
 /**
+ * Pose directement un statut cible.
+ *
+ * C'est le geste des quatre chips de la page média, là où la pastille de la
+ * bibliothèque fait tourner la boucle d'un cran avec `advanceStatus`. Sauter
+ * de « à voir » à « vu » demande donc d'ouvrir un cycle **et** de le clore,
+ * en un seul lot d'événements.
+ *
+ * Trois règles qui ne se devinent pas :
+ *
+ * - **Un cycle clos ne se rouvre jamais.** Repasser en « en cours » depuis
+ *   « vu » minte un cycle neuf, comme `rewatch`. Rouvrir effacerait le
+ *   visionnage précédent du compteur `✓ vu ×N`.
+ * - **Le premier cycle s'ouvre par un `START`, les suivants par un
+ *   `REWATCH`.** Deux `START` sur un même média rendraient la numérotation
+ *   `#N` ambiguë.
+ * - **Le retour à « à voir » est un `WATCH` hors cycle.** C'est ce qui lui
+ *   permet de ne pas toucher à l'historique déjà écrit.
+ */
+export function setStatus(
+  context: CommandContext,
+  target: Status,
+): readonly DomainEvent[] {
+  const status = currentStatus(context.events)
+  if (status === target) return []
+
+  const produced: DomainEvent[] = []
+  let events = context.events
+
+  // Un média retiré n'est dans aucun statut : il faut d'abord le remettre en
+  // bibliothèque, sans quoi le cycle qu'on ouvrirait appartiendrait à un
+  // titre absent de la bibliothèque.
+  if (status === 'absent') {
+    const back = liveEvent(context, { type: 'WATCH', cycle_key: null })
+    produced.push(back)
+    events = [...events, back]
+  }
+
+  if (target === 'to-watch') {
+    // Rien à ajouter quand le `WATCH` de retour vient déjà d'être écrit.
+    if (produced.length === 0) {
+      produced.push(liveEvent(context, { type: 'WATCH', cycle_key: null }))
+    }
+    return produced
+  }
+
+  const key = openCycleOr(context, events, produced)
+
+  if (target === 'seen') produced.push(liveEvent(context, { type: 'SEEN', cycle_key: key }))
+  if (target === 'dropped') produced.push(liveEvent(context, { type: 'DROP', cycle_key: key }))
+
+  return produced
+}
+
+/**
+ * Rend le cycle sur lequel écrire, en l'ouvrant si nécessaire.
+ *
+ * Pousse l'événement d'ouverture dans `produced` : l'appelant a besoin des
+ * deux, et les rendre séparément ferait un couple qu'un appelant distrait
+ * peut désolidariser.
+ */
+function openCycleOr(
+  context: CommandContext,
+  events: readonly StoredEvent[],
+  produced: DomainEvent[],
+): CycleKey {
+  const all = cycles(applyVoids(events))
+  const current = all[all.length - 1] ?? null
+
+  if (current && !current.hasSeen && !current.hasDrop) return current.key
+
+  const opening = liveEvent(context, {
+    type: all.length === 0 ? 'START' : 'REWATCH',
+    cycle_key: context.ids.next(),
+  })
+  produced.push(opening)
+
+  return opening.cycle_key as CycleKey
+}
+
+/**
  * Avance la progression du cycle courant.
  *
  * Trois comportements qui ne se devinent pas :
@@ -89,14 +171,14 @@ export function advanceProgress(
   options: { increment: number; label?: string },
 ): readonly DomainEvent[] {
   const status = currentStatus(context.events)
-  const existant = currentCycle(context.events)
-  const isOpen = existant !== null && status !== 'to-watch' && status !== 'absent'
+  const existing = currentCycle(context.events)
+  const isOpen = existing !== null && status !== 'to-watch' && status !== 'absent'
 
   const produced: DomainEvent[] = []
   let key: CycleKey
 
-  if (isOpen && existant) {
-    key = existant.key
+  if (isOpen && existing) {
+    key = existing.key
   } else {
     const opening = liveEvent(context, { type: 'START', cycle_key: context.ids.next() })
     produced.push(opening)
@@ -104,11 +186,11 @@ export function advanceProgress(
   }
 
   const previous = isOpen ? progress(context.events) : null
-  const percent = Math.min(100, (previous?.percent ?? 0) + options.increment)
+  const percent = advancePercent(previous?.percent ?? 0, options.increment)
 
   const at = context.clock.now()
   const label = options.label ?? previous?.label ?? undefined
-  const labelPoseLe =
+  const labelSetAt =
     options.label !== undefined
       ? at
       : label === undefined
@@ -124,7 +206,7 @@ export function advanceProgress(
         payload: {
           percent: percent,
           ...(label === undefined ? {} : { label }),
-          ...(labelPoseLe === undefined ? {} : { label_created_at: labelPoseLe }),
+          ...(labelSetAt === undefined ? {} : { label_created_at: labelSetAt }),
         },
       },
       at,
@@ -132,7 +214,7 @@ export function advanceProgress(
     ),
   )
 
-  if (percent >= 100) {
+  if (percent >= COMPLETE_PERCENT) {
     produced.push(liveEvent(context, { type: 'SEEN', cycle_key: key }))
   }
 
@@ -173,11 +255,11 @@ export function backdate(context: CommandContext, entry: BackdateEntry): readonl
 
   produced.push(pastEvent(context, { type: 'SEEN', cycle_key: key }, date))
 
-  if (entry.note !== undefined) {
+  if (entry.rating !== undefined) {
     produced.push(
       pastEvent(
         context,
-        { type: 'RATE', cycle_key: key, payload: { rating: entry.note } },
+        { type: 'RATE', cycle_key: key, payload: { rating: entry.rating } },
         date,
       ),
     )
@@ -202,20 +284,20 @@ export function rewatch(context: CommandContext): readonly DomainEvent[] {
 }
 
 /** Note le cycle courant. `null` efface — c'est le re-tap sur l'étoile. */
-export function rate(context: CommandContext, note: number | null): readonly DomainEvent[] {
+export function rate(context: CommandContext, rating: number | null): readonly DomainEvent[] {
   return onCurrentCycle(context, (key) => ({
     type: 'RATE',
     cycle_key: key,
-    payload: { rating: note },
+    payload: { rating },
   }))
 }
 
 /** Commente le cycle courant. */
-export function addComment(context: CommandContext, texte: string): readonly DomainEvent[] {
+export function addComment(context: CommandContext, text: string): readonly DomainEvent[] {
   return onCurrentCycle(context, (key) => ({
     type: 'NOTE',
     cycle_key: key,
-    payload: { text: texte },
+    payload: { text },
   }))
 }
 
@@ -250,9 +332,9 @@ type EventBody = Pick<DomainEvent, 'type' | 'cycle_key'> & { payload?: unknown }
  * `occurred_at = created_at` et précision `exact`. Sans cette règle, un
  * `START` live laissé sans date serait classé avant tous les autres cycles.
  */
-function liveEvent(context: CommandContext, corps: EventBody): DomainEvent {
+function liveEvent(context: CommandContext, body: EventBody): DomainEvent {
   const at = context.clock.now()
-  return build(context, corps, at, {
+  return build(context, body, at, {
     occurred_at: at,
     occurred_precision: 'exact',
   })
@@ -261,15 +343,15 @@ function liveEvent(context: CommandContext, corps: EventBody): DomainEvent {
 /** Événement décrivant un moment passé, avec sa précision assumée. */
 function pastEvent(
   context: CommandContext,
-  corps: EventBody,
+  body: EventBody,
   date: { occurred_at: Timestamp | null; occurred_precision: DatePrecision },
 ): DomainEvent {
-  return build(context, corps, context.clock.now(), date)
+  return build(context, body, context.clock.now(), date)
 }
 
 function build(
   context: CommandContext,
-  corps: EventBody,
+  body: EventBody,
   writtenAt: Timestamp,
   date: { occurred_at: Timestamp | null; occurred_precision: DatePrecision },
 ): DomainEvent {
@@ -279,7 +361,7 @@ function build(
     created_at: writtenAt,
     media_ref: context.mediaRef,
     ...date,
-    ...corps,
+    ...body,
   } as DomainEvent
 }
 
@@ -324,15 +406,15 @@ function openCycleStartedBefore(
  */
 function onCurrentCycle(
   context: CommandContext,
-  corps: (key: CycleKey) => EventBody,
+  body: (key: CycleKey) => EventBody,
 ): readonly DomainEvent[] {
   const current = currentCycle(context.events)
-  if (current) return [liveEvent(context, corps(current.key))]
+  if (current) return [liveEvent(context, body(current.key))]
 
   const key = context.ids.next()
   return [
     liveEvent(context, { type: 'START', cycle_key: key }),
-    liveEvent(context, corps(key)),
+    liveEvent(context, body(key)),
   ]
 }
 

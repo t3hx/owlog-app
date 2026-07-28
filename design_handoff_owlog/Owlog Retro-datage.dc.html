@@ -1,0 +1,153 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Owlog — flux de rétro-datage</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070a12; --surface:#121724; --surface-t:rgba(18,23,36,.75); --tabbar:rgba(10,14,23,.92);
+    --border:#212a3d; --border-active:#2c3448; --border-accent:rgba(39,255,147,.35);
+    --text:#eaeef2; --muted:#8a8f9c; --subtle:#5f6474; --icon-dim:#4d5468;
+    --accent:#27ff93; --blue:#2f7bff;
+    --watch:#ffd64a; --current:#27ff93; --seen:#7eb0ff; --dropped:#ff5e5e;
+    --mono:'JetBrains Mono',monospace; --display:'Chakra Petch',sans-serif; --sans:'IBM Plex Sans',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#05070c;font-family:var(--sans);color:var(--text);padding:28px;display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .phone{width:375px;height:760px;background:var(--bg);border:1px solid var(--border);border-radius:22px;overflow:hidden;position:relative;
+    background-image:radial-gradient(60rem 40rem at 70% -10%,rgba(39,255,147,.1),transparent),radial-gradient(60rem 40rem at 15% -10%,rgba(47,123,255,.14),transparent);}
+  .cap{font-family:var(--mono);font-size:10px;color:var(--subtle);margin:0 0 8px 4px;letter-spacing:.5px}
+  .col{display:flex;flex-direction:column}
+
+  /* --- fond : la recherche reste visible derriere la feuille --- */
+  .hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .logo{font-family:var(--display);font-weight:700;letter-spacing:1px;font-size:17px}
+  .logo b{color:var(--accent);text-shadow:0 0 10px rgba(39,255,147,.5);font-weight:700}
+  .tabs{display:flex;gap:2px;padding:12px 12px 0}
+  .tab{font-family:var(--mono);font-size:10.5px;color:var(--muted);padding:8px 14px;border:1px solid var(--border);border-bottom:none;border-radius:10px 10px 0 0;background:transparent}
+  .tab.on{background:var(--surface);color:var(--text);margin-bottom:-1px}
+  .bar{margin:0 12px;background:var(--surface);border:1px solid var(--border-accent);border-radius:0 14px 14px 14px;padding:13px 14px;font-family:var(--sans);font-size:13.5px;color:var(--muted);
+    box-shadow:0 0 20px rgba(39,255,147,.1) inset,0 0 16px rgba(47,123,255,.12)}
+  .row{display:flex;gap:12px;align-items:center;padding:10px;margin:8px 12px 0;border:1px solid var(--border);border-radius:14px;background:var(--surface-t)}
+  .po{width:48px;height:72px;border-radius:8px;flex:none;background:repeating-linear-gradient(-45deg,#1a2032,#1a2032 6px,#151a29 6px,#151a29 12px)}
+  .ti{font-size:14px;font-weight:600}
+  .me{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:5px}
+  .acts{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .plus{width:44px;height:44px;border:1px solid var(--border-accent);border-radius:12px;color:var(--accent);font-family:var(--mono);font-size:18px;display:flex;align-items:center;justify-content:center}
+  .seenbtn{height:44px;padding:0 12px;border:1px solid rgba(126,176,255,.4);border-radius:12px;color:var(--seen);font-family:var(--mono);font-size:10.5px;display:flex;align-items:center;gap:6px}
+  .scrim{position:absolute;inset:0;background:rgba(5,7,12,.66)}
+  .modes{display:flex;gap:8px;margin:10px 12px 0}
+  .m{flex:1;font-family:var(--mono);font-size:10px;padding:9px 8px;border:1px solid var(--border);border-radius:10px;color:var(--subtle);text-align:center}
+  .m.on{border-color:rgba(126,176,255,.45);color:var(--seen);background:rgba(126,176,255,.08)}
+  .check{width:44px;height:44px;border:1px solid rgba(126,176,255,.45);border-radius:12px;color:var(--seen);font-size:17px;display:flex;align-items:center;justify-content:center}
+
+  /* --- la feuille --- */
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border-accent);border-radius:18px 18px 0 0;padding:0 16px 20px;
+    box-shadow:0 -18px 50px rgba(0,0,0,.6)}
+  .grab{width:36px;height:4px;border-radius:2px;background:var(--border-active);margin:10px auto 14px}
+  .shead{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+  .spo{width:40px;height:60px;border-radius:7px;flex:none;background:repeating-linear-gradient(-45deg,#1a2032,#1a2032 6px,#151a29 6px,#151a29 12px)}
+  .stit{font-family:var(--display);font-size:16px;font-weight:600;line-height:1.2}
+  .ssub{font-family:var(--mono);font-size:9.5px;color:var(--subtle);margin-top:3px}
+  .lab{font-family:var(--mono);font-size:9.5px;color:var(--subtle);letter-spacing:.5px;margin:0 0 8px}
+  .years{display:flex;gap:6px;overflow:hidden;margin-bottom:10px}
+  .y{font-family:var(--mono);font-size:12px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;color:var(--muted);flex:none}
+  .y.on{border-color:var(--accent);color:var(--accent);background:rgba(39,255,147,.1)}
+  .esc{display:flex;gap:6px;margin-bottom:16px}
+  .e{font-family:var(--mono);font-size:10px;padding:8px 11px;border:1px solid var(--border);border-radius:999px;color:var(--subtle)}
+  .e.on{border-color:var(--accent);color:var(--accent);background:rgba(39,255,147,.1)}
+  .stars{display:flex;gap:1px;align-items:center;margin-bottom:14px}
+  .st{font-size:22px;color:var(--border-active);padding:2px}
+  .st.on{color:var(--accent)}
+  .stlab{font-family:var(--mono);font-size:10px;color:var(--subtle);margin-left:10px}
+  .disc{font-family:var(--mono);font-size:10.5px;color:var(--muted);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;margin-bottom:16px}
+  .cta{height:48px;border-radius:12px;background:linear-gradient(90deg,#27ff93,#2f7bff);box-shadow:0 0 18px rgba(39,255,147,.3);display:flex;align-items:center;justify-content:center;gap:8px}
+  .cta span{font-family:var(--display);font-size:13.5px;font-weight:600;color:#070a12;letter-spacing:.5px}
+  .hint{font-family:var(--mono);font-size:9px;color:var(--subtle);text-align:center;margin-top:9px}
+
+  /* --- confirmation --- */
+  .ok{border:1px solid var(--border-accent);background:rgba(39,255,147,.06);border-radius:12px;padding:13px 14px;margin-bottom:14px}
+  .okl{font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .okr{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .two{display:flex;gap:8px}
+  .gh{flex:1;height:46px;border:1px solid var(--border-active);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10.5px;color:var(--text);text-align:center;padding:0 8px}
+  .gh.pri{border-color:var(--border-accent);color:var(--accent)}
+  .count{font-family:var(--mono);font-size:9.5px;color:var(--subtle);text-align:center;margin-top:12px}
+</style>
+
+<div class="col">
+  <p class="cap">1 · déclencher — un mode, une action par rangée</p>
+  <div class="phone">
+    <div class="hdr"><div class="logo">OWL<b>O</b>G</div></div>
+    <div class="tabs"><div class="tab on">tout</div><div class="tab">films</div><div class="tab">séries</div></div>
+    <div class="bar">blade runner</div>
+    <div class="modes"><div class="m">+ ajouter en « à voir »</div><div class="m on">✓ logger un souvenir</div></div>
+    <p class="lab" style="margin:14px 12px 6px">17 RÉSULTATS · TMDB</p>
+    <div class="row"><div class="po"></div><div><div class="ti">Blade Runner 2049</div><div class="me">2017 · film</div></div>
+      <div class="acts"><div class="check">✓</div></div></div>
+    <div class="row"><div class="po"></div><div><div class="ti">Blade Runner</div><div class="me">1982 · film</div></div>
+      <div class="acts"><div class="check">✓</div></div></div>
+    <div class="row"><div class="po"></div><div><div class="ti">Blade Runner: Black Lotus</div><div class="me">2021 · série</div></div>
+      <div class="acts"><div class="check">✓</div></div></div>
+  </div>
+</div>
+
+<div class="col">
+  <p class="cap">2 · dater — l'année par défaut, un tap</p>
+  <div class="phone">
+    <div class="hdr"><div class="logo">OWL<b>O</b>G</div></div>
+    <div class="tabs"><div class="tab on">tout</div><div class="tab">films</div><div class="tab">séries</div></div>
+    <div class="bar">blade runner</div>
+    <div class="row" style="opacity:.5"><div class="po"></div><div><div class="ti">Blade Runner 2049</div><div class="me">2017 · film</div></div></div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="shead"><div class="spo"></div><div><div class="stit">Blade Runner</div><div class="ssub">1982 · film</div></div></div>
+
+      <p class="lab">QUAND ?</p>
+      <div class="years">
+        <div class="y">2026</div><div class="y on">2025</div><div class="y">2024</div><div class="y">2023</div><div class="y">2022</div>
+      </div>
+      <div class="esc">
+        <div class="e">← plus tôt</div><div class="e">date exacte</div><div class="e">je ne sais plus</div>
+      </div>
+
+      <p class="lab">TON AVIS — OPTIONNEL</p>
+      <div class="stars">
+        <div class="st on">★</div><div class="st on">★</div><div class="st on">★</div><div class="st on">★</div><div class="st">★</div>
+        <div class="stlab">4/5</div>
+      </div>
+
+      <div class="disc">+ ajouter un commentaire</div>
+
+      <div class="cta"><span>ENREGISTRER CE VISIONNAGE</span></div>
+      <p class="hint">précision « année » · le journal l'affichera « 2025 »</p>
+    </div>
+  </div>
+</div>
+
+<div class="col">
+  <p class="cap">3 · confirmer — dire ce que la règle a fait</p>
+  <div class="phone">
+    <div class="hdr"><div class="logo">OWL<b>O</b>G</div></div>
+    <div class="tabs"><div class="tab on">tout</div><div class="tab">films</div><div class="tab">séries</div></div>
+    <div class="bar">blade runner</div>
+    <div class="row" style="opacity:.5"><div class="po"></div><div><div class="ti">Blade Runner 2049</div><div class="me">2017 · film</div></div></div>
+    <div class="scrim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="shead"><div class="spo"></div><div><div class="stit">Blade Runner</div><div class="ssub">1982 · film · ✓ vu ×1</div></div></div>
+
+      <div class="ok">
+        <div class="okl">✓ visionnage #1 clos</div>
+        <div class="okr">un visionnage était ouvert et antérieur à 2025 : il a été clos, pas dupliqué.</div>
+      </div>
+
+      <div class="two">
+        <div class="gh">↻ encore un<br>visionnage</div>
+        <div class="gh pri">titre suivant →</div>
+      </div>
+
+      <p class="count">7 titres logués ce soir</p>
+    </div>
+  </div>
+</div>

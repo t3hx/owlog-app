@@ -71,7 +71,7 @@ export function cycles(events: readonly StoredEvent[]): readonly Cycle[] {
 }
 
 /** Ce qui sert à ordonner, avant que le rang final ne soit attribué. */
-type UnrankedCycle = Omit<Cycle, 'rang'> & {
+type UnrankedCycle = Omit<Cycle, 'rank'> & {
   /** Retenu pour le départage : `created_at` de l'événement d'ouverture. */
   readonly writtenAt: Timestamp
   readonly openingId: string
@@ -109,12 +109,12 @@ function compareByRank(a: UnrankedCycle, b: UnrankedCycle): number {
   if (a.rankDate !== null && b.rankDate === null) return 1
 
   if (a.rankDate !== null && b.rankDate !== null) {
-    const parDate = compareStrings(a.rankDate, b.rankDate)
-    if (parDate !== 0) return parDate
+    const byDate = compareStrings(a.rankDate, b.rankDate)
+    if (byDate !== 0) return byDate
   }
 
-  const parEcriture = compareStrings(a.writtenAt, b.writtenAt)
-  if (parEcriture !== 0) return parEcriture
+  const byWrite = compareStrings(a.writtenAt, b.writtenAt)
+  if (byWrite !== 0) return byWrite
 
   return compareStrings(a.openingId, b.openingId)
 }
