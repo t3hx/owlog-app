@@ -22,6 +22,17 @@ export interface Config {
   readonly sharedToken: string
   /** Proxies devant le service, dont on accepte l'en-tête d'IP réelle. */
   readonly trustedProxies: readonly string[]
+  /**
+   * Préfixe sous lequel le service se monte, `''` pour la racine.
+   *
+   * En production, `owlog-api` partage son domaine avec `owlog-web` et vit
+   * sous `/api`. Il s'y monte **lui-même** plutôt que de compter sur le
+   * proxy pour retirer le préfixe : rien ne garantit qu'un « Strip Path »
+   * existe dans l'orchestrateur, et une hypothèse sur l'infrastructure ne
+   * se vérifie qu'après un cycle de déploiement complet. En se montant
+   * lui-même, le service répond juste que le préfixe soit retiré ou non.
+   */
+  readonly basePath: string
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -43,7 +54,29 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sharedToken,
     allowedOrigins: splitList(env.OWLOG_ALLOWED_ORIGINS),
     trustedProxies: splitList(env.OWLOG_TRUSTED_PROXIES),
+    basePath: normalizeBasePath(env.OWLOG_BASE_PATH),
   }
+}
+
+/**
+ * Normalise un préfixe saisi à la main.
+ *
+ * La valeur vient d'un champ d'interface web, donc elle arrive écrite
+ * tantôt `api`, tantôt `/api/`, parfois entourée d'espaces. Une comparaison
+ * de chemins ne pardonne aucun de ces écarts, et l'erreur se manifeste par
+ * un `404` sur toutes les routes — un symptôme qu'on attribue au proxy
+ * avant de penser à une barre oblique.
+ *
+ * `/` seul vaut absence de préfixe : dans un champ « chemin », il désigne
+ * la racine. Le monter tel quel doublerait la barre et plus aucune route ne
+ * correspondrait.
+ */
+function normalizeBasePath(value: string | undefined): string {
+  const trimmed = value?.trim() ?? ''
+  if (trimmed === '' || trimmed === '/') return ''
+
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  return withLeadingSlash.replace(/\/+$/, '')
 }
 
 function splitList(value: string | undefined): readonly string[] {

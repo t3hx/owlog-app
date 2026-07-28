@@ -153,7 +153,8 @@ Secrets attendus à l'étape 3, côté `owlog-api` uniquement :
 | `TMDB_API_KEY` | `owlog-api` | Clé v3, non utilisée par le code actuel |
 | `OWLOG_SHARED_TOKEN` | les deux | Jeton partagé, public par nature |
 | `OWLOG_ALLOWED_ORIGINS` | `owlog-api` | Origines CORS autorisées |
-| `OWLOG_TRUSTED_PROXIES` | `owlog-api` | IP des proxies devant le service |
+| `OWLOG_TRUSTED_PROXIES` | `owlog-api` | Adresses ou **plages CIDR** des proxies devant le service |
+| `OWLOG_BASE_PATH` | `owlog-api` | Préfixe de montage, `/api` en production |
 
 `OWLOG_TRUSTED_PROXIES` n'est pas optionnel en production : sans cette liste, le service refuse de croire les en-têtes d'IP et limite tout le monde sur l'adresse du proxy. Le premier utilisateur qui dépasse coupe alors le service pour tous.
 
@@ -163,7 +164,11 @@ La clé ne quitte jamais `owlog-api`. Elle n'entre à aucun moment dans le bundl
 
 ## Déploiement
 
-Dokploy sur VPS personnel, domaine chez Cloudflare. Deux services : `owlog-web` (statique, servi par Caddy) et `owlog-api` (Hono). Cible temps 2 : Postgres auto-hébergé sur le même Dokploy, avec une API maison — pas Supabase.
+Dokploy sur VPS personnel. Deux services : `owlog-web` (statique, servi par Caddy) et `owlog-api` (Hono), **sur un seul domaine** — `owlog.nspace.link` pour le web, `/api` pour le service. Une seule origine, donc aucun CORS et aucune requête de contrôle préalable. Cible temps 2 : Postgres auto-hébergé sur le même Dokploy, avec une API maison — pas Supabase.
+
+L'infrastructure est décrite par [`runbook-vps-dokploy.md`](runbook-vps-dokploy.md), qui fait autorité. Deux traits en découlent : **aucun port web n'est ouvert en entrée** — le trafic arrive par un tunnel Cloudflare, donc pas d'enregistrement `A`, pas de Let's Encrypt — et l'origine parle HTTP en clair sur `dokploy-network`.
+
+`owlog-api` se monte **lui-même** sous `/api` plutôt que de compter sur un « Strip Path » du proxy : rien ne garantit qu'un tel réglage existe, et l'hypothèse ne se vérifie qu'après un cycle de déploiement complet. Conséquence à connaître : la sonde de vie est `/api/health`, la racine répond `404`.
 
 Pièges connus : `Cache-Control: no-cache` sur `index.html` et `immutable` sur les assets hachés, sinon les déploiements restent invisibles. La clé TMDB ne quitte jamais `owlog-api`.
 

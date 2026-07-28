@@ -27,6 +27,16 @@ import { afterAll, beforeAll, expect, it } from 'vitest'
 /** Hors de la plage des ports de développement, pour ne rien bousculer. */
 const PORT = 8791
 
+/**
+ * Le préfixe de production, exercé ici et pas seulement en test unitaire.
+ *
+ * `createApp` reçoit un objet de configuration ; le conteneur, lui, reçoit
+ * une variable d'environnement. C'est le trajet entre les deux — lecture,
+ * normalisation, montage — que ce test couvre, et c'est précisément celui
+ * dont une erreur ne se voit qu'en ligne.
+ */
+const BASE_PATH = '/api'
+
 const entrypoint = fileURLToPath(new URL('./server.ts', import.meta.url))
 
 let child: ReturnType<typeof spawn>
@@ -40,6 +50,7 @@ beforeAll(async () => {
       OWLOG_SHARED_TOKEN: 'smoke-shared',
       OWLOG_ALLOWED_ORIGINS: 'http://localhost',
       OWLOG_TRUSTED_PROXIES: '127.0.0.1',
+      OWLOG_BASE_PATH: BASE_PATH,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -57,7 +68,7 @@ beforeAll(async () => {
       throw new Error(`server exited with ${child.exitCode}:\n${output.join('')}`)
     }
     try {
-      await fetch(`http://127.0.0.1:${PORT}/health`)
+      await fetch(`http://127.0.0.1:${PORT}${BASE_PATH}/health`)
       return
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -72,17 +83,25 @@ afterAll(() => {
 })
 
 it('démarre sous la commande de production et répond à la sonde de vie', async () => {
-  const response = await fetch(`http://127.0.0.1:${PORT}/health`)
+  const response = await fetch(`http://127.0.0.1:${PORT}${BASE_PATH}/health`)
 
   expect(response.status).toBe(200)
   expect(await response.json()).toEqual({ status: 'ok' })
+})
+
+it('lit le préfixe depuis son environnement, pas seulement depuis un objet', async () => {
+  // La racine ne doit plus répondre : c'est ce qui prouve que la variable a
+  // bien traversé la lecture de configuration jusqu'au montage des routes.
+  const response = await fetch(`http://127.0.0.1:${PORT}/health`)
+
+  expect(response.status).toBe(404)
 })
 
 it('applique le jeton partagé au processus réellement déployé', async () => {
   // Vérifié ici et pas seulement sur `createApp` : la configuration est lue
   // depuis l'environnement au démarrage, un chemin que les tests de route ne
   // traversent jamais.
-  const response = await fetch(`http://127.0.0.1:${PORT}/search?q=dune`)
+  const response = await fetch(`http://127.0.0.1:${PORT}${BASE_PATH}/search?q=dune`)
 
   expect(response.status).toBe(401)
 })
