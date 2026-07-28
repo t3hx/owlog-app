@@ -33,6 +33,10 @@
  *        │                    │ homeCounters()       │
  *        │                    └───────────┬──────────┘
  *        │                                │
+ *        │                    ┌───────────▼──────────┐
+ *        │                    │ stats(states, cache)  │  ◀── + eventsForMedia
+ *        │                    └───────────┬──────────┘      (agrégations)
+ *        │                                │
  *  ┌─────▼────────────────────────────────▼──────────┐
  *  │  Page média · Bibliothèque · Accueil · Stats     │
  *  └──────────────────────────────────────────────────┘
@@ -45,7 +49,7 @@
  * pipeline.** Un diagramme périmé induit activement en erreur — il est pire
  * que pas de diagramme.
  *
- * Quatre règles qui ne se devinent pas en lisant les signatures :
+ * Cinq règles qui ne se devinent pas en lisant les signatures :
  *
  * - `applyVoids` s'exécute **en tête de chaîne**. Tous les autres réducteurs
  *   consomment sa sortie.
@@ -57,6 +61,9 @@
  * - `journal()` groupe par cycle, `log()` ne groupe rien. Deux projections,
  *   deux responsabilités ; ce qu'elles partagent — l'exclusion des `PROG`,
  *   l'ordre à dates inconnues en queue — vit dans `rules/history.ts`.
+ * - `stats()` **compte ses exclusions au lieu de les taire**. Une durée
+ *   totale qui laisse tomber en silence les séries sans `total_runtime` est
+ *   un chiffre faux qui a l'air juste, et TMDB en rend beaucoup.
  */
 
 export * from '@/domain/commands'
@@ -65,6 +72,7 @@ export * from '@/domain/reducers/mediaState'
 export * from '@/domain/reducers/journal'
 export * from '@/domain/reducers/log'
 export * from '@/domain/reducers/metrics'
+export * from '@/domain/reducers/stats'
 export * from '@/domain/reducers/projections'
 export * from '@/domain/rules/cycles'
 export * from '@/domain/rules/history'

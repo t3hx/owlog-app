@@ -9,6 +9,7 @@ import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
 import { Library } from '@/ui/screens/Library'
 import { Log } from '@/ui/screens/Log'
+import { Stats } from '@/ui/screens/Stats'
 import { Media } from '@/ui/screens/Media'
 import { Welcome } from '@/ui/screens/Welcome'
 import { Debug } from '@/ui/screens/Debug'
@@ -72,11 +73,7 @@ export function App() {
           <Log />
         </Route>
         <Route path="/stats">
-          <UnderConstruction
-            title={t('stats.title')}
-            step={11}
-            what={t('stats.what')}
-          />
+          <Stats />
         </Route>
         <Route>
           <UnderConstruction
