@@ -102,10 +102,17 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
           </span>
         </div>
 
-        {/* La mention chiffrée qui rend le total honnête. */}
+        {/* Les deux mentions chiffrées qui rendent le total honnête. Sans
+            elles, `0h` sur une période où l'on a regardé passerait pour un
+            bug de calcul plutôt que pour une donnée manquante. */}
         {view.seriesWithoutRuntime > 0 && (
           <p className="mt-2.5 font-mono text-[9.5px] text-subtle">
             {t('stats.excludedRuntime', { count: view.seriesWithoutRuntime })}
+          </p>
+        )}
+        {view.progressExcludedByPeriod > 0 && (
+          <p className="mt-1.5 font-mono text-[9.5px] text-subtle">
+            {t('stats.excludedProgress', { count: view.progressExcludedByPeriod })}
           </p>
         )}
       </section>

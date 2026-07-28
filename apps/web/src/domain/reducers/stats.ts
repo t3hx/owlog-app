@@ -75,6 +75,13 @@ export interface StatsView {
   readonly previousMinutes: number | null
   /** Séries écartées du total faute de durée connue. **Affiché, pas masqué.** */
   readonly seriesWithoutRuntime: number
+  /**
+   * Titres en cours dont l'avancement n'entre pas dans une fenêtre bornée.
+   *
+   * Même règle que ci-dessus : sans ce compteur, l'écran afficherait `0h`
+   * sur une période où l'on a bel et bien regardé, sans dire pourquoi.
+   */
+  readonly progressExcludedByPeriod: number
   readonly movieCount: number
   readonly seriesCount: number
   readonly counts: {
@@ -126,6 +133,7 @@ export function stats(input: StatsInput): StatsView {
   let openedCycles = 0
   let finishedCycles = 0
   let episodesSeen = 0
+  let progressExcludedByPeriod = 0
 
   const ratings: number[] = []
   const genreCounts = new Map<string, number>()
@@ -167,8 +175,10 @@ export function stats(input: StatsInput): StatsView {
     }
 
     // Avancement du cycle en cours : sans date, donc « tout » seulement.
-    if (input.period === 'all' && row.status === 'watching' && row.percent > 0) {
-      if (media?.totalRuntime != null) {
+    if (row.status === 'watching' && row.percent > 0) {
+      if (input.period !== 'all') {
+        progressExcludedByPeriod += 1
+      } else if (media?.totalRuntime != null) {
         const partial = (media.totalRuntime * row.percent) / 100
         if (media.kind === 'movie') movieMinutes += partial
         else seriesMinutes += partial
@@ -198,6 +208,7 @@ export function stats(input: StatsInput): StatsView {
     seriesMinutes: Math.round(seriesMinutes),
     previousMinutes: input.previousWindow === null ? null : Math.round(previousMinutes),
     seriesWithoutRuntime,
+    progressExcludedByPeriod,
     movieCount,
     seriesCount,
     counts: {

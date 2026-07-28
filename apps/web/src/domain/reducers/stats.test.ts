@@ -144,6 +144,23 @@ describe('temps total', () => {
       build([{ ref: SERIES, media: SERIE, events }], 'month').seriesMinutes,
     ).toBe(0)
   })
+
+  it('compte les avancements qu une fenetre bornee laisse de cote', () => {
+    const f = createFactory(SERIES)
+    const events = [f.watch(), f.start('c1', RECENT), f.prog('c1', 60)]
+
+    // Sans ce compteur, l'ecran afficherait « 0h » sur une periode ou l'on a
+    // bel et bien regarde six episodes, et ne dirait pas pourquoi. C'est la
+    // meme regle que les series sans duree : une exclusion se montre.
+    expect(
+      build([{ ref: SERIES, media: SERIE, events }], 'month').progressExcludedByPeriod,
+    ).toBe(1)
+
+    // Sur « tout », l'avancement est compte : il n'y a rien a exclure.
+    expect(
+      build([{ ref: SERIES, media: SERIE, events }]).progressExcludedByPeriod,
+    ).toBe(0)
+  })
 })
 
 describe('periode', () => {

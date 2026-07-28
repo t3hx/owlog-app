@@ -88,7 +88,9 @@
     "empty": "Nothing to measure yet",
     "emptyHint": "Log a first viewing: every figure comes from your data, never from a sample.",
     "splitSeries_other": "series {{percent}}% · {{count}} titles",
-    "splitMovies_other": "movies {{percent}}% · {{count}} titles"
+    "splitMovies_other": "movies {{percent}}% · {{count}} titles",
+    "excludedProgress": "{{count}} title in progress left out: its progress is only dated under « all »",
+    "excludedProgress_other": "{{count}} titles in progress left out: their progress is only dated under « all »"
   },
   "notFound": {
     "title": "Page not found",
