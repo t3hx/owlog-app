@@ -41,7 +41,15 @@ export function createMediaCatalog(options: {
     }
 
     if (response.ok) {
-      return { ok: true, value: (await response.json()) as T }
+      // La lecture du corps est dans le try, pas seulement la requête. Un
+      // proxy mal routé sert l'index de la SPA avec un `200` : la réponse
+      // est valide pour HTTP et illisible pour nous. Laisser `json()`
+      // rejeter ici violerait la promesse du port — erreurs rendues, jamais
+      // levées — et l'écran resterait figé sur « recherche » sans rien dire.
+      const parsed = await safeJson<T>(response)
+      if (parsed === null) return { ok: false, failure: { kind: 'unavailable' } }
+
+      return { ok: true, value: parsed }
     }
 
     return { ok: false, failure: await toFailure(response) }
@@ -71,16 +79,23 @@ async function toFailure(response: Response): Promise<CatalogFailure> {
       return { kind: 'rateLimited', retryAfter: header }
     }
 
-    const body = await safeJson(response)
+    const body = await safeJson<ApiError>(response)
     return { kind: 'rateLimited', retryAfter: body?.retryAfter ?? 10 }
   }
 
   return { kind: 'unavailable' }
 }
 
-async function safeJson(response: Response): Promise<ApiError | null> {
+/**
+ * Lit un corps JSON sans jamais lever.
+ *
+ * `null` ne distingue pas « corps vide » de « corps illisible » : les deux
+ * disent la même chose — ce n'est pas la réponse du contrat — et l'appelant
+ * en tire la même conclusion.
+ */
+async function safeJson<T>(response: Response): Promise<T | null> {
   try {
-    return (await response.json()) as ApiError
+    return (await response.json()) as T
   } catch {
     return null
   }
