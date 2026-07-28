@@ -41,6 +41,16 @@ export interface EventStore {
    */
   mediaCache(refs: readonly MediaRef[]): Promise<readonly MediaCacheRow[]>
 
+  /**
+   * Écrit ou remplace des lignes de cache, sans toucher au journal.
+   *
+   * L'ouverture d'une fiche appelle `/media/:ref` et remonte genres, durée
+   * totale et nombre d'épisodes, que la ligne partielle écrite à l'ajout ne
+   * porte pas. `append` ne convient pas : il sort sans rien faire quand la
+   * liste d'événements est vide, et une consultation n'écrit aucun événement.
+   */
+  upsertMediaCache(rows: readonly MediaCacheRow[]): Promise<void>
+
   /** Tous les événements d'un média, pour sa fiche et son journal. */
   eventsForMedia(ref: MediaRef): Promise<readonly StoredEvent[]>
 
