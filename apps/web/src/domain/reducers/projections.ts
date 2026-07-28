@@ -143,7 +143,7 @@ function lastOfTypeInCycle(
   cycle: CycleKey,
   type: DomainEvent['type'],
 ): DomainEvent | undefined {
-  const found = activeCycles(events).find((candidat) => candidat.key === cycle)
+  const found = activeCycles(events).find((candidate) => candidate.key === cycle)
   if (!found) return undefined
   return lastOfType(found.events, type)
 }

@@ -24,7 +24,7 @@ export interface Tab {
 
 export const TABS: readonly Tab[] = [
   { path: '/', labelKey: 'nav.home' },
-  { path: '/bibliotheque', labelKey: 'nav.library' },
+  { path: '/library', labelKey: 'nav.library' },
   { path: '/log', labelKey: 'nav.log' },
   { path: '/stats', labelKey: 'nav.stats' },
 ]

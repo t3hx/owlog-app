@@ -37,7 +37,7 @@
 
 	# --- Routage SPA -------------------------------------------------------
 	#
-	# Le routing est en mode history : /bibliotheque n'existe pas sur le
+	# Le routing est en mode history : /library n'existe pas sur le
 	# disque. Sans ce repli, un rechargement sur une route interne rendrait
 	# un 404 — et l'utilisateur qui partage un lien tomberait dessus.
 	#

@@ -7,10 +7,10 @@ import type { IdGenerator, Clock } from '@/ports/Clock'
  * événements écrits par la même commande se suivent dans le temps sans
  * jamais partager exactement le même instant.
  */
-export function testClock(depart = '2026-07-27T22:00:00.000Z'): Clock & {
+export function testClock(start = '2026-07-27T22:00:00.000Z'): Clock & {
   advanceBy(secondes: number): void
 } {
-  let at = new Date(depart).getTime()
+  let at = new Date(start).getTime()
 
   return {
     now() {

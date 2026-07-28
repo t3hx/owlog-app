@@ -172,6 +172,22 @@ L'infrastructure est décrite par [`runbook-vps-dokploy.md`](runbook-vps-dokploy
 
 Pièges connus : `Cache-Control: no-cache` sur `index.html` et `immutable` sur les assets hachés, sinon les déploiements restent invisibles. La clé TMDB ne quitte jamais `owlog-api`.
 
+### Vérifier avant de mettre en ligne
+
+```bash
+./scripts/local-prod.sh up      # construit les vraies images, démarre sur :8080
+./scripts/local-prod.sh check   # rejoue les pièges connus de mise en ligne
+./scripts/local-prod.sh down
+```
+
+**`pnpm dev` ne prouve rien de ce qui casse en production.** Il sert des modules non groupés, sans service worker, sans Caddy, sans préfixe de montage — c'est-à-dire sans aucune des pièces qui ont produit les pannes de déploiement de ce projet. Le script construit les vraies images depuis les vrais `Dockerfile` et les fait tourner dans la vraie topologie : une seule origine, `owlog-web` à la racine, `owlog-api` sous `/api`, derrière un Caddy frontal qui tient le rôle du tunnel.
+
+`check` vérifie huit choses invisibles en développement, dont chacune a déjà coûté un cycle de déploiement : le rewrite SPA sur une route interne, `no-cache` sur `index.html` et sur le service worker, `immutable` sur les assets hachés, la sonde de l'API sous son préfixe, le fait qu'une navigation vers `/api` rende du JSON et non l'application, et l'absence de jeton TMDB dans le bundle.
+
+**À lancer avant tout déploiement, et après toute modification touchant au routage, aux en-têtes, au service worker ou aux arguments de build.**
+
+Deux frictions d'environnement à connaître : l'appartenance au groupe `docker` ne prend effet qu'à la session suivante — un shell ouvert avant le `usermod` doit passer par `sg docker -c '...'` — et le plugin `docker compose` peut manquer, d'où des `docker run` explicites plutôt qu'un fichier compose.
+
 ## Skill routing
 
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.

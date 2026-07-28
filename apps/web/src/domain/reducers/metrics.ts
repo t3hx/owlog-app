@@ -19,7 +19,7 @@ import { isKnownEvent, type StoredEvent, type MediaRef } from '@/domain/types'
  */
 export interface Metrics {
   readonly mediaCount: number
-  /** Visionnages au-delà du premier, tous médias confondus. */
+  /** Visionnages au-delà du firstAt, tous médias confondus. */
   readonly cyclesBeyondFirst: number
   readonly journalEntries: number
   readonly entriesPerDay: number
@@ -45,7 +45,7 @@ export function metrics(
     const cycleCount = cycles(active).length
     if (cycleCount > 1) cyclesBeyondFirst += cycleCount - 1
 
-    journalEntries += journal(events).filter((e) => e.kind === 'evenement').length
+    journalEntries += journal(events).filter((e) => e.kind === 'event').length
 
     for (const event of events) {
       if (!isKnownEvent(event)) {
@@ -73,20 +73,20 @@ export function metrics(
 /**
  * Entrées par jour d'usage.
  *
- * Le dénominateur est la durée écoulée depuis le premier événement, bornée
+ * Le dénominateur est la durée écoulée depuis le firstAt événement, bornée
  * à un jour minimum. Diviser par une durée plus courte gonflerait la
- * métrique le premier soir et donnerait une impression d'usage soutenu au
+ * métrique le firstAt soir et donnerait une impression d'usage soutenu au
  * moment précis où l'on cherche à savoir si l'habitude se prend.
  */
 function perDay(
   entries: number,
-  premier: string | null,
+  firstAt: string | null,
   last: string | null,
 ): number {
-  if (premier === null || last === null || entries === 0) return 0
+  if (firstAt === null || last === null || entries === 0) return 0
 
-  const millisecondes = new Date(last).getTime() - new Date(premier).getTime()
-  const jours = Math.max(1, millisecondes / 86_400_000)
+  const elapsed = new Date(last).getTime() - new Date(firstAt).getTime()
+  const days = Math.max(1, elapsed / 86_400_000)
 
-  return Math.round((entries / jours) * 10) / 10
+  return Math.round((entries / days) * 10) / 10
 }

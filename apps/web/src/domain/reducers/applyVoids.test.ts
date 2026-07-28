@@ -61,13 +61,13 @@ describe('applyVoids', () => {
   it('ignore un VOID qui vise un autre VOID', () => {
     const f = createFactory()
     const watch = f.watch()
-    const premierVoid = f.voided(watch.id)
+    const firstVoid = f.voided(watch.id)
     // Annuler une annulation serait un undo chaîné : le modèle ne le
     // prévoit pas, et le laisser passer ferait réapparaître un événement
     // que l'utilisateur croyait supprimé.
-    const secondVoid = f.voided(premierVoid.id)
+    const secondVoid = f.voided(firstVoid.id)
 
-    const result = applyVoids([watch, premierVoid, secondVoid])
+    const result = applyVoids([watch, firstVoid, secondVoid])
 
     expect(result).toHaveLength(0)
   })

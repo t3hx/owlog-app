@@ -69,7 +69,7 @@ describe('commandes', () => {
       const produced = backdate(context, {
         date: '2019-05-01T00:00:00.000Z',
         precision: 'year',
-        note: 4,
+        rating: 4,
       })
 
       const identifiants = new Set(produced.map((e) => e.id))
@@ -288,7 +288,7 @@ describe('commandes', () => {
       const produced = backdate(context, {
         date: '2019-05-01T20:00:00.000Z',
         precision: 'year',
-        note: 5,
+        rating: 5,
         comment: 'un choc',
       })
 
@@ -315,8 +315,8 @@ describe('commandes', () => {
       }
 
       const numeros = journal(events)
-        .filter((e) => e.kind === 'marqueur')
-        .map((e) => (e.kind === 'marqueur' ? e.number : 0))
+        .filter((e) => e.kind === 'marker')
+        .map((e) => (e.kind === 'marker' ? e.number : 0))
 
       // Affichage decroissant : le plus recent en haut.
       expect(numeros).toEqual([3, 2, 1])
@@ -372,11 +372,11 @@ describe('commandes', () => {
   describe('coup de coeur, retrait, annulation', () => {
     it('bascule le coup de coeur', () => {
       const base = addToLibrary(context)
-      const premier = toggleFavorite(withEvents(base))
-      expect(premier.map((e) => e.type)).toEqual(['FAV'])
-      expect(premier[0]?.cycle_key).toBeNull()
+      const first = toggleFavorite(withEvents(base))
+      expect(first.map((e) => e.type)).toEqual(['FAV'])
+      expect(first[0]?.cycle_key).toBeNull()
 
-      const second = toggleFavorite(withEvents(after(base, premier)))
+      const second = toggleFavorite(withEvents(after(base, first)))
       expect(second.map((e) => e.type)).toEqual(['UNFAV'])
     })
 

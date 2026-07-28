@@ -26,12 +26,12 @@ import { Debug } from '@/ui/screens/Debug'
 export function App() {
   const { t } = useTranslation()
   const { value: firstName, loading } = useSetting('firstName')
-  const [surDebug] = useRoute('/debug')
+  const [onDebug] = useRoute('/debug')
 
   // `/debug` passe avant la question du prénom. Un écran de diagnostic
   // qu'on ne peut ouvrir qu'après l'onboarding est inutile précisément
   // quand l'onboarding est ce qui ne marche pas.
-  if (surDebug) {
+  if (onDebug) {
     return <Debug />
   }
 
@@ -59,7 +59,7 @@ export function App() {
         <Route path="/">
           <Home firstName={firstName} />
         </Route>
-        <Route path="/bibliotheque">
+        <Route path="/library">
           <UnderConstruction
             title={t('library.title')}
             step={10}

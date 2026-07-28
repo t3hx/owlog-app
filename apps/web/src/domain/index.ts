@@ -7,9 +7,9 @@
  *
  * ```
  *    geste UI ──▶ domain/commands/ ──▶ Event[] ──▶ append()  [EventStore]
- *                 (ajouter, avancerStatut,          append-only, transaction
- *                  progresser, retroDater,
- *                  revoir, annuler)
+ *                 (addToLibrary, advanceStatus,     append-only, transaction
+ *                  advanceProgress, backdate,
+ *                  rewatch, undo)
  *                                         │
  *                                ┌────────▼────────┐
  *                                │  events (Dexie) │  ◀── SOURCE DE VÉRITÉ
@@ -19,7 +19,7 @@
  *                                         │
  *        ┌────────────────────────────────┼──────────────────────────────┐
  *  ┌─────▼─────────┐          ┌───────────▼─────────┐        ┌───────────▼────────┐
- *  │ eventsForMedia│          │  etatMedia(events)  │        │ eventsSince(cursor)│
+ *  │ eventsForMedia│          │  mediaState(events) │        │ eventsSince(cursor)│
  *  └─────┬─────────┘          └───────────┬─────────┘        └───────────┬────────┘
  *        │                                │                             │
  *  ┌─────▼─────────┐          ┌───────────▼─────────┐        ┌───────────▼────────┐
@@ -28,8 +28,8 @@
  *  └─────┬─────────┘          └───────────┬─────────┘        └────────────────────┘
  *        │                                │
  *        │                    ┌───────────▼──────────┐
- *        │                    │ bibliotheque(etats)  │
- *        │                    │ compteursAccueil()   │
+ *        │                    │ library(states)      │
+ *        │                    │ homeCounters()       │
  *        │                    └───────────┬──────────┘
  *        │                                │
  *  ┌─────▼────────────────────────────────▼──────────┐

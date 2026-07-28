@@ -74,10 +74,10 @@ describe('EventStore (adaptateur Dexie)', () => {
     await store.append([film.watch(), serie.watch(), serie.start('c1')] as DomainEvent[])
 
     const states = await store.allMediaStates()
-    const parRef = new Map(states.map((etat) => [etat.ref, etat.status]))
+    const byRef = new Map(states.map((row) => [row.ref, row.status]))
 
-    expect(parRef.get(MOVIE)).toBe('to-watch')
-    expect(parRef.get(SERIES)).toBe('watching')
+    expect(byRef.get(MOVIE)).toBe('to-watch')
+    expect(byRef.get(SERIES)).toBe('watching')
   })
 
   it('ne rend que les evenements du media demande', async () => {
