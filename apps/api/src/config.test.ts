@@ -52,5 +52,42 @@ describe('loadConfig', () => {
     it('ignore les espaces autour', () => {
       expect(loadConfig({ ...MINIMAL, OWLOG_BASE_PATH: '  /api  ' }).basePath).toBe('/api')
     })
+
+    describe('valeur inexploitable', () => {
+      // Le service refuse de demarrer plutot que de se monter sous un chemin
+      // que personne n'appellera jamais. Monte sous `/"/api"`, il repond 404
+      // sur tout, et le 404 ressemble a un probleme de routage — on cherche
+      // alors du cote du proxy pendant que la cause est dans un champ de
+      // formulaire.
+      it('refuse un prefixe entoure de guillemets', () => {
+        // `doppler secrets download --format env` rend OWLOG_BASE_PATH="/api".
+        // Colle tel quel dans un champ qui ne desencadre pas, la valeur
+        // arrive avec ses guillemets.
+        expect(() => loadConfig({ ...MINIMAL, OWLOG_BASE_PATH: '"/api"' })).toThrow(
+          /OWLOG_BASE_PATH/,
+        )
+      })
+
+      it('nomme les guillemets dans le message', () => {
+        expect(() => loadConfig({ ...MINIMAL, OWLOG_BASE_PATH: "'/api'" })).toThrow(
+          /quote/i,
+        )
+      })
+
+      it('refuse un prefixe contenant une espace', () => {
+        expect(() => loadConfig({ ...MINIMAL, OWLOG_BASE_PATH: '/mon api' })).toThrow(
+          /OWLOG_BASE_PATH/,
+        )
+      })
+
+      it('accepte les caracteres legitimes d un chemin', () => {
+        expect(loadConfig({ ...MINIMAL, OWLOG_BASE_PATH: '/api/v1' }).basePath).toBe(
+          '/api/v1',
+        )
+        expect(loadConfig({ ...MINIMAL, OWLOG_BASE_PATH: '/owlog-api' }).basePath).toBe(
+          '/owlog-api',
+        )
+      })
+    })
   })
 })
