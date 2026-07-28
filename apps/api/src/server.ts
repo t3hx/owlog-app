@@ -14,6 +14,5 @@ import { loadConfig } from './config.ts'
 const config = loadConfig()
 
 serve({ fetch: createApp({ config }).fetch, port: config.port }, (info) => {
-  // eslint-disable-next-line no-console
   console.log(`owlog-api listening on :${info.port}`)
 })

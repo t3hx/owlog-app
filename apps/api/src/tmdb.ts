@@ -16,14 +16,23 @@ import {
 
 const BASE = 'https://api.themoviedb.org/3'
 
-/** Erreur d'appel amont, avec de quoi choisir le code HTTP à renvoyer. */
+/**
+ * Erreur d'appel amont, avec de quoi choisir le code HTTP à renvoyer.
+ *
+ * Les champs sont déclarés puis affectés, et non passés en propriétés de
+ * paramètre. Le raccourci `constructor(readonly status: number)` génère du
+ * code plutôt que d'annoter, donc `node --experimental-strip-types` le
+ * refuse — et c'est exactement ainsi que le service démarre en production.
+ */
 export class UpstreamError extends Error {
-  constructor(
-    readonly status: number,
-    readonly retryAfter: number | null,
-  ) {
+  readonly status: number
+  readonly retryAfter: number | null
+
+  constructor(status: number, retryAfter: number | null) {
     super(`TMDB responded with ${status}`)
     this.name = 'UpstreamError'
+    this.status = status
+    this.retryAfter = retryAfter
   }
 }
 
