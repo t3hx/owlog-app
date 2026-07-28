@@ -34,10 +34,14 @@ if (!container) {
  * le bundle, donc dans les outils de développement de quiconque ouvre
  * l'app. Il ne protège pas le service, il filtre le bruit ; la vraie
  * protection du quota TMDB est la limitation de débit côté serveur.
+ *
+ * Les valeurs de repli servent au développement local, où Vite ne reçoit
+ * aucune variable : `local-token` doit être la valeur passée en
+ * `OWLOG_SHARED_TOKEN` au service, sans quoi chaque recherche répond 401.
  */
 const catalog = createMediaCatalog({
   baseUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:8787',
-  sharedToken: import.meta.env.VITE_SHARED_TOKEN ?? 'jeton-local',
+  sharedToken: import.meta.env.VITE_SHARED_TOKEN ?? 'local-token',
 })
 
 createRoot(container).render(
