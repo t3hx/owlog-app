@@ -55,7 +55,15 @@
     "rebuild": "rebuild media_state from events",
     "rebuilding": "rebuilding…",
     "rebuilt": "rebuilt.",
-    "note": "media_state is derived: rebuilding it loses no data. events is the source of truth and is never modified."
+    "note": "media_state is derived: rebuilding it loses no data. events is the source of truth and is never modified.",
+    "backupTitle": "backup",
+    "export": "export the log as .log",
+    "exporting": "exporting…",
+    "import": "re-import a .log",
+    "importing": "importing…",
+    "imported": "{{added}} event(s) restored, {{skipped}} already present.",
+    "importFailed": "file rejected: {{reason}}",
+    "backupNote": "the .log carries everything needed to rebuild the journal, titles included. Importing it twice is a no-op."
   },
   "language": {
     "label": "Language",

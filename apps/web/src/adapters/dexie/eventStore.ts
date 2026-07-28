@@ -2,7 +2,7 @@ import { db } from '@/adapters/dexie/db'
 import { mediaState, type MediaStateRow } from '@/domain/reducers/mediaState'
 import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
 import type { MediaCacheRow } from '@/ports/MediaCache'
-import type { EventStore } from '@/ports/EventStore'
+import type { EventStore, RestoreReport } from '@/ports/EventStore'
 
 /**
  * Implémentation Dexie du port EventStore.
@@ -81,6 +81,48 @@ export function createEventStore(): EventStore {
         cursor === null ? db.events.orderBy('id') : db.events.where('id').above(cursor)
 
       return collection.limit(limit).toArray()
+    },
+
+    /**
+     * Réinjecte une sauvegarde, sans jamais lever sur un doublon.
+     *
+     * Le tri des connus et des inconnus se fait **dans la transaction** : le
+     * lire avant l'ouvrir laisserait une fenêtre où un ajout concurrent
+     * rendrait le compte faux, et le rapport affiché mentirait.
+     */
+    async restore(
+      events: readonly StoredEvent[],
+      cacheRows: readonly MediaCacheRow[],
+    ): Promise<RestoreReport> {
+      return db.transaction(
+        'rw',
+        db.events,
+        db.media_state,
+        db.media_cache,
+        async () => {
+          const existing = new Set(
+            await db.events
+              .where('id')
+              .anyOf(events.map((event) => event.id))
+              .primaryKeys(),
+          )
+
+          const fresh = events.filter((event) => !existing.has(event.id))
+          if (fresh.length > 0) await db.events.bulkAdd(fresh)
+
+          for (const row of cacheRows) {
+            // Une ligne complete vaut mieux que le titre nu du fichier.
+            const known = await db.media_cache.get(row.ref)
+            if (!known?.complete) await db.media_cache.put(row)
+          }
+
+          for (const ref of new Set(fresh.map((event) => event.media_ref))) {
+            await refreshMediaState(ref)
+          }
+
+          return { added: fresh.length, skipped: events.length - fresh.length }
+        },
+      )
     },
 
     /**

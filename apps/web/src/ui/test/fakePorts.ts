@@ -42,6 +42,7 @@ export function fakePorts(overrides: {
     eventsForMedia: () => Promise.resolve([]),
     allMediaStates: () => Promise.resolve(mediaStates),
     eventsSince: () => Promise.resolve([]),
+    restore: () => Promise.resolve({ added: 0, skipped: 0 }),
     rebuildAllState: () => Promise.resolve(),
   }
 
