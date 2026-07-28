@@ -4,6 +4,7 @@ import {
   addToLibrary,
   undo,
   advanceStatus,
+  setStatus,
   toggleFavorite,
   addComment,
   rate,
@@ -399,6 +400,92 @@ describe('commandes', () => {
       expect(produced.map((e) => e.type)).toEqual(['VOID'])
       expect(produced[0]?.type === 'VOID' && produced[0].payload.target).toBe(drop.id)
       expect(currentStatus(after(base, produced))).toBe('seen')
+    })
+  })
+
+  /**
+   * Pose d'un statut cible.
+   *
+   * La page média offre quatre chips cliquables, là où la pastille de la
+   * bibliothèque fait tourner la boucle d'un cran. Sauter directement de
+   * « à voir » à « vu » demande donc d'ouvrir un cycle **et** de le clore, ce
+   * qu'aucune commande ne faisait — et laisser l'écran écrire les deux
+   * événements lui-même mettrait la règle dans la seule couche non testée.
+   */
+  describe('setStatus', () => {
+    it('ne produit rien quand le statut est deja le bon', () => {
+      const base = [createFactory().watch()]
+      expect(setStatus(withEvents(base), 'to-watch')).toEqual([])
+    })
+
+    it('ouvre le premier cycle avec un START', () => {
+      const base = [createFactory().watch()]
+      const produced = setStatus(withEvents(base), 'watching')
+
+      expect(produced.map((e) => e.type)).toEqual(['START'])
+    })
+
+    it('ouvre un cycle neuf avec un REWATCH quand un cycle existe deja', () => {
+      const fab = createFactory()
+      const base = [fab.watch(), fab.start('c1'), fab.seen('c1')]
+
+      // Jamais un START : il ouvre le premier cycle, et un deuxieme START
+      // rendrait la numerotation #N ambigue.
+      expect(setStatus(withEvents(base), 'watching').map((e) => e.type)).toEqual(['REWATCH'])
+    })
+
+    it('ouvre et clot un cycle pour aller de « a voir » a « vu »', () => {
+      const base = [createFactory().watch()]
+      const produced = setStatus(withEvents(base), 'seen')
+
+      expect(produced.map((e) => e.type)).toEqual(['START', 'SEEN'])
+      // Les deux portent le meme cycle, sinon le SEEN clot un cycle vide et
+      // laisse le premier ouvert a vie.
+      expect(produced[0]?.cycle_key).toBe(produced[1]?.cycle_key)
+    })
+
+    it('clot le cycle courant quand il est deja ouvert', () => {
+      const fab = createFactory()
+      const base = [fab.watch(), fab.start('c1')]
+      const produced = setStatus(withEvents(base), 'seen')
+
+      expect(produced.map((e) => e.type)).toEqual(['SEEN'])
+      expect(produced[0]?.cycle_key).toBe('c1')
+    })
+
+    it('abandonne le cycle courant', () => {
+      const fab = createFactory()
+      const base = [fab.watch(), fab.start('c1')]
+
+      expect(setStatus(withEvents(base), 'dropped').map((e) => e.type)).toEqual(['DROP'])
+    })
+
+    it('revient a « a voir » par un WATCH hors cycle', () => {
+      const fab = createFactory()
+      const base = [fab.watch(), fab.start('c1'), fab.seen('c1')]
+      const produced = setStatus(withEvents(base), 'to-watch')
+
+      // Hors cycle : c'est ce qui permet au rebouclage de ne pas toucher a
+      // l'historique des visionnages deja faits.
+      expect(produced.map((e) => e.type)).toEqual(['WATCH'])
+      expect(produced[0]?.cycle_key).toBeNull()
+    })
+
+    it('remet un media retire en bibliotheque', () => {
+      const fab = createFactory()
+      const base = [fab.watch(), fab.remove()]
+
+      expect(setStatus(withEvents(base), 'to-watch').map((e) => e.type)).toEqual(['WATCH'])
+    })
+
+    it('produit un cycle complet pour marquer vu un media retire', () => {
+      const fab = createFactory()
+      const base = [fab.watch(), fab.start('c1'), fab.seen('c1'), fab.remove()]
+      const produced = setStatus(withEvents(base), 'seen')
+
+      // Le media est absent : il faut le remettre en bibliotheque, puis ouvrir
+      // un cycle neuf et le clore.
+      expect(produced.map((e) => e.type)).toEqual(['WATCH', 'REWATCH', 'SEEN'])
     })
   })
 })
