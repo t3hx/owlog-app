@@ -290,3 +290,66 @@ describe('limitation de débit', () => {
     expect(autre.status).toBe(200)
   })
 })
+
+describe('préfixe de montage', () => {
+  // En production, `owlog-api` partage son domaine avec `owlog-web` et vit
+  // sous `/api`. Le service se monte lui-même sous ce préfixe plutôt que de
+  // compter sur le proxy pour le retirer : rien ne garantit qu'un
+  // « Strip Path » existe, et une hypothèse sur l'infrastructure ne se
+  // vérifie qu'après un cycle de déploiement complet.
+  const PREFIXED: Config = { ...CONFIG, basePath: '/api' }
+
+  it('sert la sonde de vie sous le préfixe', async () => {
+    const app = createApp({ config: PREFIXED, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(new Request('http://local/api/health'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ status: 'ok' })
+  })
+
+  it('sert la recherche sous le préfixe', async () => {
+    const app = createApp({ config: PREFIXED, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(
+      new Request('http://local/api/search?q=dune', {
+        headers: { [SHARED_TOKEN_HEADER]: PREFIXED.sharedToken },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual(HIT)
+  })
+
+  it('applique le jeton partagé sous le préfixe', async () => {
+    // Le middleware est monté par motif de chemin : oublier de le préfixer
+    // laisserait la route ouverte sans que rien ne le signale.
+    const app = createApp({ config: PREFIXED, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(new Request('http://local/api/search?q=dune'))
+
+    expect(response.status).toBe(401)
+  })
+
+  it('sert le détail sous le préfixe', async () => {
+    const app = createApp({ config: PREFIXED, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(
+      new Request('http://local/api/media/tmdb:tv/95396', {
+        headers: { [SHARED_TOKEN_HEADER]: PREFIXED.sharedToken },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+  })
+
+  it('ne répond plus à la racine quand un préfixe est posé', async () => {
+    // Sinon le service resterait joignable par deux chemins, dont un que
+    // personne ne surveille.
+    const app = createApp({ config: PREFIXED, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(new Request('http://local/health'))
+
+    expect(response.status).toBe(404)
+  })
+})
