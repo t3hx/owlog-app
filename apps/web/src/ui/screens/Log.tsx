@@ -10,7 +10,7 @@ import { usePorts } from '@/ui/PortsProvider'
  * LOG global.
  *
  * Flux plat de tout ce qui a été fait, tous médias confondus. Spécification :
- * `design_handoff_owlog/log-global.md`.
+ * `docs/design_handoff_owlog/log-global.md`.
  *
  * **Il ne groupe rien.** Ni sections, ni marqueurs `— visionnage #N —` : ces
  * derniers ont du sens sur une fiche, où les cycles d'un titre se suivent,

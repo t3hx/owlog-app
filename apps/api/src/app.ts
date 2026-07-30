@@ -2,10 +2,12 @@ import { parseMediaRef, SHARED_TOKEN_HEADER, type ApiError } from '@owlog/contra
 import { Hono, type Context, type Next } from 'hono'
 import { cors } from 'hono/cors'
 
+import { createAuthRoutes } from './auth/routes.ts'
 import { createCache } from './cache.ts'
 import { clientIp } from './clientIp.ts'
 import type { Config } from './config.ts'
 import type { Db } from './db/db.ts'
+import { createConsoleMailer, type Mailer } from './mail/mailer.ts'
 import { createRateLimiter } from './rateLimit.ts'
 import { createTmdbClient, UpstreamError, type TmdbClient } from './tmdb.ts'
 
@@ -26,11 +28,13 @@ export interface AppOptions {
   readonly tmdb?: TmdbClient
   readonly now?: () => number
   /**
-   * La base, absente quand `DATABASE_URL` n'est pas configurée. L'app n'en
-   * lit que l'état : les routes qui la requièrent dégradent en 503, le
-   * reste du service l'ignore.
+   * La base, absente quand `DATABASE_URL` n'est pas configurée. Les
+   * routes qui la requièrent (`/auth`, `/sync`) dégradent en 503 tant que
+   * son état n'est pas `ok` — le pool n'est déréférencé qu'après la garde.
    */
-  readonly db?: Pick<Db, 'status' | 'refresh'>
+  readonly db?: Pick<Db, 'status' | 'refresh' | 'pool'>
+  /** Injectable pour les tests. Sans fournisseur configuré : la console. */
+  readonly mailer?: Mailer
 }
 
 /** Langue par défaut si le client n'en demande pas. */
@@ -98,18 +102,38 @@ export function createApp(options: AppOptions) {
   })
 
   /**
-   * Les routes de synchronisation (à venir, F4) requièrent la base : sans
-   * elle, 503 franc plutôt que des 500 en cascade. La garde existe avant
-   * les routes — c'est elle qui définit le contrat de dégradation.
+   * Garde des routes à base de données (`/auth`, `/sync`) : 503 franc
+   * plutôt que des 500 en cascade tant que la base n'est pas prête.
    */
-  routes.use('/sync/*', (c, next) => {
+  const requireDb = (c: Context, next: Next) => {
     const db = options.db
     if (!db || db.status() !== 'ok') {
       if (db) void db.refresh()
       return Promise.resolve(fail(c, 503, 'db-unavailable'))
     }
     return next()
-  })
+  }
+
+  /**
+   * `authenticate` sur `/auth` et `/sync` est le second verrou CSRF, en
+   * plus de `SameSite=Lax` : un formulaire cross-site peut envoyer le
+   * cookie de session, jamais un en-tête custom — celui-ci exige un
+   * `fetch` de notre origine.
+   */
+  routes.use('/auth/*', authenticate(config), requireDb)
+  routes.route(
+    '/auth',
+    createAuthRoutes({
+      // Paresseux : `requireDb` a statué avant toute déréférence.
+      pool: () => options.db!.pool,
+      mailer: options.mailer ?? createConsoleMailer(),
+      config,
+    }),
+  )
+
+  // Les routes /sync arrivent avec la réplication (F4) ; leur contrat de
+  // dégradation et leurs verrous existent avant elles.
+  routes.use('/sync/*', authenticate(config), requireDb)
 
   routes.use('/search', authenticate(config), rateLimit(config, limiter))
   routes.use('/media/*', authenticate(config), rateLimit(config, limiter))

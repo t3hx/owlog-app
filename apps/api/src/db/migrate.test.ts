@@ -46,7 +46,7 @@ afterEach(async () => {
 })
 
 describe.skipIf(!adminUrl)('runMigrations — schéma réel', () => {
-  it('applique toutes les migrations sur une base vierge et crée les cinq tables', async () => {
+  it('applique toutes les migrations sur une base vierge et crée les tables du service', async () => {
     const db = await scratch()
 
     const result = await runMigrations({ url: db.url, dir: MIGRATIONS_DIR })
@@ -60,12 +60,31 @@ describe.skipIf(!adminUrl)('runMigrations — schéma réel', () => {
     )
     const names = tables.map((t) => t.table_name).sort()
     expect(names).toEqual([
+      'auth_audit',
       'auth_tokens',
       'events',
       'media_cache',
       'schema_migrations',
       'sessions',
       'users',
+    ])
+  })
+
+  it('les deux secrets d’un e-mail de connexion se consomment indépendamment', async () => {
+    const db = await scratch()
+    await runMigrations({ url: db.url, dir: MIGRATIONS_DIR })
+
+    // La colonne unique `consumed_at` de 0001 devient deux marques : le
+    // lien tapé dans Safari (PWA iOS) ne doit pas brûler le code.
+    const columns = await query<{ column_name: string }>(
+      db.url,
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'auth_tokens'
+         AND column_name IN ('token_consumed_at', 'code_consumed_at', 'consumed_at')`,
+    )
+    expect(columns.map((c) => c.column_name).sort()).toEqual([
+      'code_consumed_at',
+      'token_consumed_at',
     ])
   })
 

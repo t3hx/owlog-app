@@ -90,7 +90,7 @@ Cette règle s'applique à `domain/commands/`, `domain/reducers/`, `domain/rules
 
 ## Avant chaque mise en ligne
 
-`CHECKLIST.md` — six vérifications sur téléphone réel que le navigateur piloté simule mal. Chaque item indique l'étape à partir de laquelle il s'applique.
+`docs/CHECKLIST.md` — six vérifications sur téléphone réel que le navigateur piloté simule mal. Chaque item indique l'étape à partir de laquelle il s'applique.
 
 ## Les règles pour un agent
 

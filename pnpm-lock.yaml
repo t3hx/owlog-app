@@ -22,6 +22,9 @@ importers:
       pg:
         specifier: ^8.22.0
         version: 8.22.0
+      uuidv7:
+        specifier: ^1.2.1
+        version: 1.2.1
     devDependencies:
       '@eslint/js':
         specifier: ^9.17.0

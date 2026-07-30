@@ -46,7 +46,7 @@ packages/contracts/       contrat partage entre les deux
     ports/                interfaces : EventStore, MediaCatalog, Clock, IdGenerator
     adapters/             implémentations : dexie, tmdb-http, browser
     ui/                   écrans React + Tailwind
-design_handoff_owlog/     design system verrouillé et prototypes hifi
+docs/                     documentation : déploiement, checklist, design system
 ```
 
 L'architecture est hexagonale : le domaine ne connaît ni Dexie ni le réseau. C'est ce qui rendra le passage à Postgres un remplacement d'adaptateur plutôt qu'une réécriture.
@@ -55,17 +55,17 @@ L'architecture est hexagonale : le domaine ne connaît ni Dexie ni le réseau. C
 
 | Fichier | Contenu |
 |---|---|
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Convention de branches et de commits. **À lire d'abord pour comprendre l'historique.** |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Convention de branches et de commits. **À lire d'abord pour comprendre l'historique.** |
 | [CLAUDE.md](CLAUDE.md) | Règles projet et stack, formulées pour un assistant de code |
-| [CHECKLIST.md](CHECKLIST.md) | Six vérifications sur téléphone réel avant chaque mise en ligne |
-| `design_handoff_owlog/README.md` | Spécification des écrans, tokens, composants |
+| [docs/CHECKLIST.md](docs/CHECKLIST.md) | Six vérifications sur téléphone réel avant chaque mise en ligne |
+| `docs/design_handoff_owlog/README.md` | Spécification des écrans, tokens, composants |
 
 Le document de design complet — modèle de données, règles de dérivation, onze étapes de construction, critères de réussite — vit hors du dépôt, dans `~/.gstack/projects/owlog-app/`.
 
 ## État
 
-Étapes 1 à 4 sur 11 livrées : socle et état vide, domaine complet, proxy TMDB et PWA installable, recherche omniprésente et ajout en un tap. 153 tests. Reste à déployer — voir [DEPLOY.md](DEPLOY.md). En cours : étape 5, export et import `.log`.
+Étapes 1 à 4 sur 11 livrées : socle et état vide, domaine complet, proxy TMDB et PWA installable, recherche omniprésente et ajout en un tap. 153 tests. Reste à déployer — voir [docs/DEPLOY.md](docs/DEPLOY.md). En cours : étape 5, export et import `.log`.
 
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
 
-`main` n'est pas la branche de travail : elle porte l'état exact de ce qui est déployé, et ne reçoit `dev` qu'au moment d'une mise en ligne. Le premier passage est prévu au déploiement de test de l'étape 3. Voir [CONTRIBUTING.md](CONTRIBUTING.md).
+`main` n'est pas la branche de travail : elle porte l'état exact de ce qui est déployé, et ne reçoit `dev` qu'au moment d'une mise en ligne. Le premier passage est prévu au déploiement de test de l'étape 3. Voir [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).

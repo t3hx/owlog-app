@@ -20,6 +20,8 @@ const CONFIG: Config = {
   trustedProxies: ['10.0.0.1'],
   basePath: '',
   databaseUrl: undefined,
+  publicOrigin: undefined,
+  email: undefined,
 }
 
 const HIT: SearchResponse = {
@@ -358,7 +360,9 @@ describe('préfixe de montage', () => {
 
 describe('état de la base', () => {
   function fakeDb(status: 'starting' | 'ok' | 'down', refresh = async () => {}) {
-    return { status: () => status, refresh }
+    // Aucun test de ce fichier ne franchit la garde : le pool ne doit
+    // jamais être déréférencé.
+    return { status: () => status, refresh, pool: undefined as never }
   }
 
   it('la sonde de vie dit « off » quand aucune base n’est configurée', async () => {
