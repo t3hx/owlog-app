@@ -81,6 +81,12 @@ export type ApiErrorCode =
   | 'upstream-unavailable'
   | 'not-found'
   | 'bad-request'
+  /**
+   * La base du service est indisponible (ou absente de la configuration).
+   * Rendu par les routes `/sync/*` uniquement : le proxy TMDB vit sans
+   * base, la synchronisation non — elle dégrade en 503, jamais en 500.
+   */
+  | 'db-unavailable'
 
 /**
  * Base des images TMDB.

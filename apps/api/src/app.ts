@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { createCache } from './cache.ts'
 import { clientIp } from './clientIp.ts'
 import type { Config } from './config.ts'
+import type { Db } from './db/db.ts'
 import { createRateLimiter } from './rateLimit.ts'
 import { createTmdbClient, UpstreamError, type TmdbClient } from './tmdb.ts'
 
@@ -24,6 +25,12 @@ export interface AppOptions {
   /** Injectable pour les tests, qui ne doivent pas appeler TMDB. */
   readonly tmdb?: TmdbClient
   readonly now?: () => number
+  /**
+   * La base, absente quand `DATABASE_URL` n'est pas configurée. L'app n'en
+   * lit que l'état : les routes qui la requièrent dégradent en 503, le
+   * reste du service l'ignore.
+   */
+  readonly db?: Pick<Db, 'status' | 'refresh'>
 }
 
 /** Langue par défaut si le client n'en demande pas. */
@@ -76,8 +83,33 @@ export function createApp(options: AppOptions) {
    *
    * Avant l'authentification : Dokploy doit pouvoir vérifier que le
    * conteneur répond sans détenir le jeton partagé.
+   *
+   * C'est une liveness SANS ping de la base, à dessein : si elle en
+   * dépendait, Postgres down rendrait la sonde rouge, Dokploy
+   * redémarrerait l'API en boucle, et le proxy TMDB du temps 1 mourrait
+   * avec la base. L'état de la base vit dans le corps (`db`), en lecture
+   * d'état connu ; le rafraîchissement part en arrière-plan, jamais
+   * attendu.
    */
-  routes.get('/health', (c) => c.json({ status: 'ok' }))
+  routes.get('/health', (c) => {
+    const db = options.db
+    if (db) void db.refresh()
+    return c.json({ status: 'ok', db: db ? db.status() : 'off' })
+  })
+
+  /**
+   * Les routes de synchronisation (à venir, F4) requièrent la base : sans
+   * elle, 503 franc plutôt que des 500 en cascade. La garde existe avant
+   * les routes — c'est elle qui définit le contrat de dégradation.
+   */
+  routes.use('/sync/*', (c, next) => {
+    const db = options.db
+    if (!db || db.status() !== 'ok') {
+      if (db) void db.refresh()
+      return Promise.resolve(fail(c, 503, 'db-unavailable'))
+    }
+    return next()
+  })
 
   routes.use('/search', authenticate(config), rateLimit(config, limiter))
   routes.use('/media/*', authenticate(config), rateLimit(config, limiter))
@@ -180,7 +212,7 @@ function upstream(c: Context, error: unknown) {
 
 function fail(
   c: Context,
-  status: 400 | 401 | 404 | 429 | 502,
+  status: 400 | 401 | 404 | 429 | 502 | 503,
   error: ApiError['error'],
   retryAfter?: number,
 ) {

@@ -33,6 +33,14 @@ export interface Config {
    * lui-même, le service répond juste que le préfixe soit retiré ou non.
    */
   readonly basePath: string
+  /**
+   * URL de connexion Postgres, absente tant que le déploiement n'a pas de
+   * base. Optionnelle à dessein — contrairement aux secrets TMDB : le
+   * compte est optionnel côté produit, et le proxy TMDB du temps 1 doit
+   * démarrer et vivre sans base. Sans elle, `/sync` répond 503 et tout le
+   * reste fonctionne.
+   */
+  readonly databaseUrl: string | undefined
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -55,6 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     allowedOrigins: splitList(env.OWLOG_ALLOWED_ORIGINS),
     trustedProxies: splitList(env.OWLOG_TRUSTED_PROXIES),
     basePath: normalizeBasePath(env.OWLOG_BASE_PATH),
+    databaseUrl: env.DATABASE_URL?.trim() || undefined,
   }
 }
 

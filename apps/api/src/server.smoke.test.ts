@@ -86,7 +86,7 @@ it('démarre sous la commande de production et répond à la sonde de vie', asyn
   const response = await fetch(`http://127.0.0.1:${PORT}${BASE_PATH}/health`)
 
   expect(response.status).toBe(200)
-  expect(await response.json()).toEqual({ status: 'ok' })
+  expect(await response.json()).toEqual({ status: 'ok', db: 'off' })
 })
 
 it('lit le préfixe depuis son environnement, pas seulement depuis un objet', async () => {
