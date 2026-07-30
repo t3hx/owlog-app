@@ -193,14 +193,16 @@ check() {
     "$(curl -sI "$base$asset" | grep -i '^cache-control' | tr -d '\r' | sed 's/.*: //')"
 
   # Le service se monte lui-même sous `/api` : la sonde suit le préfixe.
-  expect "la sonde de l'api suit son préfixe" '{"status":"ok"}' \
-    "$(curl -s "$base/api/health")"
+  # Le corps porte aussi l'état de la base (`db`), qui dépend de la
+  # configuration de la pile — on ne fige que le statut du service.
+  expect "la sonde de l'api suit son préfixe" '"status":"ok"' \
+    "$(curl -s "$base/api/health" | grep -o '"status":"ok"')"
 
   # Sans la liste d'exclusion, une navigation vers /api affiche
   # l'application : curl répond juste, le navigateur ment, et on cherche la
   # panne du mauvais côté.
-  expect "une navigation vers /api rend du JSON" '{"status":"ok"}' \
-    "$(curl -s -H 'Accept: text/html' "$base/api/health")"
+  expect "une navigation vers /api rend du JSON" '"status":"ok"' \
+    "$(curl -s -H 'Accept: text/html' "$base/api/health" | grep -o '"status":"ok"')"
 
   # Le jeton TMDB ne doit jamais quitter owlog-api.
   local leaked

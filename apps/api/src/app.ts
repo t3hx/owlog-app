@@ -9,6 +9,7 @@ import type { Config } from './config.ts'
 import type { Db } from './db/db.ts'
 import { createConsoleMailer, type Mailer } from './mail/mailer.ts'
 import { createRateLimiter } from './rateLimit.ts'
+import { createSyncRoutes } from './sync/routes.ts'
 import { createTmdbClient, UpstreamError, type TmdbClient } from './tmdb.ts'
 
 /**
@@ -60,6 +61,18 @@ export function createApp(options: AppOptions) {
 
   const limiter = createRateLimiter({
     limit: 60,
+    windowMs: 60_000,
+    ...(options.now ? { now: options.now } : {}),
+  })
+
+  /**
+   * Limiteur propre à `/sync`, séparé de celui de `/search` : une session
+   * qui pagine un gros pull ne doit pas manger le quota de recherche, et
+   * réciproquement. 120/min laisse passer un resync complet de 10 k
+   * événements (20 pages) avec une marge large.
+   */
+  const syncLimiter = createRateLimiter({
+    limit: 120,
     windowMs: 60_000,
     ...(options.now ? { now: options.now } : {}),
   })
@@ -131,9 +144,14 @@ export function createApp(options: AppOptions) {
     }),
   )
 
-  // Les routes /sync arrivent avec la réplication (F4) ; leur contrat de
-  // dégradation et leurs verrous existent avant elles.
-  routes.use('/sync/*', authenticate(config), requireDb)
+  routes.use('/sync/*', authenticate(config), requireDb, rateLimit(config, syncLimiter))
+  routes.route(
+    '/sync',
+    createSyncRoutes({
+      // Paresseux : `requireDb` a statué avant toute déréférence.
+      pool: () => options.db!.pool,
+    }),
+  )
 
   routes.use('/search', authenticate(config), rateLimit(config, limiter))
   routes.use('/media/*', authenticate(config), rateLimit(config, limiter))

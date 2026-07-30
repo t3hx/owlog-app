@@ -11,6 +11,8 @@
  * recherche et de détail chez TMDB.
  */
 
+export * from './sync.ts'
+
 /** Type de média. TMDB renvoie aussi `person`, que le proxy filtre. */
 export type MediaKind = 'movie' | 'tv'
 
@@ -86,6 +88,12 @@ export type ApiErrorCode =
   | 'upstream-unavailable'
   | 'not-found'
   | 'bad-request'
+  /**
+   * Corps de requête au-delà de `SYNC_BODY_LIMIT_BYTES`. Rendu par les
+   * routes `/sync` avant toute lecture du corps : le client scinde son
+   * lot et réessaie.
+   */
+  | 'payload-too-large'
   /**
    * La base du service est indisponible (ou absente de la configuration).
    * Rendu par les routes qui la requièrent (`/sync/*`, `/auth/*`) : le

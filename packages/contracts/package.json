@@ -9,5 +9,8 @@
   "scripts": {
     "test": "echo 'no tests' && exit 0",
     "lint": "echo 'no lint' && exit 0"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }
