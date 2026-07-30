@@ -20,7 +20,7 @@ import { usePorts } from '@/ui/PortsProvider'
  * juste même si l'utilisateur a fait autre chose entre-temps.
  */
 export function useAddMedia() {
-  const { events } = usePorts()
+  const { events, deviceId } = usePorts()
   const [lastAdded, setLastAdded] = useState<{ ref: string; eventId: EventId } | null>(null)
 
   const add = useCallback(
@@ -30,6 +30,7 @@ export function useAddMedia() {
         mediaRef: hit.ref,
         clock: systemClock,
         ids: uuidv7Generator,
+        deviceId,
       })
 
       const first = produced[0]
@@ -41,7 +42,7 @@ export function useAddMedia() {
 
       setLastAdded({ ref: hit.ref, eventId: first.id })
     },
-    [events],
+    [events, deviceId],
   )
 
   const undoLast = useCallback(async () => {
@@ -54,13 +55,14 @@ export function useAddMedia() {
           mediaRef: lastAdded.ref as SearchHit['ref'],
           clock: systemClock,
           ids: uuidv7Generator,
+          deviceId,
         },
         lastAdded.eventId,
       ),
     )
 
     setLastAdded(null)
-  }, [events, lastAdded])
+  }, [events, lastAdded, deviceId])
 
   const forget = useCallback(() => setLastAdded(null), [])
 

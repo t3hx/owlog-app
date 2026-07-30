@@ -81,10 +81,11 @@ export interface EventStore {
   eventsRecent(before: EventId | null, limit: number): Promise<readonly StoredEvent[]>
 
   /**
-   * Réinjecte des événements venus d'une sauvegarde `.log`.
+   * Réinjecte des événements déjà écrits ailleurs — sauvegarde `.log` ou
+   * pull de synchronisation.
    *
-   * **Ce n'est pas `append`.** Les événements arrivent déjà écrits, avec
-   * leurs identifiants d'origine, et le fichier peut en contenir que la base
+   * **Ce n'est pas `append`.** Les événements arrivent avec leurs
+   * identifiants d'origine, et la source peut en contenir que la base
    * connaît déjà — on réimporte deux fois, on fusionne deux appareils. Un
    * `append` lèverait sur le premier doublon et laisserait la base à moitié
    * restaurée, ce qui est précisément le résultat qu'une sauvegarde existe
@@ -94,10 +95,21 @@ export interface EventStore {
    * mais n'écrasent jamais une ligne `complete` : le fichier ne porte qu'un
    * titre et une année, et les stats distinguent une durée absente d'une
    * durée nulle.
+   *
+   * Les deux options distinguent les deux appelants :
+   *
+   * - `enqueuePush` (défaut `true`) : les événements nouveaux entrent dans
+   *   l'outbox — le chemin de l'import `.log`, qui doit repartir vers le
+   *   serveur. Le pull passe `false` : re-pousser ce qu'on vient de tirer
+   *   serait idempotent mais doublerait le trafic.
+   * - `refreshState` (défaut `true`) : recalcul immédiat des lignes
+   *   dérivées touchées. Le pull **initial** passe `false` et recalcule une
+   *   seule fois en fin de pull — par lot, le recalcul serait O(n²).
    */
   restore(
     events: readonly StoredEvent[],
     cacheRows: readonly MediaCacheRow[],
+    options?: { readonly enqueuePush?: boolean; readonly refreshState?: boolean },
   ): Promise<RestoreReport>
 
   /**

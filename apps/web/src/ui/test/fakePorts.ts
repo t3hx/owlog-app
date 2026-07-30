@@ -40,6 +40,7 @@ export function fakePorts(overrides: {
     useMediaState: (ref) => mediaStates.find((row) => row.ref === ref),
     useMediaCacheRow: (ref) => overrides.mediaCache?.find((row) => row.ref === ref),
     useMediaCacheRows: () => overrides.mediaCache ?? [],
+    usePendingPushCount: () => 0,
   }
 
   const settings: SettingsStore = {
@@ -76,5 +77,20 @@ export function fakePorts(overrides: {
     remove: () => Promise.resolve(),
   }
 
-  return { settings, events, catalog, pending, live }
+  const sync: Ports['sync'] = {
+    start: () => Promise.resolve(),
+    stop: () => undefined,
+    syncNow: () => Promise.resolve(),
+    repushAll: () => Promise.resolve(),
+    status: () => ({
+      syncing: false,
+      lastSyncAt: null,
+      lastError: null,
+      unauthorized: false,
+      enabled: true,
+    }),
+    subscribe: () => () => undefined,
+  }
+
+  return { settings, events, catalog, pending, live, deviceId: 'device-test', sync }
 }

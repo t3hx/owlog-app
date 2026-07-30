@@ -42,6 +42,10 @@ export function useMediaCacheRow(ref: MediaRef): MediaCacheRow | undefined {
   return useLiveQuery(() => db.media_cache.get(ref), [ref], undefined)
 }
 
+export function usePendingPushCount(): number {
+  return useLiveQuery(() => db.pending_push.count(), [], 0)
+}
+
 /** Implémentation du port, injectée au point d'assemblage. */
 export const liveQueries: LiveQueries = {
   useMediaStates,
@@ -50,4 +54,5 @@ export const liveQueries: LiveQueries = {
   useMediaState,
   useMediaCacheRow,
   useMediaCacheRows,
+  usePendingPushCount,
 }

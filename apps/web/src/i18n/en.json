@@ -119,7 +119,22 @@
     "importing": "importing…",
     "imported": "{{added}} event(s) restored, {{skipped}} already present.",
     "importFailed": "file rejected: {{reason}}",
-    "backupNote": "the .log carries everything needed to rebuild the journal, titles included. Importing it twice is a no-op."
+    "backupNote": "the .log carries everything needed to rebuild the journal, titles included. Importing it twice is a no-op.",
+    "syncTitle": "sync",
+    "syncPending": "events_awaiting_push",
+    "syncCursor": "journal_cursor",
+    "syncCacheCursor": "cache_cursor",
+    "syncLastAt": "last_successful_sync",
+    "syncError": "last_error",
+    "syncNever": "never",
+    "syncNoError": "none",
+    "syncNow": "sync now",
+    "syncing": "syncing…",
+    "repushAll": "re-push the whole journal and cache",
+    "repushing": "re-pushing…",
+    "syncDisabled": "engine at rest: no account on this device.",
+    "syncUnauthorized": "session expired — please sign in again.",
+    "syncNote": "cursors say how far this client has pulled from the server. Re-pushing everything is safe: the server ignores what it already knows."
   },
   "language": {
     "label": "Language",

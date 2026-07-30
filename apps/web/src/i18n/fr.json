@@ -119,7 +119,22 @@
     "importing": "import…",
     "imported": "{{added}} événement(s) réinjecté(s), {{skipped}} déjà présent(s).",
     "importFailed": "fichier refusé : {{reason}}",
-    "backupNote": "le .log contient tout ce qui permet de reconstruire le journal, titres compris. Le réimporter deux fois est sans effet."
+    "backupNote": "le .log contient tout ce qui permet de reconstruire le journal, titres compris. Le réimporter deux fois est sans effet.",
+    "syncTitle": "synchronisation",
+    "syncPending": "evenements_en_attente_de_push",
+    "syncCursor": "curseur_journal",
+    "syncCacheCursor": "curseur_cache",
+    "syncLastAt": "derniere_sync_reussie",
+    "syncError": "derniere_erreur",
+    "syncNever": "jamais",
+    "syncNoError": "aucune",
+    "syncNow": "synchroniser maintenant",
+    "syncing": "synchronisation…",
+    "repushAll": "re-pousser tout le journal et le cache",
+    "repushing": "re-poussée…",
+    "syncDisabled": "moteur au repos : pas de compte sur cet appareil.",
+    "syncUnauthorized": "session expirée — reconnexion nécessaire.",
+    "syncNote": "les curseurs disent jusqu'où ce client a tiré le serveur. Re-pousser tout est sans danger : le serveur ignore ce qu'il connaît déjà."
   },
   "language": {
     "label": "Langue",

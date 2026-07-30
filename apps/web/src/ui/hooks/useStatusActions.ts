@@ -19,7 +19,7 @@ import { usePorts } from '@/ui/PortsProvider'
  * le retour à « à voir » est un `WATCH` hors cycle.
  */
 export function useStatusActions() {
-  const { events } = usePorts()
+  const { events, deviceId } = usePorts()
 
   const write = useCallback(
     async (
@@ -32,12 +32,13 @@ export function useStatusActions() {
         mediaRef: ref,
         clock: systemClock,
         ids: uuidv7Generator,
+        deviceId,
       })
 
       if (produced.length === 0) return
       await events.append(produced)
     },
-    [events],
+    [events, deviceId],
   )
 
   return {

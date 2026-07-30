@@ -48,4 +48,11 @@ export interface LiveQueries {
    * là où le nombre de médias change à chaque ajout.
    */
   useMediaCacheRows(): readonly MediaCacheRow[]
+
+  /**
+   * Taille de l'outbox de synchronisation, réactive — le « en attente »
+   * du panneau de diagnostic. Un compte et non la liste : personne ne lit
+   * des ids, on lit combien il en reste.
+   */
+  usePendingPushCount(): number
 }

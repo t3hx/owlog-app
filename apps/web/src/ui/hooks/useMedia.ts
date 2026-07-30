@@ -24,7 +24,7 @@ import { usePorts } from '@/ui/PortsProvider'
  * consultation déclenche un appel réseau, ce qui n'est pas une règle métier.
  */
 export function useMedia(ref: MediaRef) {
-  const { events, catalog, live } = usePorts()
+  const { events, catalog, live, deviceId } = usePorts()
   const { i18n } = useTranslation()
 
   const journal = live.useMediaEvents(ref)
@@ -68,6 +68,7 @@ export function useMedia(ref: MediaRef) {
         mediaRef: ref,
         clock: systemClock,
         ids: uuidv7Generator,
+        deviceId,
       }
 
       const produced = command(context)

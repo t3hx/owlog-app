@@ -55,6 +55,7 @@ describe('commandes', () => {
       mediaRef: MOVIE,
       clock: testClock(),
       ids: testIds(),
+      deviceId: 'device-test',
     }
   })
 
@@ -64,6 +65,15 @@ describe('commandes', () => {
 
       expect(event?.occurred_at).toBe(event?.created_at)
       expect(event?.occurred_precision).toBe('exact')
+    })
+
+    it('porte le device_id du contexte, jamais une valeur en dur', () => {
+      // Temps 2 : chaque installation a son identité, injectée par le point
+      // d'assemblage. L'historique du temps 1 porte `local` et le garde —
+      // append-only — mais aucun événement neuf ne doit plus le recevoir.
+      const [event] = addToLibrary(context)
+
+      expect(event?.device_id).toBe('device-test')
     })
 
     it('donne un identifiant distinct a chaque evenement produit', () => {

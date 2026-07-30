@@ -5,6 +5,7 @@ import type { LiveQueries } from '@/ports/LiveQueries'
 import type { MediaCatalog } from '@/ports/MediaCatalog'
 import type { PendingAdds } from '@/ports/PendingAdds'
 import type { SettingsStore } from '@/ports/SettingsStore'
+import type { SyncEngine } from '@/ports/Sync'
 
 /**
  * Injection des ports dans l'arbre React.
@@ -27,6 +28,14 @@ export interface Ports {
   readonly catalog: MediaCatalog
   readonly pending: PendingAdds
   readonly live: LiveQueries
+  /**
+   * Identité de l'installation, résolue au point d'assemblage — avant le
+   * premier rendu, parce que les commandes en ont besoin de façon
+   * synchrone au moment d'un geste. Une valeur et non un port : elle ne
+   * change jamais pendant la vie de l'app.
+   */
+  readonly deviceId: string
+  readonly sync: SyncEngine
 }
 
 const PortsContext = createContext<Ports | null>(null)
