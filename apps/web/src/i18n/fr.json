@@ -167,7 +167,8 @@
     "pendingBadge_one": "{{count}} titre à confirmer",
     "pendingBadge_other": "{{count}} titres à confirmer",
     "confirmPending": "Confirmer les titres mis de côté",
-    "dismissPending": "abandonner"
+    "dismissPending": "abandonner",
+    "retry": "réessayer"
   },
   "status": {
     "to-watch": "à voir",

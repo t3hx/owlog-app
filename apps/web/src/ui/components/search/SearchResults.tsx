@@ -33,6 +33,8 @@ export interface SearchResultsProps {
   /** Texte tapé, pour la mise de côté hors-ligne. */
   query: string
   onSetAside: (text: string) => void
+  /** Relance la requête en échec, sans passer par une modification du texte. */
+  onRetry: () => void
   /** Appelé après un ajout abouti, pour retirer l'entrée de file résolue. */
   onAdded?: () => void
   /** `log` remplace le `+` par la saisie d'un souvenir. */
@@ -45,6 +47,7 @@ export function SearchResults({
   scope,
   query,
   onSetAside,
+  onRetry,
   onAdded,
   mode = 'add',
   onLog,
@@ -66,7 +69,14 @@ export function SearchResults({
   }
 
   if (state.status === 'failed') {
-    return <Failure failure={state.failure} query={query} onSetAside={onSetAside} />
+    return (
+      <Failure
+        failure={state.failure}
+        query={query}
+        onSetAside={onSetAside}
+        onRetry={onRetry}
+      />
+    )
   }
 
   const known = new Map<string, Status>(
@@ -174,15 +184,12 @@ function Failure({
   failure,
   query,
   onSetAside,
+  onRetry,
 }: {
   failure: CatalogFailure
   query: string
   onSetAside: (text: string) => void
-  /** Appelé après un ajout abouti, pour retirer l'entrée de file résolue. */
-  onAdded?: () => void
-  /** `log` remplace le `+` par la saisie d'un souvenir. */
-  mode?: SearchMode
-  onLog?: (hit: SearchHit) => void
+  onRetry: () => void
 }) {
   const { t } = useTranslation()
 
@@ -193,6 +200,7 @@ function Failure({
         hint={t('search.offlineHint')}
         query={query}
         onSetAside={onSetAside}
+        onRetry={onRetry}
       />
     )
   }
@@ -202,11 +210,18 @@ function Failure({
       <Empty
         title={t('search.rateLimited')}
         hint={t('search.rateLimitedHint', { count: failure.retryAfter })}
+        onRetry={onRetry}
       />
     )
   }
 
-  return <Empty title={t('search.unavailable')} hint={t('search.unavailableHint')} />
+  return (
+    <Empty
+      title={t('search.unavailable')}
+      hint={t('search.unavailableHint')}
+      onRetry={onRetry}
+    />
+  )
 }
 
 /**
@@ -220,11 +235,13 @@ function Empty({
   hint,
   query,
   onSetAside,
+  onRetry,
 }: {
   title: string
   hint: string
   query?: string
   onSetAside?: (text: string) => void
+  onRetry?: () => void
 }) {
   const { t } = useTranslation()
   const trimmed = query?.trim() ?? ''
@@ -233,6 +250,19 @@ function Empty({
     <div className="flex flex-col items-start gap-2 px-3 py-6">
       <p className="font-display text-[15px] font-semibold text-text">{title}</p>
       <p className="text-sm text-muted">{hint}</p>
+
+      {/* Un écran d'échec sans action est une impasse. Le retour du réseau
+          relance déjà la requête tout seul ; ce bouton couvre le cas où le
+          navigateur ne signale pas la bascule, ce qui arrive sur mobile. */}
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2 h-11 rounded-action border border-border-active px-4 font-mono text-[11px] text-text"
+        >
+          {t('search.retry')}
+        </button>
+      )}
 
       {onSetAside && trimmed.length > 0 && (
         <button

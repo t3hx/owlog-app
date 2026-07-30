@@ -42,7 +42,7 @@ export function Search({
   // la retirer quand l'ajout aboutit : sans ça, elle resterait après avoir
   // été résolue, et il faudrait l'abandonner à la main.
   const [resolving, setResolving] = useState<PendingAdd | null>(null)
-  const state = useSearch(query, scope)
+  const { state, retry } = useSearch(query, scope)
 
   const searching = query.trim().length > 0
 
@@ -77,6 +77,7 @@ export function Search({
           state={state}
           scope={scope}
           query={query}
+          onRetry={retry}
           mode={mode}
           onLog={backdate.open}
           onSetAside={(text) => {
