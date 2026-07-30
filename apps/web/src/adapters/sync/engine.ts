@@ -67,6 +67,7 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
   let syncing = false
   let lastSyncAt: string | null = null
   let lastError: SyncFailure['kind'] | null = null
+  let pulledEvents = 0
 
   let stopObserving: (() => void) | null = null
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -94,12 +95,14 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
     unauthorized?: boolean
     enabled?: boolean
     lastSyncAt?: string
+    pulledEvents?: number
   }): void {
     if (patch.syncing !== undefined) syncing = patch.syncing
     if (patch.lastError !== undefined) lastError = patch.lastError
     if (patch.unauthorized !== undefined) unauthorized = patch.unauthorized
     if (patch.enabled !== undefined) enabled = patch.enabled
     if (patch.lastSyncAt !== undefined) lastSyncAt = patch.lastSyncAt
+    if (patch.pulledEvents !== undefined) pulledEvents = patch.pulledEvents
     notify()
   }
 
@@ -225,6 +228,9 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
 
         after = events.reduce((max, e) => Math.max(max, e.serverSeq), after)
         cacheAfter = cacheRows.reduce((max, r) => Math.max(max, r.updatedSeq), cacheAfter)
+        // Le compteur du premier pull : la page vient d'être APPLIQUÉE, il
+        // peut monter — pas avant, l'écran afficherait de l'espoir.
+        setState({ pulledEvents: pulledEvents + events.length })
       }
 
       // Le curseur n'avance qu'APRÈS le restore réussi de la page : une
@@ -253,7 +259,7 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
 
   async function syncPass(): Promise<void> {
     if (!enabled) return
-    setState({ syncing: true, lastError: null })
+    setState({ syncing: true, lastError: null, pulledEvents: 0 })
 
     try {
       const firstSync = (await settings.read('syncCursor')) === undefined
@@ -298,6 +304,9 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
 
   return {
     async start(): Promise<void> {
+      // Ré-arme un moteur tu : c'est le chemin de la (re)connexion. Une
+      // session vient d'être posée — le silence du 401 n'a plus de raison.
+      setState({ enabled: true, unauthorized: false })
       stopObserving ??= outbox.observeCount((count) => {
         if (count > 0) schedulePush()
       })
@@ -331,7 +340,7 @@ export function createSyncEngine(deps: SyncEngineDeps): SyncEngine {
     },
 
     status(): SyncStatus {
-      return { syncing, lastSyncAt, lastError, unauthorized, enabled }
+      return { syncing, lastSyncAt, lastError, unauthorized, enabled, pulledEvents }
     },
 
     subscribe(callback: () => void): () => void {

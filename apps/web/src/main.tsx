@@ -1,9 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { createAuthGateway } from '@/adapters/auth-http/authGateway'
 import { ensureDeviceId } from '@/adapters/browser/deviceId'
 import { eventStore } from '@/adapters/dexie/eventStore'
 import { liveQueries } from '@/adapters/dexie/hooks'
+import { localData } from '@/adapters/dexie/localData'
 import { outbox } from '@/adapters/dexie/outbox'
 import { pendingAdds } from '@/adapters/dexie/pendingAdds'
 import { settingsStore } from '@/adapters/dexie/settingsStore'
@@ -13,6 +15,7 @@ import { createMediaCatalog } from '@/adapters/tmdb-http/mediaCatalog'
 import '@/i18n'
 import { App } from '@/ui/App'
 import { PortsProvider } from '@/ui/PortsProvider'
+import { SessionProvider } from '@/ui/session/SessionProvider'
 import '@/ui/styles/tokens.css'
 
 /**
@@ -117,8 +120,12 @@ async function boot(): Promise<void> {
           live: liveQueries,
           deviceId,
           sync,
+          auth: createAuthGateway({ baseUrl, sharedToken }),
+          local: localData,
         }}>
-        <App />
+        <SessionProvider>
+          <App />
+        </SessionProvider>
       </PortsProvider>
     </StrictMode>,
   )

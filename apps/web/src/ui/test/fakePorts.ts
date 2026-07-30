@@ -46,6 +46,7 @@ export function fakePorts(overrides: {
   const settings: SettingsStore = {
     read: () => Promise.resolve(undefined),
     write: () => Promise.resolve(),
+    remove: () => Promise.resolve(),
     subscribe: () => () => undefined,
   }
 
@@ -88,9 +89,26 @@ export function fakePorts(overrides: {
       lastError: null,
       unauthorized: false,
       enabled: true,
+      pulledEvents: 0,
     }),
     subscribe: () => () => undefined,
   }
 
-  return { settings, events, catalog, pending, live, deviceId: 'device-test', sync }
+  const auth: Ports['auth'] = {
+    requestLink: () => Promise.resolve({ ok: true, value: undefined }),
+    verifyCode: () =>
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null } }),
+    verifyLink: () =>
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null } }),
+    me: () => Promise.resolve({ ok: true, value: null }),
+    updateProfile: (firstName) =>
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName } }),
+    logout: () => Promise.resolve({ ok: true, value: undefined }),
+  }
+
+  const local: Ports['local'] = {
+    purgeAll: () => Promise.resolve(),
+  }
+
+  return { settings, events, catalog, pending, live, deviceId: 'device-test', sync, auth, local }
 }

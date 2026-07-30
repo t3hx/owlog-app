@@ -19,10 +19,19 @@ export interface SyncStatus {
   readonly unauthorized: boolean
   /** Faux quand le moteur s'est tu (pas de compte, session expirée, stop). */
   readonly enabled: boolean
+  /**
+   * Événements tirés pendant la passe en cours (remis à zéro à chaque
+   * passe). C'est le compteur de l'écran de premier pull — la pagination
+   * par 500 le donne gratuitement, page par page.
+   */
+  readonly pulledEvents: number
 }
 
 export interface SyncEngine {
-  /** Branche l'observation de l'outbox et lance la sync initiale. */
+  /**
+   * (Ré)arme le moteur et lance une passe : au boot, et surtout APRÈS une
+   * connexion — un moteur tu par un 401 doit repartir sans rechargement.
+   */
   start(): Promise<void>
   stop(): void
   /** Une passe complète — les déclencheurs (réseau, premier plan) appellent ça. */

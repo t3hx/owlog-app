@@ -137,9 +137,8 @@
     "syncNote": "les curseurs disent jusqu'où ce client a tiré le serveur. Re-pousser tout est sans danger : le serveur ignore ce qu'il connaît déjà."
   },
   "language": {
-    "label": "Langue",
-    "fr": "FR",
-    "en": "EN"
+    "fr": "français",
+    "en": "english"
   },
   "update": {
     "available": "Nouvelle version disponible",
@@ -244,5 +243,98 @@
     "count_one": "{{count}} titre logué ce soir",
     "count_other": "{{count}} titres logués ce soir",
     "close": "fermer"
+  },
+  "landing": {
+    "signIn": "se connecter",
+    "eyebrow": "// FILMS · SÉRIES · ET BIENTÔT PLUS",
+    "title": "Tout ce que tu regardes.<0/>Un seul <1>log</1>.",
+    "subtitle": "Ajoute un titre en un geste, suis ta progression, note, revois, et garde l'historique complet de ta vie de spectateur.",
+    "cta": "COMMENCER — C'EST GRATUIT",
+    "reassurance": "sans carte · données exportables · api tmdb",
+    "feature1Title": "Ajout en un tap",
+    "feature1Body": "Cherche, tape +, c'est loggé.",
+    "feature2Title": "Journal & revisionnages",
+    "feature2Body": "Chaque cycle daté, archivé.",
+    "feature3Title": "Stats à ton image",
+    "feature3Body": "Ton année en chiffres.",
+    "footerLeft": "© owlog 2026",
+    "footerRight": "confidentialité · contact"
+  },
+  "login": {
+    "back": "retour",
+    "tagline": "ravi de te revoir",
+    "emailPlaceholder": "adresse e-mail",
+    "sendCta": "RECEVOIR LE LIEN MAGIQUE",
+    "sending": "ENVOI…",
+    "legal": "pas de mot de passe · un lien par e-mail suffit",
+    "mergeNote": "tes données locales restent sur cet appareil : la connexion les fusionne avec ton compte, rien n'est écrasé.",
+    "codeSentTo": "code envoyé à",
+    "codeLabel": "code à six chiffres",
+    "validate": "VALIDER",
+    "verifying": "VÉRIFICATION…",
+    "resend": "renvoyer le code",
+    "resendIn": "renvoyer dans {{seconds}}s",
+    "fixEmail": "corriger l'adresse",
+    "errorInvalid": "code ou lien refusé — expiré ou déjà utilisé.",
+    "errorInvalidAttempts": "code faux — {{count}} essai restant.",
+    "errorInvalidAttempts_other": "code faux — {{count}} essais restants.",
+    "errorLocked": "trop d'essais : ce code est verrouillé. Redemande un e-mail.",
+    "errorRateLimited": "trop de demandes — patiente un peu avant de réessayer.",
+    "errorOffline": "hors-ligne — reconnecte-toi au réseau et réessaie.",
+    "errorUnavailable": "le service ne répond pas. Réessaie dans un instant."
+  },
+  "loginLink": {
+    "eyebrow": "// CONNEXION",
+    "pendingTitle": "Connexion en cours…",
+    "pendingBody": "On vérifie ton lien. Une seconde.",
+    "connectedTitle": "Connecté.",
+    "connectedBody": "On synchronise ton journal.",
+    "failedTitle": "Ce lien ne fonctionne plus.",
+    "failedBody": "lien expiré, déjà utilisé, ou invalide.",
+    "newCode": "RECEVOIR UN NOUVEAU CODE"
+  },
+  "firstPull": {
+    "eyebrow": "// SYNCHRONISATION",
+    "counter": "événements récupérés",
+    "error": "la synchronisation s'est interrompue. Ce qui est déjà arrivé est conservé.",
+    "retry": "RÉESSAYER"
+  },
+  "settings": {
+    "title": "RÉGLAGES",
+    "accountTitle": "COMPTE",
+    "syncUpToDate": "✓ à jour",
+    "syncPending": "{{count}} à pousser",
+    "syncOffline": "hors-ligne",
+    "syncError": "la dernière synchronisation a échoué",
+    "lastSync": "dernière sync {{date}}",
+    "logout": "SE DÉCONNECTER",
+    "activateBody": "Un compte synchronise ton journal entre tes appareils. Sans lui, tout reste ici — et tout fonctionne.",
+    "activateCta": "ACTIVER LA SYNC",
+    "privacyWhere": "tes données vivent sur cet appareil et, si tu actives la sync, sur un serveur personnel — pas chez un tiers.",
+    "privacyLogout": "se déconnecter arrête la sync ; rien n'est effacé, ni ici ni là-bas.",
+    "privacyPurge": "effacer mes données locales vide cet appareil et déconnecte ; le serveur garde ta sauvegarde.",
+    "profileTitle": "PROFIL",
+    "firstName": "prénom",
+    "save": "ok",
+    "language": "langue",
+    "dataTitle": "DONNÉES",
+    "export": "exporter mon .log",
+    "import": "importer un .log",
+    "importReport": "{{added}} ajoutés · {{skipped}} ignorés",
+    "importFailed": "fichier refusé : {{reason}}",
+    "dangerTitle": "ZONE DANGEREUSE",
+    "purge": "effacer mes données locales",
+    "purgeEyebrow": "// ZONE DANGEREUSE",
+    "purgeTitle": "Vider cet appareil ?",
+    "purgeBody": "Le journal, les titres, le prénom et les réglages de cet appareil seront effacés, et tu seras déconnecté·e. Ce qui a été synchronisé reste sur le serveur.",
+    "purgeUnpushed": "{{count}} élément non synchronisé sera définitivement perdu.",
+    "purgeUnpushed_other": "{{count}} éléments non synchronisés seront définitivement perdus.",
+    "purgeCancel": "ANNULER",
+    "purgeConfirm": "EFFACER MES DONNÉES",
+    "purging": "EFFACEMENT…"
+  },
+  "session": {
+    "expired": "session expirée — la sync est en pause.",
+    "reconnect": "se reconnecter"
   }
 }

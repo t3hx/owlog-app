@@ -19,6 +19,15 @@ export interface SettingsStore {
   write(key: SettingKey, value: string): Promise<void>
 
   /**
+   * Efface un réglage — la clé redevient « jamais écrite ».
+   *
+   * Distinct d'une valeur vide : l'existence de `syncCursor` est le bit
+   * qui sépare « session expirée » (une invite) d'« aucun compte »
+   * (silence). La déconnexion doit rendre ce bit à l'état vierge.
+   */
+  remove(key: SettingKey): Promise<void>
+
+  /**
    * S'abonne aux changements d'une clé. Le rappel est invoqué à chaque
    * écriture de cette clé. Retourne la fonction de désabonnement.
    */

@@ -3,6 +3,7 @@ import { Trans, useTranslation } from 'react-i18next'
 
 import { Attribution } from '@/ui/components/Attribution'
 import { usePorts } from '@/ui/PortsProvider'
+import { useSession } from '@/ui/session/SessionProvider'
 
 /**
  * Écran de première ouverture.
@@ -31,7 +32,8 @@ import { usePorts } from '@/ui/PortsProvider'
  */
 export function Welcome() {
   const { t } = useTranslation()
-  const { settings } = usePorts()
+  const { settings, auth } = usePorts()
+  const session = useSession()
   const [firstName, setPrenom] = useState('')
   const [submitting, setEnvoi] = useState(false)
 
@@ -43,6 +45,11 @@ export function Welcome() {
 
     setEnvoi(true)
     await settings.write('firstName', firstName.trim())
+    // Connecté sans prénom serveur — l'appareil vierge qui vient de se
+    // connecter : la réponse de l'onboarding vaut upsert, le serveur fait
+    // autorité. Sans attendre ni bloquer : hors réseau, la prochaine
+    // édition des Réglages retentera.
+    if (session.user !== null) void auth.updateProfile(firstName.trim())
     // Pas de remise à zéro de `submitting` : l'écriture fait disparaître cet
     // écran. Le remettre à false ferait clignoter le bouton avant le
     // démontage du composant.

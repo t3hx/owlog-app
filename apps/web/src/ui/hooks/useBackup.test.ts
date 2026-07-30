@@ -22,6 +22,7 @@ function storeWith(values: Partial<Record<SettingKey, string>>): SettingsStore {
   return {
     read: (key) => Promise.resolve(values[key]),
     write: () => Promise.resolve(),
+    remove: () => Promise.resolve(),
     subscribe: () => () => undefined,
   }
 }

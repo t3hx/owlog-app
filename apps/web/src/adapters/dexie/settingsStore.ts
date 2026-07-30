@@ -32,6 +32,11 @@ export function createSettingsStore(): SettingsStore {
       notify(key)
     },
 
+    async remove(key: SettingKey): Promise<void> {
+      await db.settings.delete(key)
+      notify(key)
+    },
+
     subscribe(key: SettingKey, callback: () => void): () => void {
       const forKey = subscribers.get(key) ?? new Set()
       forKey.add(callback)

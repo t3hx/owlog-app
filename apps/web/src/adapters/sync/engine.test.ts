@@ -349,6 +349,42 @@ describe('SyncEngine', () => {
     await drained()
   })
 
+  it('start() ré-arme un moteur tu — le parcours de reconnexion', async () => {
+    // L'utilisateur anonyme a fait taire le moteur au boot (401 silencieux).
+    // Il se connecte : l'écran de connexion rappelle start(), qui doit
+    // ré-armer ET synchroniser — sinon la connexion ne synchronise rien
+    // avant le prochain rechargement complet.
+    const server = fakeServer()
+    server.fail({ kind: 'unauthorized' })
+    const e = makeEngine(server.gateway)
+    await e.start()
+    expect(e.status().enabled).toBe(false)
+
+    server.fail(null)
+    const remote = createFactory()
+    server.seed([remote.watch()] as DomainEvent[])
+    await e.start()
+
+    expect(e.status().enabled).toBe(true)
+    expect(e.status().unauthorized).toBe(false)
+    expect(await db.events.count()).toBe(1)
+  })
+
+  it('compte les événements tirés pendant la passe — l’écran de premier pull', async () => {
+    const server = fakeServer({ pageLimit: 2 })
+    const remote = createFactory()
+    server.seed([remote.watch(), remote.start('c1'), remote.seen('c1')] as DomainEvent[])
+
+    const e = makeEngine(server.gateway)
+    const observed: number[] = []
+    e.subscribe(() => observed.push(e.status().pulledEvents))
+    await e.start()
+
+    // Le compteur monte page par page et finit au total.
+    expect(e.status().pulledEvents).toBe(3)
+    expect(observed).toContain(2)
+  })
+
   it('repushAll remet tout le journal en file et le serveur déduplique', async () => {
     const server = fakeServer()
     const e = makeEngine(server.gateway)

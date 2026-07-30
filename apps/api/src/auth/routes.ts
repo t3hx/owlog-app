@@ -222,6 +222,30 @@ export function createAuthRoutes(deps: AuthDeps) {
     return c.json(response)
   })
 
+  auth.post('/profile', async (c) => {
+    const pool = deps.pool()
+    const user = await sessionUser(pool, c)
+    if (!user) return fail(c, 401, 'unauthorized')
+
+    const body = await readJson(c)
+    const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : ''
+    if (firstName.length === 0 || firstName.length > 40) return fail(c, 400, 'bad-request')
+
+    // Le serveur fait autorité sur le prénom après connexion : l'écran
+    // Réglages pousse ici, et tout appareil relit par /me. La borne de 40
+    // est celle du champ de l'onboarding.
+    const updated = await pool.query<{ email: string; first_name: string | null }>(
+      `UPDATE users SET first_name = $1 WHERE id = $2 RETURNING email, first_name`,
+      [firstName, user.id],
+    )
+
+    const row = updated.rows[0]!
+    const response: VerifyResponse = {
+      user: { email: row.email, firstName: row.first_name },
+    }
+    return c.json(response)
+  })
+
   auth.post('/logout', async (c) => {
     const pool = deps.pool()
     const raw = getCookie(c, SESSION_COOKIE)

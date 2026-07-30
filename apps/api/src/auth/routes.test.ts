@@ -518,6 +518,47 @@ describe.skipIf(!adminUrl)('session', () => {
 
     expect(response.status).toBe(401)
   })
+
+  it('le profil se met à jour — le serveur fait autorité sur le prénom', async () => {
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    const updated = await app.fetch(post('/auth/profile', { firstName: 'Alex' }, { cookie }))
+
+    expect(updated.status).toBe(200)
+    await expect(updated.json()).resolves.toEqual({
+      user: { email: 'a@b.c', firstName: 'Alex' },
+    })
+
+    // /auth/me rend la valeur écrite : c'est elle que tout appareil relit.
+    const me = await app.fetch(get('/auth/me', { cookie }))
+    await expect(me.json()).resolves.toEqual({
+      user: { email: 'a@b.c', firstName: 'Alex' },
+    })
+  })
+
+  it('le profil exige une session — jamais un user_id de corps de requête', async () => {
+    const app = makeApp()
+
+    const response = await app.fetch(post('/auth/profile', { firstName: 'Alex' }))
+
+    expect(response.status).toBe(401)
+  })
+
+  it('le profil refuse un prénom vide ou démesuré', async () => {
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    const empty = await app.fetch(post('/auth/profile', { firstName: '   ' }, { cookie }))
+    const huge = await app.fetch(
+      post('/auth/profile', { firstName: 'x'.repeat(41) }, { cookie }),
+    )
+
+    expect(empty.status).toBe(400)
+    expect(huge.status).toBe(400)
+  })
 })
 
 describe.skipIf(!adminUrl)('auth et base', () => {
