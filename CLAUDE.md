@@ -30,6 +30,19 @@ Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune lan
 - **Jamais de co-auteur.** Aucun `Co-Authored-By`, aucune mention d'outil ou d'assistant dans un message de commit.
 - Messages en français, à l'impératif, préfixés par un type (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`).
 
+### Branches et validation
+
+- **Tout travail de feature se fait sur une branche** `feat/...` ou `fix/...`
+  tirée de `dev` (noms en anglais, US only), jamais directement sur `dev`.
+- La branche est **squashée sur `dev`** — un commit propre par feature.
+- **Aucune feature n'est clôturée sans validation manuelle de l'utilisateur.**
+  Avant tout squash sur `dev` et toute fermeture de ticket : présenter la
+  branche à tester (commande de lancement, points précis à vérifier) et
+  attendre son retour. Les tests automatisés verts ne remplacent pas ce
+  passage.
+- Tolérance : documentation et micro-corrections de configuration peuvent
+  aller directement sur `dev`.
+
 ### Développement piloté par les tests
 
 Le test précède le code. La discipline s'applique là où elle a du sens :
