@@ -43,6 +43,13 @@
  *
  *    media_cache ────▶ titres, affiches, genres, durées (étape 3)
  *      (entrée latérale : jamais du domaine, jamais une source de statut)
+ *
+ *    sync (temps 2) — entrée latérale, hors domaine :
+ *      append() ──▶ pending_push (MÊME transaction) ──▶ push /sync ──▶ ack
+ *      pull /sync ──▶ restore(events, cacheRows) idempotent par id ──▶ events
+ *      (les événements tirés rejoignent le pipeline ci-dessus par la même
+ *       porte que tout le monde ; aucun réducteur ne sait qu'ils viennent
+ *       d'ailleurs — c'est ce qui rend la sync additive, pas invasive)
  * ```
  *
  * **Mettre ce diagramme à jour fait partie de toute modification du

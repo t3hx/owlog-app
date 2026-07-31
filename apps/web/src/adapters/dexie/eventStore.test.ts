@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '@/adapters/dexie/db'
 import { createEventStore } from '@/adapters/dexie/eventStore'
@@ -28,6 +28,7 @@ describe('EventStore (adaptateur Dexie)', () => {
     await db.events.clear()
     await db.media_state.clear()
     await db.media_cache.clear()
+    await db.pending_push.clear()
   })
 
   it('relit les evenements ecrits', async () => {
@@ -169,6 +170,7 @@ describe('cache média', () => {
     await db.events.clear()
     await db.media_state.clear()
     await db.media_cache.clear()
+    await db.pending_push.clear()
   })
 
   it('écrit la ligne de cache dans la même transaction que l événement', async () => {
@@ -286,6 +288,7 @@ describe('restauration', () => {
     await db.events.clear()
     await db.media_state.clear()
     await db.media_cache.clear()
+    await db.pending_push.clear()
   })
 
   it('reinjecte des evenements dans une base vide', async () => {
@@ -351,5 +354,31 @@ describe('restauration', () => {
     // durees absentes comme des durees nulles.
     const [row] = await store.mediaCache([MOVIE])
     expect(row).toMatchObject({ complete: true, genres: ['SF'] })
+  })
+
+  it('un quota qui deborde a mi-course annule TOUT — jamais de demi-restauration', async () => {
+    // Le scenario reel : IndexedDB leve QuotaExceededError au milieu d'un
+    // gros import ou d'une page de pull. Les evenements de la meme
+    // transaction doivent disparaitre avec elle — une base a moitie
+    // restauree est precisement ce que `restore` existe pour eviter.
+    const store = createEventStore()
+    const f = createFactory()
+    const events = [f.watch(), f.start('c1')] as DomainEvent[]
+
+    const quota = vi
+      .spyOn(db.media_cache, 'put')
+      .mockRejectedValueOnce(new DOMException('Quota exceeded', 'QuotaExceededError'))
+
+    await expect(store.restore(events, [partialCacheRow(HIT, 'now')])).rejects.toThrow()
+    quota.mockRestore()
+
+    expect(await db.events.count()).toBe(0)
+    expect(await db.pending_push.count()).toBe(0)
+    expect(await db.media_state.count()).toBe(0)
+
+    // Et parce que restore est idempotent, la reprise apres liberation
+    // d'espace repart de zero, proprement.
+    const retried = await store.restore(events, [partialCacheRow(HIT, 'now')])
+    expect(retried).toEqual({ added: 2, skipped: 0 })
   })
 })

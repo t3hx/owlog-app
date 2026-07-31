@@ -290,6 +290,38 @@ OWLOG_BACKUP_AGE_IDENTITY=owlog-backup-identity.txt \
 
 La procédure a été exécutée de bout en bout le 2026-07-30 (source peuplée → dump chiffré → base vierge → comptes identiques, `auth_tokens` vide, trigger append-only actif). **La rejouer après la première sauvegarde de production** : une sauvegarde jamais restaurée n'est pas une sauvegarde.
 
+## 9. Secrets e-mail et leur rotation (temps 2)
+
+Trois variables Doppler côté `owlog-api`, toutes optionnelles — sans elles,
+le mailer console prend le relais et les e-mails de connexion s'écrivent
+dans les journaux du conteneur, ce qui suffit en développement et en
+dépannage :
+
+| Nom | Rôle |
+|---|---|
+| `OWLOG_EMAIL_API_TOKEN` | jeton du fournisseur — LE secret à protéger |
+| `OWLOG_EMAIL_API_URL` | endpoint du fournisseur (défaut : Resend) |
+| `OWLOG_EMAIL_FROM` | expéditeur, `Owlog <no-reply@…>` |
+
+### Rotation du jeton
+
+À faire **au moindre doute** (jeton aperçu dans un log, un écran partagé,
+un dépôt), et par hygiène à chaque changement de fournisseur :
+
+1. Créer le nouveau jeton chez le fournisseur — **avant** de révoquer
+   l'ancien : les deux coexistent, aucun trou de service.
+2. `doppler secrets set OWLOG_EMAIL_API_TOKEN --project owlog-app --config prd`
+3. Redéployer `owlog-api` (le service lit ses secrets au démarrage).
+4. Demander un lien de connexion réel et vérifier la réception.
+5. Révoquer l'ancien jeton chez le fournisseur — en dernier.
+
+En cas de compromission avérée, inverser 1 et 5 : révoquer d'abord, et
+accepter la fenêtre où `request-link` répond 502 (`upstream-unavailable`) —
+l'app locale continue de fonctionner, seule la connexion attend.
+
+Le jeton n'apparaît jamais dans le bundle web : `local-prod.sh check` le
+vérifie mécaniquement (« aucun secret e-mail dans le bundle »).
+
 ## Corriger ce document
 
 La partie Dokploy n'a pas encore été exécutée. **Au premier passage, corrige-la dans le même commit** que le déploiement : un document de mise en ligne faux coûte plus cher que pas de document, parce qu'on lui fait confiance à trois heures du matin.

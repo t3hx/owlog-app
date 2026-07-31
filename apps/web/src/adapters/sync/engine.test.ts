@@ -385,6 +385,67 @@ describe('SyncEngine', () => {
     expect(observed).toContain(2)
   })
 
+  it('app tuée entre l’append et le flush : rien n’est perdu au redémarrage', async () => {
+    // Vie 1 : un geste est écrit, l'app meurt avant que le debounce ne
+    // parte. L'outbox a été remplie DANS la transaction de l'append —
+    // c'est toute sa raison d'être.
+    const server = fakeServer()
+    const firstLife = makeEngine(server.gateway)
+    await firstLife.start()
+    await drained()
+
+    const store = createEventStore()
+    const f = createFactory()
+    await store.append([f.watch()] as DomainEvent[])
+    firstLife.stop()
+    expect(server.events).toHaveLength(0)
+
+    // Vie 2 : redémarrage. Le moteur relit la file et pousse.
+    const secondLife = makeEngine(server.gateway)
+    await secondLife.start()
+    await drained()
+
+    expect(server.events).toHaveLength(1)
+  })
+
+  it('deux onglets synchronisent en même temps sans trou ni doublon', async () => {
+    // Deux onglets = deux moteurs sur la MÊME base et les MÊMES réglages.
+    // Le pire cas : les deux tirent en même temps, chacun avance le
+    // curseur. `restore()` est idempotent par id et le curseur ne recule
+    // jamais vers un état incohérent — le journal final est exact.
+    const server = fakeServer({ pageLimit: 2 })
+    const remote = createFactory()
+    server.seed([
+      remote.watch(),
+      remote.start('c1'),
+      remote.prog('c1', 40),
+      remote.seen('c1'),
+      remote.fav(),
+    ] as DomainEvent[])
+
+    const deps = () => ({
+      gateway: server.gateway,
+      store: createEventStore(),
+      outbox: createOutbox(),
+      settings: createSettingsStore(),
+      debounceMs: 30,
+    })
+    const tabA = createSyncEngine(deps())
+    const tabB = createSyncEngine(deps())
+
+    await Promise.all([tabA.start(), tabB.start()])
+    tabA.stop()
+    tabB.stop()
+
+    expect(await db.events.count()).toBe(5)
+    expect(await createSettingsStore().read('syncCursor')).toBe('5')
+
+    // Un pull ultérieur ne rapporte rien : le curseur est cohérent.
+    const later = makeEngine(server.gateway)
+    await later.syncNow()
+    expect(await db.events.count()).toBe(5)
+  })
+
   it('repushAll remet tout le journal en file et le serveur déduplique', async () => {
     const server = fakeServer()
     const e = makeEngine(server.gateway)
