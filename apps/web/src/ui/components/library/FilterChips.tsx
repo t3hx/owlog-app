@@ -4,7 +4,7 @@ import {
   LIBRARY_FILTERS,
   type LibraryFilter,
   type LibraryView,
-} from '@/domain/reducers/mediaState'
+} from '@owlog/domain'
 import { STATUS_CHIP, STATUS_GLYPH } from '@/ui/components/status/statusStyle'
 
 export interface FilterChipsProps {

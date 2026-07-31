@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { mediaState } from '@/domain/reducers/mediaState'
-import { createFactory, MOVIE } from '@/domain/test/factory'
-import type { StoredEvent } from '@/domain/types'
+import { mediaState, type StoredEvent } from '@owlog/domain'
+import { createFactory, MOVIE } from '@owlog/domain/test'
 import i18next from '@/i18n'
 import { partialCacheRow } from '@/ports/MediaCache'
 import { PortsProvider } from '@/ui/PortsProvider'

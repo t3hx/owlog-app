@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-  stats,
-  type StatsMedia,
-  type StatsPeriod,
-  type StatsView,
-  type StatsWindow,
-} from '@/domain/reducers/stats'
-import type { MediaRef, StoredEvent, Timestamp } from '@/domain/types'
+import { stats, type StatsMedia, type StatsPeriod, type StatsView, type StatsWindow, type MediaRef, type StoredEvent, type Timestamp } from '@owlog/domain'
 import { usePorts } from '@/ui/PortsProvider'
 
 const DAY_MS = 86_400_000

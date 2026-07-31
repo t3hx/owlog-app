@@ -3,8 +3,7 @@ import { useCallback, useState } from 'react'
 import type { SearchHit } from '@owlog/contracts'
 
 import { systemClock, uuidv7Generator } from '@/adapters/browser/clock'
-import { addToLibrary, undo } from '@/domain/commands'
-import type { EventId } from '@/domain/types'
+import { addToLibrary, undo, type EventId } from '@owlog/domain'
 import { partialCacheRow } from '@/ports/MediaCache'
 import { usePorts } from '@/ui/PortsProvider'
 

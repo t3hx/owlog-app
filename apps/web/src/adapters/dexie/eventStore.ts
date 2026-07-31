@@ -1,6 +1,5 @@
 import { db } from '@/adapters/dexie/db'
-import { mediaState, type MediaStateRow } from '@/domain/reducers/mediaState'
-import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
+import { mediaState, type MediaStateRow, type EventId, type DomainEvent, type StoredEvent, type MediaRef } from '@owlog/domain'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import type { EventStore, RestoreReport } from '@/ports/EventStore'
 

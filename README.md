@@ -37,17 +37,21 @@ pnpm lint      # ESLint
 ```
 apps/web/                 PWA React + TypeScript
   src/
-    domain/               règles, commandes, réducteurs. Zéro infrastructure.
-      commands/           construction d'événements
-      reducers/           projections (statut, journal, bibliothèque…)
-      rules/              rang des cycles, dérivation du statut
     ports/                interfaces : EventStore, Outbox, SyncGateway,
-                          AuthGateway, MediaCatalog, Clock, IdGenerator…
+                          AuthGateway, MediaCatalog…
     adapters/             implémentations : dexie, sync, sync-http,
                           auth-http, tmdb-http, browser
     ui/                   écrans React + Tailwind
 apps/api/                 service Hono — proxy TMDB, auth par lien magique
                           + code court, réplication /sync sur Postgres
+packages/domain/          le domaine : règles, commandes, réducteurs. Zéro
+                          infrastructure ; consommé par le web et par l'API
+  src/
+    commands/             construction d'événements
+    reducers/             projections (statut, journal, bibliothèque…)
+    rules/                rang des cycles, dérivation du statut
+    ports/                Clock, IdGenerator — les ports que le domaine
+                          consomme lui-même
 packages/contracts/       contrat partagé entre les deux (formes + Zod)
 docs/                     documentation : déploiement, checklist, design system
 ```

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 
 import { systemClock, uuidv7Generator } from '@/adapters/browser/clock'
-import { advanceProgress } from '@/domain/commands'
-import { progress } from '@/domain/reducers/projections'
-import { applyTaps } from '@/domain/rules/progression'
-import type { MediaRef } from '@/domain/types'
+import { advanceProgress, progress, applyTaps, type MediaRef } from '@owlog/domain'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**

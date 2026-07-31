@@ -2,7 +2,7 @@ import type { SearchHit } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
-import type { Status } from '@/domain/types'
+import type { Status } from '@owlog/domain'
 import type { CatalogFailure } from '@/ports/MediaCatalog'
 import { MediaRow } from '@/ui/components/search/MediaRow'
 import { usePorts } from '@/ui/PortsProvider'

@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '@/adapters/dexie/db'
 import { createEventStore } from '@/adapters/dexie/eventStore'
 import { createOutbox } from '@/adapters/dexie/outbox'
-import { createFactory } from '@/domain/test/factory'
-import type { DomainEvent } from '@/domain/types'
+import { createFactory } from '@owlog/domain/test'
+import type { DomainEvent } from '@owlog/domain'
 
 /**
  * Outbox de synchronisation, contre le vrai Dexie.

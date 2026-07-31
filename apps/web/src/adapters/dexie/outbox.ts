@@ -1,7 +1,7 @@
 import { liveQuery } from 'dexie'
 
 import { db } from '@/adapters/dexie/db'
-import type { EventId, StoredEvent } from '@/domain/types'
+import type { EventId, StoredEvent } from '@owlog/domain'
 import type { Outbox } from '@/ports/Outbox'
 
 /**

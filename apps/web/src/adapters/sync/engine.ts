@@ -5,7 +5,7 @@ import {
   type SyncCacheRow,
 } from '@owlog/contracts'
 
-import type { StoredEvent } from '@/domain/types'
+import type { StoredEvent } from '@owlog/domain'
 import type { EventStore } from '@/ports/EventStore'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import type { Outbox } from '@/ports/Outbox'

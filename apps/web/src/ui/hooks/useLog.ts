@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { log, type LogEntry } from '@/domain/reducers/log'
-import type { StoredEvent } from '@/domain/types'
+import { log, type LogEntry, type StoredEvent } from '@owlog/domain'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**

@@ -1,7 +1,7 @@
 import { posterUrl } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 
-import type { TapProjection } from '@/domain/rules/progression'
+import type { TapProjection } from '@owlog/domain'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import { ProgressBar } from '@/ui/components/home/ProgressBar'
 

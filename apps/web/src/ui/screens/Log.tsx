@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
-import type { MediaRef } from '@/domain/types'
+import type { MediaRef } from '@owlog/domain'
 import { EventText } from '@/ui/components/journal/EventText'
 import { useLog } from '@/ui/hooks/useLog'
 import { usePorts } from '@/ui/PortsProvider'

@@ -4,8 +4,8 @@ import { db } from '@/adapters/dexie/db'
 import { createEventStore } from '@/adapters/dexie/eventStore'
 import { createPendingAdds } from '@/adapters/dexie/pendingAdds'
 import { partialCacheRow } from '@/ports/MediaCache'
-import { createFactory, MOVIE, SERIES } from '@/domain/test/factory'
-import type { DomainEvent } from '@/domain/types'
+import { createFactory, MOVIE, SERIES } from '@owlog/domain/test'
+import type { DomainEvent } from '@owlog/domain'
 
 /**
  * Adaptateur Dexie du port EventStore.

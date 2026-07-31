@@ -2,8 +2,7 @@ import { posterUrl, type SearchHit } from '@owlog/contracts'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { BackdateEntry } from '@/domain/commands'
-import type { DatePrecision } from '@/domain/types'
+import type { BackdateEntry, DatePrecision } from '@owlog/domain'
 import type { BackdateOutcome } from '@/ui/hooks/useBackdate'
 
 /**

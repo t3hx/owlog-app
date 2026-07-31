@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
-import { homeCounters, type MediaStateRow } from '@/domain/reducers/mediaState'
-import { applyTaps, episodeIncrement } from '@/domain/rules/progression'
-import type { MediaRef } from '@/domain/types'
+import { homeCounters, type MediaStateRow, applyTaps, episodeIncrement, type MediaRef } from '@owlog/domain'
 import { ToWatchShelf } from '@/ui/components/home/ToWatchShelf'
 import { WatchingRow } from '@/ui/components/home/WatchingRow'
 import { Search } from '@/ui/components/search/Search'

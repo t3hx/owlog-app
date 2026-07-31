@@ -1,7 +1,7 @@
 import { posterUrl, type SearchHit } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 
-import type { Status } from '@/domain/types'
+import type { Status } from '@owlog/domain'
 
 /**
  * Rangée d'un média dans les résultats de recherche.

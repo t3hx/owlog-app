@@ -1,8 +1,7 @@
 import { posterUrl } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 
-import type { MediaStateRow } from '@/domain/reducers/mediaState'
-import type { Status } from '@/domain/types'
+import type { MediaStateRow, Status } from '@owlog/domain'
 import { ProgressBar } from '@/ui/components/home/ProgressBar'
 import { STATUS_CHIP, STATUS_GLYPH } from '@/ui/components/status/statusStyle'
 import type { MediaCacheRow } from '@/ports/MediaCache'

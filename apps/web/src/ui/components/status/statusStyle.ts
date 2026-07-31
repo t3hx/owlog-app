@@ -1,4 +1,4 @@
-import type { Status } from '@/domain/types'
+import type { Status } from '@owlog/domain'
 
 /**
  * Habillage des quatre statuts, partagé par la fiche et par la bibliothèque.

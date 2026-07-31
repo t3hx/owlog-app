@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
-import type { StoredEvent } from '@/domain/types'
+import type { StoredEvent } from '@owlog/domain'
 
 /**
  * Une entrée d'événement, telle qu'elle se lit : `2026-07-28 · vu`.

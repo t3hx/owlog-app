@@ -3,17 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { completeCacheRow } from '@/ports/MediaCache'
 import { systemClock, uuidv7Generator } from '@/adapters/browser/clock'
-import {
-  addComment,
-  rate,
-  rewatch,
-  setStatus,
-  toggleFavorite,
-  undo,
-  type CommandContext,
-} from '@/domain/commands'
-import type { MediaStateRow } from '@/domain/reducers/mediaState'
-import type { EventId, MediaRef, Status, StoredEvent } from '@/domain/types'
+import { addComment, rate, rewatch, setStatus, toggleFavorite, undo, type CommandContext, type MediaStateRow, type EventId, type MediaRef, type Status, type StoredEvent } from '@owlog/domain'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**

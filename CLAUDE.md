@@ -51,21 +51,27 @@ Runner : Vitest.
 Le domaine ne connaît aucune infrastructure. C'est ce qui rendra le passage à Postgres (temps 2) un remplacement d'adaptateur et non une réécriture.
 
 ```
-domain/
+packages/domain/src/      package workspace `@owlog/domain`, exporté en source
+                          (pas de build), consommé par le web ET par l'API —
+                          le serveur rejoue les mêmes réducteurs que le client
   commands/      construction d'événements : ajouter, avancerStatut, progresser,
                  retroDater, revoir, annuler. Zéro effet de bord.
   reducers/      projections : cycles, currentStatus, mediaState, journal…
   rules/         rang des cycles, rattachement du rétro-datage, dérivation du statut
-ports/           EventStore, MediaCatalog, Clock, IdGenerator   (interfaces)
-adapters/
-  dexie/         EventStore (append, eventsForMedia, allMediaStates, eventsSince)
+  ports/         Clock, IdGenerator — les seuls ports que le domaine consomme
+apps/web/src/
+  ports/         EventStore, MediaCatalog…   (interfaces, côté application)
+  adapters/
+    dexie/       EventStore (append, eventsForMedia, allMediaStates, eventsSince)
                  + media_state (dérivée) + media_cache + pending_adds + settings
-  tmdb-http/     MediaCatalog via owlog-api
-  browser/       Clock, IdGenerator
-ui/              React + Tailwind. N'appelle que commands/ et reducers/.
+    tmdb-http/   MediaCatalog via owlog-api
+    browser/     Clock, IdGenerator
+  ui/            React + Tailwind. N'appelle que commands/ et reducers/.
 ```
 
-`Clock` et `IdGenerator` sont des ports : le domaine génère des UUIDv7 et des horodatages, et sans injection les règles de rang ne sont pas testables de façon déterministe.
+`Clock` et `IdGenerator` sont des ports : le domaine génère des UUIDv7 et des horodatages, et sans injection les règles de rang ne sont pas testables de façon déterministe. Ils vivent **dans** le package — ce sont les seuls ports que le domaine consomme lui-même — quand les autres ports restent côté `apps/web`.
+
+Contrainte du package : l'API tourne sous `node --experimental-strip-types`. Les imports internes de `packages/domain` sont donc **relatifs, à extension `.ts` explicite** (aucun alias `@/`), et le code n'utilise aucune syntaxe non strippable (enum, namespace, paramètres-propriétés).
 
 `**commands/` est aussi important que `reducers/`.** Toute la subtilité du modèle est en écriture. Sans cette couche, les règles atterrissent dans les composants React, la seule couche exemptée de TDD.
 
@@ -93,8 +99,8 @@ Tout élément est documenté : chaque type d'événement, chaque réducteur, ch
 
 Deux diagrammes vivent en commentaire dans le code, recopiés du document de design :
 
-- le pipeline événements vers écrans, en tête de `domain/index.ts` ;
-- la machine à états du statut et la règle de rang, en tête de `domain/rules/status.ts`.
+- le pipeline événements vers écrans, en tête de `packages/domain/src/index.ts` ;
+- la machine à états du statut et la règle de rang, en tête de `packages/domain/src/rules/status.ts`.
 
 **Les maintenir fait partie de la modification.** Toucher une règle de dérivation sans mettre à jour le diagramme dans le même commit est un défaut de revue. Un diagramme périmé induit activement en erreur ; il est pire que pas de diagramme.
 

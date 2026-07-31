@@ -1,4 +1,4 @@
-import type { EventId, StoredEvent } from '@/domain/types'
+import type { EventId, StoredEvent } from '@owlog/domain'
 
 /**
  * Port de la file d'attente de synchronisation.
