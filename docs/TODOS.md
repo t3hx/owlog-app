@@ -20,6 +20,8 @@ revue /autoplan du sprint temps 2 (2026-07-30, plan dans
 
 ## Canal temps réel (SSE ou WebSocket) — P3, L
 
+> Revu par /autoplan temps 3 (2026-07-31) : re-différé au temps 3.
+
 - **Quoi** : push serveur→client pour remplacer les déclencheurs discrets.
 - **Pourquoi différé** : le critère de fraîcheur du sprint (« à jour au
   retour au premier plan ») est satisfait sans lui.
@@ -37,6 +39,8 @@ revue /autoplan du sprint temps 2 (2026-07-30, plan dans
   code PKCE côté `owlog-api`.
 
 ## Liste des appareils connectés + révocation — P3, M
+
+> Revu par /autoplan temps 3 (2026-07-31) : re-différé au temps 3.
 
 - **Quoi** : rangée « appareils » dans Réglages, listant les sessions
   actives avec révocation.
