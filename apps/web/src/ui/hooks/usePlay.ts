@@ -43,7 +43,7 @@ interface Batch {
  * redemandé explicitement.
  */
 export function usePlay() {
-  const { events } = usePorts()
+  const { events, deviceId } = usePorts()
   const batches = useRef(new Map<MediaRef, Batch>())
   const timers = useRef(new Map<MediaRef, ReturnType<typeof setTimeout>>())
   const writing = useRef(new Set<MediaRef>())
@@ -75,7 +75,7 @@ export function usePlay() {
         )
 
         const produced = advanceProgress(
-          { events: stored, mediaRef: ref, clock: systemClock, ids: uuidv7Generator },
+          { events: stored, mediaRef: ref, clock: systemClock, ids: uuidv7Generator, deviceId },
           {
             increment: written * batch.increment,
             ...(projected.label === null ? {} : { label: projected.label }),

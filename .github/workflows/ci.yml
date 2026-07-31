@@ -1,0 +1,57 @@
+# CI — chaque poussée sur dev et chaque PR.
+#
+# Décision du gate final (D3) : ce sprint introduit le premier service à
+# état du projet. Les tests d'intégration de l'API tournent contre un VRAI
+# Postgres — le harnais Vitest démarre un conteneur jetable et chaque test
+# reçoit une base vierge, donc **les migrations sont rejouées depuis zéro à
+# chaque exécution** (`migrate.test.ts` les exerce aussi en concurrence,
+# sous advisory lock). C'est la classe de bug la plus coûteuse à découvrir
+# sur le VPS, attrapée ici.
+#
+# Docker est préinstallé sur ubuntu-latest : le globalSetup des tests API
+# fonctionne tel quel. S'il venait à manquer, la suite SAUTE les tests DB
+# avec un avertissement — le grep final transforme ce saut silencieux en
+# échec de CI : une couverture qui disparaît doit se voir.
+name: ci
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm d'abord : setup-node lit `packageManager` mais son cache a
+      # besoin du binaire déjà présent.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Installer (lockfile gelé)
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm -r lint
+
+      - name: Typecheck et build de production
+        run: pnpm -r build
+
+      - name: Tests (Postgres jetable, migrations sur base vierge)
+        run: |
+          pnpm -r test 2>&1 | tee test-output.log
+          # Le harnais saute les tests DB sans Docker, avec un avertissement
+          # bruyant. En CI, ce saut serait une perte de couverture invisible :
+          # on le promeut en échec.
+          if grep -q "tests d'intégration DB ignorés" test-output.log; then
+            echo "::error::Les tests d'intégration DB ont été sautés — Postgres indisponible."
+            exit 1
+          fi

@@ -36,17 +36,20 @@ pnpm lint      # ESLint
 
 ```
 apps/web/                 PWA React + TypeScript
-apps/api/                 proxy TMDB (Hono) — cache la cle, normalise la reponse
-packages/contracts/       contrat partage entre les deux
   src/
     domain/               règles, commandes, réducteurs. Zéro infrastructure.
       commands/           construction d'événements
       reducers/           projections (statut, journal, bibliothèque…)
       rules/              rang des cycles, dérivation du statut
-    ports/                interfaces : EventStore, MediaCatalog, Clock, IdGenerator
-    adapters/             implémentations : dexie, tmdb-http, browser
+    ports/                interfaces : EventStore, Outbox, SyncGateway,
+                          AuthGateway, MediaCatalog, Clock, IdGenerator…
+    adapters/             implémentations : dexie, sync, sync-http,
+                          auth-http, tmdb-http, browser
     ui/                   écrans React + Tailwind
-design_handoff_owlog/     design system verrouillé et prototypes hifi
+apps/api/                 service Hono — proxy TMDB, auth par lien magique
+                          + code court, réplication /sync sur Postgres
+packages/contracts/       contrat partagé entre les deux (formes + Zod)
+docs/                     documentation : déploiement, checklist, design system
 ```
 
 L'architecture est hexagonale : le domaine ne connaît ni Dexie ni le réseau. C'est ce qui rendra le passage à Postgres un remplacement d'adaptateur plutôt qu'une réécriture.
@@ -55,17 +58,21 @@ L'architecture est hexagonale : le domaine ne connaît ni Dexie ni le réseau. C
 
 | Fichier | Contenu |
 |---|---|
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Convention de branches et de commits. **À lire d'abord pour comprendre l'historique.** |
+| [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Convention de branches et de commits. **À lire d'abord pour comprendre l'historique.** |
 | [CLAUDE.md](CLAUDE.md) | Règles projet et stack, formulées pour un assistant de code |
-| [CHECKLIST.md](CHECKLIST.md) | Six vérifications sur téléphone réel avant chaque mise en ligne |
-| `design_handoff_owlog/README.md` | Spécification des écrans, tokens, composants |
+| [docs/CHECKLIST.md](docs/CHECKLIST.md) | Six vérifications sur téléphone réel avant chaque mise en ligne |
+| `docs/design_handoff_owlog/README.md` | Spécification des écrans, tokens, composants |
 
-Le document de design complet — modèle de données, règles de dérivation, onze étapes de construction, critères de réussite — vit hors du dépôt, dans `~/.gstack/projects/owlog-app/`.
+Le document de design complet — modèle de données, règles de dérivation, onze étapes de construction, critères de réussite — vit hors du dépôt. L'original a été perdu ; la **reconstitution du 2026-07-30 fait foi** : `~/.gstack/projects/owlog-app/tx-dev-design-20260730-reconstitue.md`. Le plan du sprint temps 2 (audit trail de 38 décisions) : `~/.gstack/projects/t3hx-owlog-app/tehx-dev-sprint-temps2-plan-20260730.md`.
 
 ## État
 
-Étapes 1 à 4 sur 11 livrées : socle et état vide, domaine complet, proxy TMDB et PWA installable, recherche omniprésente et ajout en un tap. 153 tests. Reste à déployer — voir [DEPLOY.md](DEPLOY.md). En cours : étape 5, export et import `.log`.
+**Temps 1 : les onze étapes sont livrées et en ligne** — socle, domaine, proxy TMDB, PWA installable, recherche et ajout en un tap, export/import `.log`, rétro-datage, revisionnages, bibliothèque, stats, LOG global.
+
+**Temps 2 en cours** : comptes optionnels et synchronisation multi-appareils. Livré sur `dev` : Postgres + migrations sous advisory lock + sauvegarde chiffrée (F2), auth par lien magique + code court (F3), réplication `/sync` à curseurs sérialisés (F4), SyncEngine client à outbox transactionnelle (F5), écrans Landing / Connexion / Réglages (F6). En cours : consolidation et mise en ligne (F7). Le compte reste optionnel : sans session, l'app est exactement le temps 1.
+
+Plus de 450 tests (Vitest), CI GitHub Actions sur chaque poussée — lint, build, et tests d'intégration contre un Postgres jetable dont chaque base est vierge : les migrations sont rejouées à chaque exécution.
 
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
 
-`main` n'est pas la branche de travail : elle porte l'état exact de ce qui est déployé, et ne reçoit `dev` qu'au moment d'une mise en ligne. Le premier passage est prévu au déploiement de test de l'étape 3. Voir [CONTRIBUTING.md](CONTRIBUTING.md).
+`main` n'est pas la branche de travail : elle porte l'état exact de ce qui est déployé, et ne reçoit `dev` qu'au moment d'une mise en ligne. Voir [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).

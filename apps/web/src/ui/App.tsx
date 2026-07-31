@@ -1,59 +1,75 @@
 import { useTranslation } from 'react-i18next'
-import { Route, Switch, useRoute } from 'wouter'
+import { Redirect, Route, Switch, useRoute } from 'wouter'
 
 import { UnderConstruction } from '@/ui/components/UnderConstruction'
+import { Banners } from '@/ui/components/Banners'
 import { Header } from '@/ui/components/Header'
 import { TabBar } from '@/ui/components/TabBar'
-import { UpdateBanner } from '@/ui/components/UpdateBanner'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
+import { Landing } from '@/ui/screens/Landing'
 import { Library } from '@/ui/screens/Library'
 import { Log } from '@/ui/screens/Log'
+import { Login } from '@/ui/screens/Login'
+import { LoginLink } from '@/ui/screens/LoginLink'
+import { FirstPull } from '@/ui/screens/FirstPull'
+import { Settings } from '@/ui/screens/Settings'
 import { Stats } from '@/ui/screens/Stats'
 import { Media } from '@/ui/screens/Media'
 import { Welcome } from '@/ui/screens/Welcome'
 import { Debug } from '@/ui/screens/Debug'
 
 /**
- * Racine de l'application.
+ * Racine de l'application — le routage à trois états.
  *
- * Routing en mode history, pas en hash. Ce choix impose deux choses en aval,
- * toutes deux traitées à l'étape 3 : un rewrite SPA dans le Caddyfile pour
- * que `/library` serve `index.html`, et `navigateFallback` dans la
- * configuration Workbox pour que la même règle vaille hors-ligne.
+ * ```
+ * visiteur sans rien   → Landing (et « COMMENCER » → onboarding LOCAL)
+ * données locales      → l'app, directement — la Landing ne s'interpose
+ *                        JAMAIS devant un utilisateur existant
+ * parcours de compte   → /login, /login/link, /login/sync : plein écran,
+ *                        accessibles dans tous les états
+ * ```
  *
- * Tant que le prénom n'est pas renseigné, l'écran de bienvenue occupe toute
- * la vue, sans tab bar : à la première ouverture il n'y a rien à naviguer,
- * et quatre onglets vides donneraient l'impression d'une app cassée plutôt
- * que d'une app neuve.
+ * Le gate de boot : la présence de données se lit dans IndexedDB, qui est
+ * asynchrone. Tant qu'on ne sait pas, on rend un écran neutre — jamais un
+ * flash de Landing pour l'utilisateur existant, jamais un clignotement de
+ * Welcome pour celui qui a déjà un prénom.
+ *
+ * Routing en mode history, pas en hash. Ce choix impose deux choses en
+ * aval, toutes deux en place : un rewrite SPA dans le Caddyfile pour que
+ * `/library` serve `index.html`, et `navigateFallback` côté Workbox pour
+ * que la même règle vaille hors-ligne.
  */
 export function App() {
   const { t } = useTranslation()
   const { value: firstName, loading } = useSetting('firstName')
   const [onDebug] = useRoute('/debug')
+  const [onLogin] = useRoute('/login')
+  const [onLoginLink] = useRoute('/login/link')
+  const [onLoginSync] = useRoute('/login/sync')
+  const [onWelcome] = useRoute('/welcome')
 
-  // `/debug` passe avant la question du prénom. Un écran de diagnostic
-  // qu'on ne peut ouvrir qu'après l'onboarding est inutile précisément
-  // quand l'onboarding est ce qui ne marche pas.
-  if (onDebug) {
-    return <Debug />
+  // `/debug` passe avant toute question : un écran de diagnostic qu'on ne
+  // peut ouvrir qu'après l'onboarding est inutile précisément quand
+  // l'onboarding est ce qui ne marche pas.
+  if (onDebug) return <Debug />
+
+  // Le parcours de compte est plein écran et vaut dans tous les états —
+  // l'utilisateur local qui active la sync comme l'appareil vierge.
+  if (onLoginLink) return <LoginLink />
+  if (onLoginSync) return <FirstPull />
+  if (onLogin) return <Login />
+
+  // Le gate de boot : on ne sait pas encore. Écran neutre, pas de flash.
+  if (loading) return <div className="min-h-dvh" />
+
+  if (onWelcome) {
+    return firstName === undefined ? <Welcome /> : <Redirect to="/" replace />
   }
 
-  // Premier rendu : on ne sait pas encore si le prénom existe. Afficher
-  // l'écran de bienvenue tout de suite le ferait clignoter à chaque
-  // ouverture, y compris pour quelqu'un qui l'a déjà renseigné.
-  if (loading) {
-    return <div className="min-h-dvh" />
-  }
-
-  if (firstName === undefined) {
-    return (
-      <>
-        <Header />
-        <Welcome />
-      </>
-    )
-  }
+  // Aucune donnée locale : quel que soit le chemin demandé, la Landing est
+  // le seul écran qui ait un sens.
+  if (firstName === undefined) return <Landing />
 
   return (
     <div className="min-h-dvh pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
@@ -75,6 +91,9 @@ export function App() {
         <Route path="/stats">
           <Stats />
         </Route>
+        <Route path="/settings">
+          <Settings />
+        </Route>
         <Route>
           <UnderConstruction
             title={t('notFound.title')}
@@ -84,7 +103,7 @@ export function App() {
         </Route>
       </Switch>
 
-      <UpdateBanner />
+      <Banners />
       <TabBar />
     </div>
   )

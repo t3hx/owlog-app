@@ -31,8 +31,14 @@ const PAGE = 500
  * tout, et une clé ajoutée sans passer ici sortirait silencieusement du
  * filet. Le type ferme l'union, donc l'oubli se voit à la compilation le jour
  * où on renomme une clé — pas le jour d'une restauration.
+ *
+ * **Ni `deviceId`, ni les curseurs de sync — jamais.** Le `.log` se
+ * réimporte sur un autre appareil : une identité importée ferait passer
+ * deux installations pour une seule, et un curseur importé ferait sauter
+ * des pulls — des événements distants invisibles pour toujours, sans un
+ * bruit. La liste est verrouillée par un test.
  */
-const BACKED_UP: readonly SettingKey[] = ['firstName']
+export const BACKED_UP: readonly SettingKey[] = ['firstName']
 
 export type BackupState =
   | { readonly status: 'idle' }
@@ -110,7 +116,8 @@ async function readAll(store: EventStore): Promise<readonly StoredEvent[]> {
   return all
 }
 
-async function readSettings(
+/** Les seuls réglages qui entrent dans le fichier : la liste, rien qu'elle. */
+export async function readSettings(
   store: SettingsStore,
 ): Promise<ReadonlyMap<string, string>> {
   const saved = new Map<string, string>()

@@ -25,12 +25,21 @@ export interface SettingRow {
   value: string
 }
 
+/**
+ * Une entrée de la file de synchronisation : un identifiant d'événement à
+ * pousser. Rien d'autre — l'événement vit au journal, unique source.
+ */
+export interface PendingPushRow {
+  id: string
+}
+
 export const db = new Dexie('owlog') as Dexie & {
   settings: EntityTable<SettingRow, 'key'>
   events: EntityTable<StoredEvent, 'id'>
   media_state: EntityTable<MediaStateRow, 'ref'>
   media_cache: EntityTable<MediaCacheRow, 'ref'>
   pending_adds: EntityTable<PendingAdd, 'id'>
+  pending_push: EntityTable<PendingPushRow, 'id'>
 }
 
 db.version(1).stores({
@@ -57,4 +66,15 @@ db.version(3).stores({
   media_state: '&ref, status',
   media_cache: '&ref, complete',
   pending_adds: '&id, createdAt',
+})
+
+// Version 4 : l'outbox de synchronisation. Des ids d'événements à pousser,
+// écrits dans la même transaction que l'append — voir `ports/Outbox.ts`.
+db.version(4).stores({
+  settings: '&key',
+  events: '&id, media_ref, created_at',
+  media_state: '&ref, status',
+  media_cache: '&ref, complete',
+  pending_adds: '&id, createdAt',
+  pending_push: '&id',
 })

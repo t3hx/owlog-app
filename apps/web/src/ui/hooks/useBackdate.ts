@@ -31,7 +31,7 @@ export type BackdateOutcome = {
 }
 
 export function useBackdate() {
-  const { events } = usePorts()
+  const { events, deviceId } = usePorts()
 
   const [target, setTarget] = useState<SearchHit | null>(null)
   const [outcome, setOutcome] = useState<BackdateOutcome | null>(null)
@@ -68,6 +68,7 @@ export function useBackdate() {
             mediaRef: target.ref,
             clock: systemClock,
             ids: uuidv7Generator,
+            deviceId,
           },
           entry,
         )

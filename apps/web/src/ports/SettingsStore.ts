@@ -19,6 +19,15 @@ export interface SettingsStore {
   write(key: SettingKey, value: string): Promise<void>
 
   /**
+   * Efface un réglage — la clé redevient « jamais écrite ».
+   *
+   * Distinct d'une valeur vide : l'existence de `syncCursor` est le bit
+   * qui sépare « session expirée » (une invite) d'« aucun compte »
+   * (silence). La déconnexion doit rendre ce bit à l'état vierge.
+   */
+  remove(key: SettingKey): Promise<void>
+
+  /**
    * S'abonne aux changements d'une clé. Le rappel est invoqué à chaque
    * écriture de cette clé. Retourne la fonction de désabonnement.
    */
@@ -32,4 +41,17 @@ export interface SettingsStore {
  * produirait un réglage fantôme que rien ne signalerait, et l'utilisateur
  * verrait sa préférence disparaître sans explication.
  */
-export type SettingKey = 'firstName'
+export type SettingKey =
+  | 'firstName'
+  /**
+   * Identité de l'installation, UUIDv7 minté au premier démarrage.
+   * Jamais exporté dans le `.log` : voir `adapters/browser/deviceId.ts`.
+   */
+  | 'deviceId'
+  /**
+   * Curseurs de réplication (`server_seq` du journal, `updated_seq` du
+   * cache), entiers sérialisés en texte. Jamais exportés dans le `.log` :
+   * un curseur importé d'un autre appareil ferait sauter des pulls.
+   */
+  | 'syncCursor'
+  | 'syncCacheCursor'

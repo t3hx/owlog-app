@@ -703,7 +703,15 @@ docker logs <cloudflared>  # 4 connexions edge
 
 ## Phase 8 — Ce qui reste à décider / faire ensuite
 
-- **Sauvegardes.** Le verrouillage réseau ne protège de rien contre un disque corrompu. Minimum : snapshots netcup + Dokploy Backups vers un S3 **externe** (pas ton Garage sur la même machine).
+- **Exploitation Owlog (temps 2).** Les procédures applicatives vivent dans
+  [DEPLOY.md](DEPLOY.md), qui fait autorité : sauvegarde quotidienne chiffrée
+  et **restauration depuis dump** (§8, exécutée de bout en bout le
+  2026-07-30), **rotation des secrets e-mail** (§9), et l'hypothèse
+  `CF-Connecting-IP` (§1) — l'en-tête n'est cru que parce que l'origine
+  n'est joignable QUE par le tunnel ; si ce verrouillage réseau change un
+  jour, cette hypothèse tombe avec lui et `OWLOG_TRUSTED_PROXIES` doit être
+  repensée dans le même geste.
+- **Sauvegardes système.** Le verrouillage réseau ne protège de rien contre un disque corrompu. Minimum : snapshots netcup + Dokploy Backups vers un S3 **externe** (pas ton Garage sur la même machine). Les dumps Postgres d'Owlog sont couverts par DEPLOY.md §8.
 - **Webhooks n8n.** Seul cas qui demande une published route ciblée : expose `n8n.nspace.link` dans le tunnel mais protège `/` par une policy Cloudflare Access, en laissant `/webhook/` et `/webhook-test/` ouverts. L'éditeur reste accessible par Tailscale.
 - **CI/CD.** Runner GitHub Actions qui rejoint le tailnet (`tailscale/github-action`), build + push vers GHCR, puis appel de l'API Dokploy sur son IP tailnet. Aucun webhook public.
 - **Surveillance de l'expiration des clés Tailscale** — à revérifier si tu ajoutes des nœuds plus tard.

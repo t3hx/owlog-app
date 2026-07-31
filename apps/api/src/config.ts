@@ -33,6 +33,26 @@ export interface Config {
    * lui-même, le service répond juste que le préfixe soit retiré ou non.
    */
   readonly basePath: string
+  /**
+   * URL de connexion Postgres, absente tant que le déploiement n'a pas de
+   * base. Optionnelle à dessein — contrairement aux secrets TMDB : le
+   * compte est optionnel côté produit, et le proxy TMDB du temps 1 doit
+   * démarrer et vivre sans base. Sans elle, `/sync` répond 503 et tout le
+   * reste fonctionne.
+   */
+  readonly databaseUrl: string | undefined
+  /**
+   * Origine publique de l'app web, pour construire le lien magique des
+   * e-mails (`https://owlog.nspace.link`). Jamais déduite de la requête :
+   * derrière le tunnel, l'origine parle HTTP en clair et un lien `http://`
+   * en production serait faux. Absente en développement — le lien tombe
+   * sur l'origine du serveur Vite.
+   */
+  readonly publicOrigin: string | undefined
+  /** Fournisseur d'e-mail (format Resend). Absent : mailer console. */
+  readonly email:
+    | { readonly apiUrl: string; readonly apiToken: string; readonly from: string }
+    | undefined
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -55,6 +75,35 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     allowedOrigins: splitList(env.OWLOG_ALLOWED_ORIGINS),
     trustedProxies: splitList(env.OWLOG_TRUSTED_PROXIES),
     basePath: normalizeBasePath(env.OWLOG_BASE_PATH),
+    databaseUrl: env.DATABASE_URL?.trim() || undefined,
+    publicOrigin: env.OWLOG_PUBLIC_ORIGIN?.trim().replace(/\/+$/, '') || undefined,
+    email: loadEmail(env),
+  }
+}
+
+/**
+ * Le fournisseur d'e-mail se configure en tout ou rien : un jeton sans
+ * expéditeur enverrait des messages refusés par le fournisseur, et un
+ * fournisseur sans origine publique fabriquerait des liens localhost dans
+ * de vrais e-mails. Refuser de démarrer coûte moins cher que diagnostiquer
+ * l'un ou l'autre en production.
+ */
+function loadEmail(env: NodeJS.ProcessEnv): Config['email'] {
+  const apiToken = env.OWLOG_EMAIL_API_TOKEN?.trim()
+  if (!apiToken) return undefined
+
+  const from = env.OWLOG_EMAIL_FROM?.trim()
+  if (!from) {
+    throw new Error('OWLOG_EMAIL_FROM is missing while OWLOG_EMAIL_API_TOKEN is set.')
+  }
+  if (!env.OWLOG_PUBLIC_ORIGIN?.trim()) {
+    throw new Error('OWLOG_PUBLIC_ORIGIN is missing while OWLOG_EMAIL_API_TOKEN is set.')
+  }
+
+  return {
+    apiUrl: env.OWLOG_EMAIL_API_URL?.trim() || 'https://api.resend.com/emails',
+    apiToken,
+    from,
   }
 }
 

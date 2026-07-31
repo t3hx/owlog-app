@@ -32,6 +32,13 @@ readonly API_NAME=owlog-api
 readonly WEB_NAME=owlog-web
 readonly EDGE_NAME=owlog-edge
 
+# Postgres local, comme en production : sans lui, /auth et /sync répondent
+# 503 et le check ne peut pas rejouer leurs pièges. Le mot de passe est
+# local et jetable — la base meurt avec la pile.
+readonly PG_IMAGE=postgres:17-alpine
+readonly PG_NAME=owlog-pg-local
+readonly PG_PASSWORD=owlog-local
+
 # --- Garde-fous -------------------------------------------------------------
 
 require() {
@@ -89,15 +96,29 @@ up() {
   local subnet
   subnet="$(docker network inspect "$NETWORK" --format '{{(index .IPAM.Config 0).Subnet}}')"
 
+  # Postgres démarre en premier : l'API migre au boot sous advisory lock,
+  # exactement le chemin de la production. Si la base traîne, l'API
+  # réessaie — c'est un cas nominal de déploiement, testé tel quel.
+  docker run -d --name "$PG_NAME" --network "$NETWORK" \
+    -e POSTGRES_PASSWORD="$PG_PASSWORD" \
+    -e POSTGRES_DB=owlog \
+    "$PG_IMAGE" >/dev/null
+
   # `OWLOG_TRUSTED_PROXIES` porte le sous-réseau et non `0.0.0.0/0` : la
   # limitation de débit doit compter par IP réelle, comme en production. Tout
   # faire confiance masquerait un défaut de configuration au lieu de le
   # révéler ici, là où il est réparable.
+  #
+  # Pas de secrets e-mail : le mailer console prend le relais, et les
+  # e-mails de connexion se lisent dans `logs` — suffisant pour rejouer le
+  # parcours complet en local.
   docker run -d --name "$API_NAME" --network "$NETWORK" \
     -e TMDB_API_TOKEN="$tmdb_token" \
     -e OWLOG_SHARED_TOKEN="$SHARED_TOKEN" \
     -e OWLOG_BASE_PATH=/api \
     -e OWLOG_TRUSTED_PROXIES="$subnet" \
+    -e DATABASE_URL="postgresql://postgres:$PG_PASSWORD@$PG_NAME:5432/owlog" \
+    -e OWLOG_PUBLIC_ORIGIN="http://localhost:$PORT" \
     "$API_IMAGE" >/dev/null
 
   docker run -d --name "$WEB_NAME" --network "$NETWORK" "$WEB_IMAGE" >/dev/null
@@ -114,8 +135,10 @@ up() {
 
 wait_healthy() {
   printf '▸ attente des sondes de vie'
-  for _ in $(seq 1 30); do
-    if curl -sf "http://localhost:$PORT/api/health" >/dev/null 2>&1 &&
+  # La base compte aussi : tant que les migrations n'ont pas réussi, /auth
+  # et /sync répondent 503 et le check échouerait pour de mauvaises raisons.
+  for _ in $(seq 1 45); do
+    if curl -sf "http://localhost:$PORT/api/health" 2>/dev/null | grep -q '"db":"ok"' &&
       curl -sf "http://localhost:$PORT/" >/dev/null 2>&1; then
       printf ' ok\n'
       return
@@ -129,7 +152,7 @@ wait_healthy() {
 }
 
 down_quietly() {
-  docker rm -f "$EDGE_NAME" "$WEB_NAME" "$API_NAME" >/dev/null 2>&1 || true
+  docker rm -f "$EDGE_NAME" "$WEB_NAME" "$API_NAME" "$PG_NAME" >/dev/null 2>&1 || true
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
 }
 
@@ -193,19 +216,43 @@ check() {
     "$(curl -sI "$base$asset" | grep -i '^cache-control' | tr -d '\r' | sed 's/.*: //')"
 
   # Le service se monte lui-même sous `/api` : la sonde suit le préfixe.
-  expect "la sonde de l'api suit son préfixe" '{"status":"ok"}' \
-    "$(curl -s "$base/api/health")"
+  # Le corps porte aussi l'état de la base (`db`), qui dépend de la
+  # configuration de la pile — on ne fige que le statut du service.
+  expect "la sonde de l'api suit son préfixe" '"status":"ok"' \
+    "$(curl -s "$base/api/health" | grep -o '"status":"ok"')"
 
   # Sans la liste d'exclusion, une navigation vers /api affiche
   # l'application : curl répond juste, le navigateur ment, et on cherche la
   # panne du mauvais côté.
-  expect "une navigation vers /api rend du JSON" '{"status":"ok"}' \
-    "$(curl -s -H 'Accept: text/html' "$base/api/health")"
+  expect "une navigation vers /api rend du JSON" '"status":"ok"' \
+    "$(curl -s -H 'Accept: text/html' "$base/api/health" | grep -o '"status":"ok"')"
 
   # Le jeton TMDB ne doit jamais quitter owlog-api.
   local leaked
   leaked="$(curl -s "$base$asset" | grep -c 'eyJhbGciOi' || true)"
   expect "aucun jeton TMDB dans le bundle" 0 "$leaked"
+
+  # Les secrets e-mail non plus : ils n'existent que côté API. Une variable
+  # `OWLOG_EMAIL_*` qui fuirait dans le bundle serait un jeton Resend public.
+  local mail_leak
+  mail_leak="$(curl -s "$base$asset" | grep -c 'OWLOG_EMAIL' || true)"
+  expect "aucun secret e-mail dans le bundle" 0 "$mail_leak"
+
+  # La base est migrée et vivante : sans elle, /auth et /sync mentiraient
+  # en 503 et les deux vérifications suivantes n'exerceraient rien.
+  expect "la base est migrée au boot" '"db":"ok"' \
+    "$(curl -s "$base/api/health" | grep -o '"db":"ok"')"
+
+  # /auth valide ses entrées : un corps absent rend 400, pas un 500 ni un
+  # e-mail fantôme.
+  expect "auth refuse un corps absent" 400 \
+    "$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+      -H "x-owlog-token: $SHARED_TOKEN" "$base/api/auth/request-link")"
+
+  # /sync exige une session : le jeton partagé (public) ne suffit jamais.
+  expect "sync refuse sans session" 401 \
+    "$(curl -s -o /dev/null -w '%{http_code}' \
+      -H "x-owlog-token: $SHARED_TOKEN" "$base/api/sync/events")"
 
   echo
   if [ "$failures" -eq 0 ]; then

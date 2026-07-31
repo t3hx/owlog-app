@@ -37,8 +37,15 @@ export function createEventStore(): EventStore {
         db.events,
         db.media_state,
         db.media_cache,
+        db.pending_push,
         async () => {
           await db.events.bulkAdd([...events])
+
+          // L'outbox s'écrit ICI, dans la transaction de l'append — pas
+          // après. L'app peut être tuée entre l'écriture et le flush de
+          // sync : soit l'événement et son id en attente existent tous
+          // les deux, soit aucun. Rien d'autre ne tient cette promesse.
+          await db.pending_push.bulkAdd(events.map((event) => ({ id: event.id })))
 
           // Les lignes de cache entrent dans LA MEME transaction. Sans ca,
           // couper le reseau juste apres un ajout laisserait une
@@ -115,12 +122,17 @@ export function createEventStore(): EventStore {
     async restore(
       events: readonly StoredEvent[],
       cacheRows: readonly MediaCacheRow[],
+      options?: { readonly enqueuePush?: boolean; readonly refreshState?: boolean },
     ): Promise<RestoreReport> {
+      const enqueuePush = options?.enqueuePush ?? true
+      const refreshState = options?.refreshState ?? true
+
       return db.transaction(
         'rw',
         db.events,
         db.media_state,
         db.media_cache,
+        db.pending_push,
         async () => {
           const existing = new Set(
             await db.events
@@ -132,14 +144,24 @@ export function createEventStore(): EventStore {
           const fresh = events.filter((event) => !existing.has(event.id))
           if (fresh.length > 0) await db.events.bulkAdd(fresh)
 
+          // Les nouveaux seulement : un événement déjà connu a déjà eu sa
+          // chance de partir — le réimport d'un fichier entier ne doit pas
+          // remettre tout le journal en file. « Re-pousser tout » existe
+          // pour ça, et il le dit.
+          if (enqueuePush && fresh.length > 0) {
+            await db.pending_push.bulkPut(fresh.map((event) => ({ id: event.id })))
+          }
+
           for (const row of cacheRows) {
             // Une ligne complete vaut mieux que le titre nu du fichier.
             const known = await db.media_cache.get(row.ref)
             if (!known?.complete) await db.media_cache.put(row)
           }
 
-          for (const ref of new Set(fresh.map((event) => event.media_ref))) {
-            await refreshMediaState(ref)
+          if (refreshState) {
+            for (const ref of new Set(fresh.map((event) => event.media_ref))) {
+              await refreshMediaState(ref)
+            }
           }
 
           return { added: fresh.length, skipped: events.length - fresh.length }

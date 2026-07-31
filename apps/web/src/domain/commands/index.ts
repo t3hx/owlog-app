@@ -27,6 +27,15 @@ export interface CommandContext {
   readonly mediaRef: MediaRef
   readonly clock: Clock
   readonly ids: IdGenerator
+  /**
+   * Identité de l'installation, UUIDv7 minté une fois et persisté.
+   *
+   * Injectée comme les ports du temps : le domaine écrit ce qu'on lui
+   * donne. L'historique du temps 1 porte `local` et le garde — le store
+   * est append-only — mais tout événement neuf porte l'identité réelle,
+   * sans quoi la synchronisation ne saurait pas dire d'où vient un fait.
+   */
+  readonly deviceId: string
 }
 
 /** Saisie d'un visionnage passé. */
@@ -357,7 +366,7 @@ function build(
 ): DomainEvent {
   return {
     id: context.ids.next(),
-    device_id: 'local',
+    device_id: context.deviceId,
     created_at: writtenAt,
     media_ref: context.mediaRef,
     ...date,

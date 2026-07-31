@@ -8,9 +8,9 @@ Thèse produit : **le visionnage est l'unité d'enregistrement, pas le film.** U
 
 ## Documents de référence
 
-- `design_handoff_owlog/README.md` — spécification des 9 écrans, tokens, composants, règles ♥ et revisionnage. **Le design est verrouillé, il ne se rediscute pas.**
-- `design_handoff_owlog/design-system.md` — résumé des tokens et règles.
-- `design_handoff_owlog/*.dc.html` — prototypes haute fidélité, référence pixel.
+- `docs/design_handoff_owlog/README.md` — spécification des 9 écrans, tokens, composants, règles ♥ et revisionnage. **Le design est verrouillé, il ne se rediscute pas.**
+- `docs/design_handoff_owlog/design-system.md` — résumé des tokens et règles.
+- `docs/design_handoff_owlog/*.dc.html` — prototypes haute fidélité, référence pixel.
 - `~/.gstack/projects/owlog-app/tx-dev-design-*.md` — document de design : modèle d'événements, règles de dérivation, ordre de construction, critères de réussite. **Le lire avant toute décision d'architecture.**
 
 ## Règles projet — non négociables
@@ -19,7 +19,7 @@ Thèse produit : **le visionnage est l'unité d'enregistrement, pas le film.** U
 
 **Le code s'écrit en anglais. Toujours, sans exception.** Noms de fonctions, de variables, de types, de fichiers, de champs, de clés, de valeurs stockées, de tables et de colonnes.
 
-Le français est réservé aux **commentaires**, à la **documentation**, aux **messages de commit** et aux **noms de tests** — qui sont de la prose descriptive, pas du code.
+Le français est réservé aux **commentaires**, à la **documentation** — qui sont de la prose descriptive, pas du code.
 
 Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune langue : elles passent par l'i18n.
 
@@ -34,13 +34,15 @@ Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune lan
 
 Le test précède le code. La discipline s'applique là où elle a du sens :
 
-| Couche | Règle |
-|---|---|
+
+| Couche                                         | Règle                                                                                                                           |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `domain/commands/` — construction d'événements | **TDD strict.** C'est là que vivent les règles délicates : rattachement du rétro-datage, attribution de `cycle_key`, horodatage |
-| `domain/reducers/` — projections | **TDD strict.** Fonctions pures sur une liste d'événements, aucun DOM |
-| `adapters/` | Tests d'intégration contre le port, écrits avant l'adaptateur |
-| `owlog-api` | Tests de route avant implémentation |
-| `ui/` — recréation au pixel | Pas de TDD. Le contrôle est la comparaison visuelle des captures à 375px avec les prototypes |
+| `domain/reducers/` — projections               | **TDD strict.** Fonctions pures sur une liste d'événements, aucun DOM                                                           |
+| `adapters/`                                    | Tests d'intégration contre le port, écrits avant l'adaptateur                                                                   |
+| `owlog-api`                                    | Tests de route avant implémentation                                                                                             |
+| `ui/` — recréation au pixel                    | Pas de TDD. Le contrôle est la comparaison visuelle des captures à 375px avec les prototypes                                    |
+
 
 Runner : Vitest.
 
@@ -65,7 +67,7 @@ ui/              React + Tailwind. N'appelle que commands/ et reducers/.
 
 `Clock` et `IdGenerator` sont des ports : le domaine génère des UUIDv7 et des horodatages, et sans injection les règles de rang ne sont pas testables de façon déterministe.
 
-**`commands/` est aussi important que `reducers/`.** Toute la subtilité du modèle est en écriture. Sans cette couche, les règles atterrissent dans les composants React, la seule couche exemptée de TDD.
+`**commands/` est aussi important que `reducers/`.** Toute la subtilité du modèle est en écriture. Sans cette couche, les règles atterrissent dans les composants React, la seule couche exemptée de TDD.
 
 **Interdit :** un import de `dexie`, de `fetch` ou de `Date` dans `domain/`.
 
@@ -110,12 +112,12 @@ Pas de dépouillement automatique des commentaires au merge : `main` doit rester
 - **Dexie.js** (IndexedDB) : `events` est la source de vérité ; `media_state` est **dérivée**, reconstructible, jamais autoritaire ; `pending_adds` est la file d'ajouts hors-ligne, ce ne sont pas des événements.
 - **Append-only strict.** Rien n'est jamais muté ni supprimé. Une correction est un événement `VOID {target}`, filtré en tête de chaîne par `applyVoids`.
 - **TanStack Query**, cache mémoire seul. Pas de `persistQueryClient` : `media_cache` est la seule source hors-ligne.
-- **`uuidv7`** — `crypto.randomUUID()` ne produit que de l'UUIDv4, non ordonnable.
-- **`vite-plugin-pwa`** (Workbox), stratégie `prompt` + `registration.update()` horaire.
-- **`wouter`** en mode history. Impose un rewrite SPA côté Caddy et `navigateFallback`.
-- **`dexie-react-hooks`** (`useLiveQuery`) pour la réactivité locale.
-- **`lucide-react`** pour les icônes.
-- **Hono** pour `owlog-api`. **`tmdb-ts` côté serveur uniquement** — la clé TMDB n'entre jamais dans le bundle client.
+- `**uuidv7**` — `crypto.randomUUID()` ne produit que de l'UUIDv4, non ordonnable.
+- `**vite-plugin-pwa**` (Workbox), stratégie `prompt` + `registration.update()` horaire.
+- `**wouter**` en mode history. Impose un rewrite SPA côté Caddy et `navigateFallback`.
+- `**dexie-react-hooks**` (`useLiveQuery`) pour la réactivité locale.
+- `**lucide-react**` pour les icônes.
+- **Hono** pour `owlog-api`. `**tmdb-ts` côté serveur uniquement** — la clé TMDB n'entre jamais dans le bundle client.
 - **Vitest** pour les tests.
 
 ### Tailwind et le design verrouillé
@@ -147,18 +149,30 @@ doppler secrets download --no-file --format env   # inspection
 
 Secrets attendus à l'étape 3, côté `owlog-api` uniquement :
 
+
+| Nom                     | Où          | Rôle                                                      |
+| ----------------------- | ----------- | --------------------------------------------------------- |
+| `TMDB_API_TOKEN`        | `owlog-api` | Jeton de lecture v4. Ne quitte jamais le serveur          |
+| `TMDB_API_KEY`          | `owlog-api` | Clé v3, non utilisée par le code actuel                   |
+| `OWLOG_SHARED_TOKEN`    | les deux    | Jeton partagé, public par nature                          |
+| `OWLOG_ALLOWED_ORIGINS` | `owlog-api` | Origines CORS autorisées                                  |
+| `OWLOG_TRUSTED_PROXIES` | `owlog-api` | Adresses ou **plages CIDR** des proxies devant le service |
+| `OWLOG_BASE_PATH`       | `owlog-api` | Préfixe de montage, `/api` en production                  |
+
+Ajoutés au temps 2 (tous optionnels : sans eux, l'API reste le proxy TMDB du temps 1) :
+
 | Nom | Où | Rôle |
 |---|---|---|
-| `TMDB_API_TOKEN` | `owlog-api` | Jeton de lecture v4. Ne quitte jamais le serveur |
-| `TMDB_API_KEY` | `owlog-api` | Clé v3, non utilisée par le code actuel |
-| `OWLOG_SHARED_TOKEN` | les deux | Jeton partagé, public par nature |
-| `OWLOG_ALLOWED_ORIGINS` | `owlog-api` | Origines CORS autorisées |
-| `OWLOG_TRUSTED_PROXIES` | `owlog-api` | Adresses ou **plages CIDR** des proxies devant le service |
-| `OWLOG_BASE_PATH` | `owlog-api` | Préfixe de montage, `/api` en production |
+| `DATABASE_URL` | `owlog-api` | Postgres. Absente : `/auth` et `/sync` répondent 503, le reste vit |
+| `OWLOG_PUBLIC_ORIGIN` | `owlog-api` | Origine publique du web, pour les liens magiques des e-mails |
+| `OWLOG_EMAIL_API_TOKEN` | `owlog-api` | Jeton du fournisseur d'e-mail. Absent : mailer console (dev) |
+| `OWLOG_EMAIL_API_URL` | `owlog-api` | Endpoint du fournisseur (défaut : Resend) |
+| `OWLOG_EMAIL_FROM` | `owlog-api` | Expéditeur, `Owlog <no-reply@…>` |
+
 
 `OWLOG_TRUSTED_PROXIES` n'est pas optionnel en production : sans cette liste, le service refuse de croire les en-têtes d'IP et limite tout le monde sur l'adresse du proxy. Le premier utilisateur qui dépasse coupe alors le service pour tous.
 
-Procédure complète de mise en ligne : [DEPLOY.md](DEPLOY.md).
+Procédure complète de mise en ligne : [docs/DEPLOY.md](docs/DEPLOY.md).
 
 La clé ne quitte jamais `owlog-api`. Elle n'entre à aucun moment dans le bundle client, qui ne connaît que `/search` et `/media/:ref`.
 
@@ -166,7 +180,7 @@ La clé ne quitte jamais `owlog-api`. Elle n'entre à aucun moment dans le bundl
 
 Dokploy sur VPS personnel. Deux services : `owlog-web` (statique, servi par Caddy) et `owlog-api` (Hono), **sur un seul domaine** — `owlog.nspace.link` pour le web, `/api` pour le service. Une seule origine, donc aucun CORS et aucune requête de contrôle préalable. Cible temps 2 : Postgres auto-hébergé sur le même Dokploy, avec une API maison — pas Supabase.
 
-L'infrastructure est décrite par [`runbook-vps-dokploy.md`](runbook-vps-dokploy.md), qui fait autorité. Deux traits en découlent : **aucun port web n'est ouvert en entrée** — le trafic arrive par un tunnel Cloudflare, donc pas d'enregistrement `A`, pas de Let's Encrypt — et l'origine parle HTTP en clair sur `dokploy-network`.
+L'infrastructure est décrite par [`docs/runbook-vps-dokploy.md`](docs/runbook-vps-dokploy.md), qui fait autorité. Deux traits en découlent : **aucun port web n'est ouvert en entrée** — le trafic arrive par un tunnel Cloudflare, donc pas d'enregistrement `A`, pas de Let's Encrypt — et l'origine parle HTTP en clair sur `dokploy-network`.
 
 `owlog-api` se monte **lui-même** sous `/api` plutôt que de compter sur un « Strip Path » du proxy : rien ne garantit qu'un tel réglage existe, et l'hypothèse ne se vérifie qu'après un cycle de déploiement complet. Conséquence à connaître : la sonde de vie est `/api/health`, la racine répond `404`.
 
@@ -180,7 +194,7 @@ Pièges connus : `Cache-Control: no-cache` sur `index.html` et `immutable` sur l
 ./scripts/local-prod.sh down
 ```
 
-**`pnpm dev` ne prouve rien de ce qui casse en production.** Il sert des modules non groupés, sans service worker, sans Caddy, sans préfixe de montage — c'est-à-dire sans aucune des pièces qui ont produit les pannes de déploiement de ce projet. Le script construit les vraies images depuis les vrais `Dockerfile` et les fait tourner dans la vraie topologie : une seule origine, `owlog-web` à la racine, `owlog-api` sous `/api`, derrière un Caddy frontal qui tient le rôle du tunnel.
+`**pnpm dev` ne prouve rien de ce qui casse en production.** Il sert des modules non groupés, sans service worker, sans Caddy, sans préfixe de montage — c'est-à-dire sans aucune des pièces qui ont produit les pannes de déploiement de ce projet. Le script construit les vraies images depuis les vrais `Dockerfile` et les fait tourner dans la vraie topologie : une seule origine, `owlog-web` à la racine, `owlog-api` sous `/api`, derrière un Caddy frontal qui tient le rôle du tunnel.
 
 `check` vérifie huit choses invisibles en développement, dont chacune a déjà coûté un cycle de déploiement : le rewrite SPA sur une route interne, `no-cache` sur `index.html` et sur le service worker, `immutable` sur les assets hachés, la sonde de l'API sous son préfixe, le fait qu'une navigation vers `/api` rende du JSON et non l'application, et l'absence de jeton TMDB dans le bundle.
 
@@ -193,6 +207,7 @@ Deux frictions d'environnement à connaître : l'appartenance au groupe `docker`
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
 
 Key routing rules:
+
 - Product ideas/brainstorming → invoke /office-hours
 - Strategy/scope → invoke /plan-ceo-review
 - Architecture → invoke /plan-eng-review
@@ -206,3 +221,4 @@ Key routing rules:
 - Save progress → invoke /context-save
 - Resume context → invoke /context-restore
 - Author a backlog-ready spec/issue → invoke /spec
+

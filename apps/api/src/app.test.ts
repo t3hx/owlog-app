@@ -19,6 +19,9 @@ const CONFIG: Config = {
   allowedOrigins: [],
   trustedProxies: ['10.0.0.1'],
   basePath: '',
+  databaseUrl: undefined,
+  publicOrigin: undefined,
+  email: undefined,
 }
 
 const HIT: SearchResponse = {
@@ -306,7 +309,7 @@ describe('préfixe de montage', () => {
     const response = await app.fetch(new Request('http://local/api/health'))
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ status: 'ok' })
+    await expect(response.json()).resolves.toEqual({ status: 'ok', db: 'off' })
   })
 
   it('sert la recherche sous le préfixe', async () => {
@@ -352,5 +355,72 @@ describe('préfixe de montage', () => {
     const response = await app.fetch(new Request('http://local/health'))
 
     expect(response.status).toBe(404)
+  })
+})
+
+describe('état de la base', () => {
+  function fakeDb(status: 'starting' | 'ok' | 'down', refresh = async () => {}) {
+    // Aucun test de ce fichier ne franchit la garde : le pool ne doit
+    // jamais être déréférencé.
+    return { status: () => status, refresh, pool: undefined as never }
+  }
+
+  it('la sonde de vie dit « off » quand aucune base n’est configurée', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(new Request('http://local/health'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ status: 'ok', db: 'off' })
+  })
+
+  it('la sonde reste verte quand la base est down — Postgres ne tue pas le proxy TMDB', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb(), db: fakeDb('down') })
+
+    const response = await app.fetch(new Request('http://local/health'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ status: 'ok', db: 'down' })
+  })
+
+  it('la sonde ne bloque jamais sur la base', async () => {
+    // Un refresh qui ne répond jamais : c'est exactement une base en train
+    // de tomber. La sonde répond quand même — elle lit l'état connu, elle
+    // ne ping pas.
+    const app = createApp({
+      config: CONFIG,
+      tmdb: fakeTmdb(),
+      db: fakeDb('ok', () => new Promise(() => {})),
+    })
+
+    const response = await app.fetch(new Request('http://local/health'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ status: 'ok', db: 'ok' })
+  })
+
+  it('/sync répond 503 quand la base est down', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb(), db: fakeDb('down') })
+
+    const response = await app.fetch(authenticated('/sync/events'))
+
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toEqual({ error: 'db-unavailable' })
+  })
+
+  it('/sync répond 503 quand aucune base n’est configurée', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/sync/events'))
+
+    expect(response.status).toBe(503)
+  })
+
+  it('la recherche vit quand la base est down', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb(), db: fakeDb('down') })
+
+    const response = await app.fetch(authenticated('/search?q=severance'))
+
+    expect(response.status).toBe(200)
   })
 })

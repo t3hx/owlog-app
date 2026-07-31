@@ -40,11 +40,13 @@ export function fakePorts(overrides: {
     useMediaState: (ref) => mediaStates.find((row) => row.ref === ref),
     useMediaCacheRow: (ref) => overrides.mediaCache?.find((row) => row.ref === ref),
     useMediaCacheRows: () => overrides.mediaCache ?? [],
+    usePendingPushCount: () => 0,
   }
 
   const settings: SettingsStore = {
     read: () => Promise.resolve(undefined),
     write: () => Promise.resolve(),
+    remove: () => Promise.resolve(),
     subscribe: () => () => undefined,
   }
 
@@ -76,5 +78,37 @@ export function fakePorts(overrides: {
     remove: () => Promise.resolve(),
   }
 
-  return { settings, events, catalog, pending, live }
+  const sync: Ports['sync'] = {
+    start: () => Promise.resolve(),
+    stop: () => undefined,
+    syncNow: () => Promise.resolve(),
+    repushAll: () => Promise.resolve(),
+    status: () => ({
+      syncing: false,
+      lastSyncAt: null,
+      lastError: null,
+      unauthorized: false,
+      enabled: true,
+      pulledEvents: 0,
+    }),
+    subscribe: () => () => undefined,
+  }
+
+  const auth: Ports['auth'] = {
+    requestLink: () => Promise.resolve({ ok: true, value: undefined }),
+    verifyCode: () =>
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null } }),
+    verifyLink: () =>
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null } }),
+    me: () => Promise.resolve({ ok: true, value: null }),
+    updateProfile: (firstName) =>
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName } }),
+    logout: () => Promise.resolve({ ok: true, value: undefined }),
+  }
+
+  const local: Ports['local'] = {
+    purgeAll: () => Promise.resolve(),
+  }
+
+  return { settings, events, catalog, pending, live, deviceId: 'device-test', sync, auth, local }
 }

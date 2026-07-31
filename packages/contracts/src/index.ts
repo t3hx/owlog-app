@@ -11,6 +11,8 @@
  * recherche et de détail chez TMDB.
  */
 
+export * from './sync.ts'
+
 /** Type de média. TMDB renvoie aussi `person`, que le proxy filtre. */
 export type MediaKind = 'movie' | 'tv'
 
@@ -73,6 +75,11 @@ export interface ApiError {
   readonly error: ApiErrorCode
   /** Secondes à attendre avant de réessayer. Présent sur `rate-limited`. */
   readonly retryAfter?: number
+  /**
+   * Essais restants avant verrouillage du code. Présent sur `auth-invalid`
+   * rendu par `/auth/verify-code` : la spec design impose de les afficher.
+   */
+  readonly attemptsLeft?: number
 }
 
 export type ApiErrorCode =
@@ -81,6 +88,46 @@ export type ApiErrorCode =
   | 'upstream-unavailable'
   | 'not-found'
   | 'bad-request'
+  /**
+   * Corps de requête au-delà de `SYNC_BODY_LIMIT_BYTES`. Rendu par les
+   * routes `/sync` avant toute lecture du corps : le client scinde son
+   * lot et réessaie.
+   */
+  | 'payload-too-large'
+  /**
+   * La base du service est indisponible (ou absente de la configuration).
+   * Rendu par les routes qui la requièrent (`/sync/*`, `/auth/*`) : le
+   * proxy TMDB vit sans base, elles non — 503 franc, jamais un 500.
+   */
+  | 'db-unavailable'
+  /**
+   * Lien ou code refusé : inconnu, expiré, déjà consommé, ou faux. Un seul
+   * code pour tous ces cas — les distinguer aiderait surtout l'énumération.
+   * Sur `verify-code`, `attemptsLeft` accompagne un code faux.
+   */
+  | 'auth-invalid'
+  /**
+   * Jeton verrouillé après cinq codes faux. Distinct d'`auth-invalid` :
+   * l'écran de connexion revient en phase 1 avec un message, il ne
+   * décompte plus d'essais.
+   */
+  | 'auth-locked'
+
+/** Ce que le serveur sait d'un compte connecté. */
+export interface AuthUser {
+  readonly email: string
+  readonly firstName: string | null
+}
+
+/** Réponse de `/auth/verify` et `/auth/verify-code` : la session est posée en cookie. */
+export interface VerifyResponse {
+  readonly user: AuthUser
+}
+
+/** Réponse de `/auth/me`. `user: null` = pas de session — ce n'est pas une erreur. */
+export interface MeResponse {
+  readonly user: AuthUser | null
+}
 
 /**
  * Base des images TMDB.

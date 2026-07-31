@@ -43,4 +43,10 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Les fichiers de déclaration ne sont jamais exécutés : une
+    // augmentation de module y est sans danger pour strip-types.
+    files: ['**/*.d.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
+  },
 )

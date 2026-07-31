@@ -90,3 +90,39 @@ Le seul filet contre l'éviction du stockage. À vérifier **avant** la saisie d
 - [ ] Réimporter le fichier depuis `/debug`
 - [ ] Le prénom, les compteurs de l'accueil et les titres avec leurs années sont revenus — **sans réseau**
 - [ ] Réimporter le même fichier une seconde fois : « 0 événement réinjecté, N déjà présent », rien n'est dupliqué
+
+---
+
+## Temps 2 — synchronisation multi-appareils
+
+Trois parcours de plus, à dérouler avec **deux appareils réels** (ou un
+téléphone et un navigateur d'ordinateur). Ils vérifient les critères de
+réussite du sprint, pas des détails : un `SEEN` qui traverse, un appareil
+vierge qui se remplit titres compris, une purge qui repart de zéro.
+
+### 7. Connexion à deux appareils — *à partir du temps 2*
+
+- [ ] Sur l'appareil A (déjà rempli) : Réglages → `ACTIVER LA SYNC`, saisir l'adresse
+- [ ] L'e-mail arrive : le **code** est dans l'objet, lisible en notification
+- [ ] Saisir le code : la sixième touche valide toute seule
+- [ ] La card COMPTE affiche `✓ à jour` après la première sync
+- [ ] Sur l'appareil B (vierge) : se connecter avec la même adresse
+- [ ] L'écran `// SYNCHRONISATION` montre un compteur qui monte
+- [ ] La bibliothèque de B affiche les titres **avec leurs affiches** — c'est le critère n°2 du sprint : vérifier en **mode avion** juste après
+
+### 8. Sync après mode avion — *à partir du temps 2*
+
+- [ ] Sur A, en mode avion : marquer un titre `vu`
+- [ ] Réglages : la card COMPTE affiche `N à pousser`, pas une erreur
+- [ ] Couper le mode avion, remettre l'app au premier plan
+- [ ] La card repasse `✓ à jour`
+- [ ] Sur B, remettre l'app au premier plan : le `✓ vu` est arrivé — c'est le critère n°1 du sprint
+
+### 9. Purge locale et restauration serveur — *à partir du temps 2*
+
+- [ ] Sur B : Réglages → ZONE DANGEREUSE → `effacer mes données locales`
+- [ ] L'écran de confirmation dit le compte exact d'éléments non poussés (zéro si tout est synchronisé)
+- [ ] `ANNULER` est le bouton proéminent — l'effacement est le geste discret
+- [ ] Confirmer : l'app revient sur la Landing, déconnectée
+- [ ] Se reconnecter : le premier pull reconstruit tout — titres, affiches, prénom
+- [ ] Ce parcours est **rejouable** : c'est lui qui rend la vérification de restauration répétable sans farfouiller dans le navigateur

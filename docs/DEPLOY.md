@@ -253,6 +253,75 @@ git push origin main
 
 Dokploy déclenche les deux builds sur `main`. `git log main` répond alors à la question « qu'est-ce qui tourne en ligne, maintenant ? », ce qui est le seul rôle de cette branche.
 
+## 8. Postgres et sauvegarde (temps 2)
+
+Postgres arrive comme service Dokploy sur `dokploy-network`, jamais exposé. Le secret `DATABASE_URL` (Doppler) le fait connaître d'`owlog-api` — qui **démarre et vit sans lui** : sans `DATABASE_URL`, ou avec la base down, `/api/health` répond `200` avec `db: off|down` dans le corps, `/api/sync/*` répond `503`, et le proxy TMDB continue. Les migrations s'appliquent toutes seules au démarrage du service, sous advisory lock ; il n'y a aucune étape de migration manuelle.
+
+La sonde Dokploy reste sur `/api/health` : elle est une liveness **sans ping de la base**, à dessein — une sonde qui dépendrait de Postgres transformerait toute panne de base en redémarrage en boucle de l'API.
+
+### Sauvegarde quotidienne — obligatoire, pas optionnelle
+
+Un Postgres non sauvegardé serait un recul de durabilité par rapport au `.log` manuel. Sur le VPS :
+
+```bash
+sudo apt install postgresql-client age rclone   # une fois
+age-keygen -o owlog-backup-identity.txt         # une fois, PUIS SORTIR LA CLÉ DU VPS
+# la clé privée se garde hors du VPS (gestionnaire de mots de passe) ;
+# seul le destinataire public age1… reste dans l'environnement du cron.
+```
+
+Cron quotidien (l'utilisateur du VPS, pas root) :
+
+```cron
+0 2 * * * DATABASE_URL=postgres://… OWLOG_BACKUP_AGE_RECIPIENT=age1… \
+  OWLOG_BACKUP_RCLONE_REMOTE=r2:owlog-backups \
+  /chemin/owlog-app/scripts/db-backup.sh >> /var/log/owlog-backup.log 2>&1
+```
+
+Le script exclut les **données** d'`auth_tokens` (des secrets en vol, TTL 15 min), chiffre le flux avant qu'il touche le disque, garde 14 dumps localement et pousse le reste vers l'object storage.
+
+### Restauration
+
+```bash
+# une base cible VIERGE, puis :
+OWLOG_BACKUP_AGE_IDENTITY=owlog-backup-identity.txt \
+  ./scripts/db-restore.sh owlog-<date>.sql.gz.age postgres://…/owlog_restored
+```
+
+La procédure a été exécutée de bout en bout le 2026-07-30 (source peuplée → dump chiffré → base vierge → comptes identiques, `auth_tokens` vide, trigger append-only actif). **La rejouer après la première sauvegarde de production** : une sauvegarde jamais restaurée n'est pas une sauvegarde.
+
+## 9. Secrets e-mail et leur rotation (temps 2)
+
+Trois variables Doppler côté `owlog-api`, toutes optionnelles — sans elles,
+le mailer console prend le relais et les e-mails de connexion s'écrivent
+dans les journaux du conteneur, ce qui suffit en développement et en
+dépannage :
+
+| Nom | Rôle |
+|---|---|
+| `OWLOG_EMAIL_API_TOKEN` | jeton du fournisseur — LE secret à protéger |
+| `OWLOG_EMAIL_API_URL` | endpoint du fournisseur (défaut : Resend) |
+| `OWLOG_EMAIL_FROM` | expéditeur, `Owlog <no-reply@…>` |
+
+### Rotation du jeton
+
+À faire **au moindre doute** (jeton aperçu dans un log, un écran partagé,
+un dépôt), et par hygiène à chaque changement de fournisseur :
+
+1. Créer le nouveau jeton chez le fournisseur — **avant** de révoquer
+   l'ancien : les deux coexistent, aucun trou de service.
+2. `doppler secrets set OWLOG_EMAIL_API_TOKEN --project owlog-app --config prd`
+3. Redéployer `owlog-api` (le service lit ses secrets au démarrage).
+4. Demander un lien de connexion réel et vérifier la réception.
+5. Révoquer l'ancien jeton chez le fournisseur — en dernier.
+
+En cas de compromission avérée, inverser 1 et 5 : révoquer d'abord, et
+accepter la fenêtre où `request-link` répond 502 (`upstream-unavailable`) —
+l'app locale continue de fonctionner, seule la connexion attend.
+
+Le jeton n'apparaît jamais dans le bundle web : `local-prod.sh check` le
+vérifie mécaniquement (« aucun secret e-mail dans le bundle »).
+
 ## Corriger ce document
 
 La partie Dokploy n'a pas encore été exécutée. **Au premier passage, corrige-la dans le même commit** que le déploiement : un document de mise en ligne faux coûte plus cher que pas de document, parce qu'on lui fait confiance à trois heures du matin.
