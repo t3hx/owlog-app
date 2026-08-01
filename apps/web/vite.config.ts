@@ -37,7 +37,13 @@ export default defineConfig({
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           {
-            src: '/icons/icon-512-maskable.png',
+            src: '/icons/icon-maskable-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
@@ -50,6 +56,13 @@ export default defineConfig({
         // ouverture hors-ligne retombe en polices système et la conformité
         // au design est perdue — défaut invisible tant qu'on est en ligne.
         globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
+
+        // Hors precache : le PNG source du logo (1,3 Mo) et l'image Open
+        // Graph ne sont jamais affichés par l'app — le premier n'est que la
+        // matière première des icônes, la seconde n'est lue que par les
+        // crawlers de partage. Les précacher ferait télécharger ~1,6 Mo à
+        // chaque client pour rien et gonflerait le quota d'origine.
+        globIgnores: ['og-image.png'],
 
         // Mode history : toute route inconnue sert `index.html`, hors-ligne
         // comme en ligne. C'est le pendant du rewrite SPA du Caddyfile.

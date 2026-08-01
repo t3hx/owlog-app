@@ -1,6 +1,7 @@
 {
   "app": {
-    "tagline": "Everything you watch. One single log."
+    "tagline": "Everything you watch. One single log.",
+    "logoAlt": "Owlog"
   },
   "nav": {
     "home": "home",

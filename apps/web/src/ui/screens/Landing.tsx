@@ -26,8 +26,8 @@ export function Landing() {
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <nav className="mx-auto flex w-full max-w-[1100px] items-center justify-between px-6 py-[22px]">
-        <Logo className="text-[21px]" />
+      <nav className="mx-auto flex w-full max-w-[1100px] items-center justify-between px-6 py-3">
+        <Logo className="h-24" />
         <Link
           href="/login"
           className="rounded-[10px] border border-border-active px-[18px] py-2.5 font-mono text-[11px] text-text transition-colors hover:border-accent hover:text-accent"
@@ -83,11 +83,14 @@ export function Landing() {
           </div>
         </section>
 
-        {/* Colonne desktop : la capture, hachurée en attendant la vraie. */}
+        {/* Colonne desktop : la capture, hachurée en attendant la vraie.
+            `mx-auto` : la colonne fait la moitié du conteneur mais la capture
+            est plafonnée à 300px — sans centrage, tout le reliquat s'accumule
+            à droite et déséquilibre le hero sur écran large. */}
         <div className="hidden flex-1 md:block">
           <div
             aria-hidden
-            className="aspect-[9/16] max-h-[540px] w-full max-w-[300px] rounded-card border border-border bg-poster-placeholder"
+            className="mx-auto aspect-[9/16] max-h-[540px] w-full max-w-[300px] rounded-card border border-border bg-poster-placeholder"
           />
         </div>
       </div>

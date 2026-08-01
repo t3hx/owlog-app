@@ -6,6 +6,25 @@
     <meta name="theme-color" content="#070a12" />
     <meta name="description" content="Tout ce que tu regardes. Un seul log." />
     <!--
+      Identite binaire. Le PNG du logo ne sert qu'ici et dans le manifest :
+      il n'entre jamais dans le DOM de l'app (decision design F11), le logo
+      in-app reste le wordmark texte Chakra Petch.
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <!--
+      Open Graph / Twitter. Contenu statique lu par les crawlers de partage,
+      hors de portee de React : seule exception toleree a la regle i18n.
+      L'URL de l'image est absolue, exigence des scrapers OG.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Owlog" />
+    <meta property="og:description" content="Tout ce que tu regardes. Un seul log." />
+    <meta property="og:image" content="https://owlog.nspace.link/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!--
       Preload des deux polices du premier rendu : le corps de texte et la
       police mono des metadonnees. Sans ca, le shell s'affiche en police
       systeme le temps que le CSS soit parse puis bascule, ce qui se voit.

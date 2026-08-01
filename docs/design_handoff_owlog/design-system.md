@@ -14,6 +14,7 @@ PWA mobile-first de tracking média (films/séries d'abord, extensible : animes,
 
 ## Typo
 - Display/titres/logo: 'Chakra Petch' (600-700, logo letter-spacing 1px, OWLOG avec O menthe + text-shadow glow)
+  - **Amendement 2026-08-01 (T3H-57, décision utilisateur)** : le logo n'est plus le wordmark CSS mais l'image `owlog_logo_full.png`, affichée telle quelle — seule la taille varie (header M, Connexion L). Unique dérivé autorisé : le recadrage hibou des favicons/icônes PWA. Chakra Petch reste la typo des titres.
 - Corps: 'IBM Plex Sans'
 - Métadonnées/data/labels tab: 'JetBrains Mono' (9-11px, couleur muted)
 - Titres de section: Chakra Petch 15px 600, préfixe "▸", MAJUSCULES, letter-spacing .5px
