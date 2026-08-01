@@ -26,6 +26,9 @@
     "seeAll": "see all →",
     "percent": "{{percent}}%",
     "play": "Advance {{title}}",
+    "markSeen": "Mark {{title}} seen",
+    "startWatching": "Start {{title}}",
+    "episodeCount": "ep. {{seen}}/{{total}}",
     "uncached": "title to reload"
   },
   "library": {
@@ -172,6 +175,8 @@
     "rateLimitedHint": "Try again in {{count}} second.",
     "rateLimitedHint_other": "Try again in {{count}} seconds.",
     "addLabel": "Add {{title}}",
+    "favoriteLabel": "Add {{title}} as a favorite",
+    "startLabel": "Add {{title}} and start watching",
     "added": "✓ added",
     "undo": "undo",
     "kindMovie": "movie",
@@ -202,6 +207,10 @@
     "tmdb": "tmdb {{rating}}",
     "rewatch": "WATCH AGAIN",
     "rewatchHint": "back to « watching » · opens watch #{{number}} in the journal",
+    "nextEpisode": "NEXT EPISODE {{label}}",
+    "nextEpisodeNumber": "NEXT EPISODE · EP. {{number}}",
+    "nextEpisodeUnknown": "NEXT EPISODE",
+    "markSeen": "MARK SEEN",
     "seenCount": "✓ seen ×{{count}}",
     "cancelHint": "long-press an entry to undo it"
   },

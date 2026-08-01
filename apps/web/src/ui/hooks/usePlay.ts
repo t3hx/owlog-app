@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 
 import { systemClock, uuidv7Generator } from '@/adapters/browser/clock'
-import { advanceProgress, progress, applyTaps, type MediaRef } from '@owlog/domain'
+import { advanceProgress, setStatus, progress, applyTaps, type MediaRef } from '@owlog/domain'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**
@@ -38,6 +38,12 @@ interface Batch {
  * fermeture sur un `state` leur en donnerait une périmée — le cas classique
  * où le premier tap s'écrit et les suivants disparaissent. Le rendu est
  * redemandé explicitement.
+ *
+ * Le hook porte aussi `markSeen`, la moitié « film » du play adaptatif, et
+ * `startWatching`, le play d'un titre à voir : même geste, autres écritures.
+ * Les trois vivent ensemble parce qu'ils partagent la même exigence — un tap
+ * protégé contre son double — et que chaque surface de play choisit selon
+ * `hasEpisodes` et le statut du titre.
  */
 export function usePlay() {
   const { events, deviceId } = usePorts()
@@ -118,6 +124,80 @@ export function usePlay() {
   /** Taps encaissés et pas encore écrits, pour l'affichage optimiste. */
   const pendingTaps = useCallback((ref: MediaRef) => batches.current.get(ref)?.taps ?? 0, [])
 
+  // Écritures « marquer vu » en vol, pour ignorer un double-tap. Un `Set`
+  // et non un booléen : deux médias distincts peuvent se marquer en même
+  // temps, et l'un ne doit pas bloquer l'autre.
+  const completing = useRef(new Set<MediaRef>())
+
+  /**
+   * Marque le média vu, en un tap — la moitié « film » du play adaptatif.
+   *
+   * Sur un média sans épisodes, une progression n'a pas de sens : le tap
+   * exprime « je l'ai vu », donc il écrit un `SEEN` via `setStatus`, pas un
+   * `PROG`. Pas de regroupement ni de minuterie ici : il n'y a rien à
+   * regrouper, un film ne se finit qu'une fois par cycle.
+   *
+   * Le double-tap est absorbé deux fois : le garde en vol ignore le second
+   * tap d'une rafale, et `setStatus` relit le journal au moment d'écrire —
+   * un tap arrivé après l'écriture ne produit rien, le statut est déjà vu.
+   */
+  const markSeen = useCallback(
+    async (ref: MediaRef): Promise<void> => {
+      if (completing.current.has(ref)) return
+      completing.current.add(ref)
+
+      try {
+        const stored = await events.eventsForMedia(ref)
+        const produced = setStatus(
+          { events: stored, mediaRef: ref, clock: systemClock, ids: uuidv7Generator, deviceId },
+          'seen',
+        )
+
+        if (produced.length > 0) await events.append(produced as never)
+      } finally {
+        completing.current.delete(ref)
+      }
+    },
+    [events, deviceId],
+  )
+
+  // Écritures « commencer » en vol, même raison que `completing` : ignorer
+  // le double-tap sans qu'un média n'en bloque un autre.
+  const starting = useRef(new Set<MediaRef>())
+
+  /**
+   * Fait passer le média « en cours », en un tap — le play d'un titre à voir.
+   *
+   * C'est le geste du ▶ discret sur l'étagère « À VOIR » : un tap ouvre un
+   * cycle (`START`), série comme film — un film ouvert se marquera vu plus
+   * tard, d'un tap sur le play de la rangée « EN COURS ». Pas de regroupement
+   * ni de minuterie : on ne commence un cycle qu'une fois.
+   *
+   * Même double protection que `markSeen` : le garde en vol absorbe le second
+   * tap d'une rafale, et `setStatus` relit le journal au moment d'écrire —
+   * un tap arrivé après l'écriture ne produit rien, le statut est déjà
+   * « en cours ».
+   */
+  const startWatching = useCallback(
+    async (ref: MediaRef): Promise<void> => {
+      if (starting.current.has(ref)) return
+      starting.current.add(ref)
+
+      try {
+        const stored = await events.eventsForMedia(ref)
+        const produced = setStatus(
+          { events: stored, mediaRef: ref, clock: systemClock, ids: uuidv7Generator, deviceId },
+          'watching',
+        )
+
+        if (produced.length > 0) await events.append(produced as never)
+      } finally {
+        starting.current.delete(ref)
+      }
+    },
+    [events, deviceId],
+  )
+
   /**
    * Écrit tout ce qui traîne quand la page part en arrière-plan.
    *
@@ -145,7 +225,7 @@ export function usePlay() {
     }
   }, [])
 
-  return { tap, pendingTaps }
+  return { tap, pendingTaps, markSeen, startWatching }
 }
 
 function arm(

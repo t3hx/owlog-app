@@ -26,6 +26,9 @@
     "seeAll": "voir tout →",
     "percent": "{{percent}}%",
     "play": "Avancer {{title}}",
+    "markSeen": "Marquer {{title}} vu",
+    "startWatching": "Commencer {{title}}",
+    "episodeCount": "ép. {{seen}}/{{total}}",
     "uncached": "titre à recharger"
   },
   "library": {
@@ -172,6 +175,8 @@
     "rateLimitedHint": "Réessaie dans {{count}} seconde.",
     "rateLimitedHint_other": "Réessaie dans {{count}} secondes.",
     "addLabel": "Ajouter {{title}}",
+    "favoriteLabel": "Ajouter {{title}} en coup de cœur",
+    "startLabel": "Ajouter {{title}} et commencer",
     "added": "✓ ajouté",
     "undo": "annuler",
     "kindMovie": "film",
@@ -202,6 +207,10 @@
     "tmdb": "tmdb {{rating}}",
     "rewatch": "REVOIR",
     "rewatchHint": "repasse en « en cours » · ouvre le visionnage #{{number}} dans le journal",
+    "nextEpisode": "ÉPISODE SUIVANT {{label}}",
+    "nextEpisodeNumber": "ÉPISODE SUIVANT · ÉP. {{number}}",
+    "nextEpisodeUnknown": "ÉPISODE SUIVANT",
+    "markSeen": "MARQUER VU",
     "seenCount": "✓ vu ×{{count}}",
     "cancelHint": "appui long sur une entrée pour l'annuler"
   },

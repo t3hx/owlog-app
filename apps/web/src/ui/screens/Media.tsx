@@ -2,11 +2,22 @@ import { backdropUrl, posterUrl } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
-import { journal as journalOf, type MediaRef, type StoredEvent } from '@owlog/domain'
+import {
+  journal as journalOf,
+  applyTaps,
+  episodeIncrement,
+  hasEpisodes,
+  upcomingEpisodeLabel,
+  upcomingEpisodeNumber,
+  type MediaRef,
+  type StoredEvent,
+} from '@owlog/domain'
+import { ProgressBar } from '@/ui/components/home/ProgressBar'
 import { EventText } from '@/ui/components/journal/EventText'
 import { STATUS_CHIP, STATUSES } from '@/ui/components/status/statusStyle'
 import { useLongPress } from '@/ui/hooks/useLongPress'
 import { useMedia } from '@/ui/hooks/useMedia'
+import { usePlay } from '@/ui/hooks/usePlay'
 
 /**
  * Page média.
@@ -24,11 +35,26 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
   const { t } = useTranslation()
   const [, navigate] = useLocation()
   const media = useMedia(mediaRef)
+  const { tap, pendingTaps, markSeen } = usePlay()
 
   const { state, cache, journal } = media
   const status = state?.status ?? 'absent'
   const poster = posterUrl(cache?.posterPath ?? null, 'w342')
   const backdrop = backdropUrl(cache?.backdropPath ?? null, 'w780')
+
+  // Même projection optimiste que l'accueil : le CTA « épisode suivant »
+  // avance au tap, l'écriture est regroupée par `usePlay`.
+  const increment = episodeIncrement(cache?.numberOfEpisodes)
+  const projection = applyTaps(
+    { percent: state?.percent ?? 0, label: state?.label ?? null },
+    pendingTaps(mediaRef),
+    increment,
+  )
+  const nextLabel = upcomingEpisodeLabel(projection.label)
+  // Sans label saisi, la numérotation se déduit du pourcentage et du compte
+  // d'épisodes : pas de saison affirmée, mais un rang.
+  const nextNumber =
+    nextLabel === null ? upcomingEpisodeNumber(projection.percent, cache?.numberOfEpisodes) : null
 
   return (
     <div className="mx-auto max-w-md px-4 pb-8">
@@ -111,23 +137,47 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
         )}
       </div>
 
+      {/* La barre d'avancement, la même que l'accueil : elle ne s'affiche
+          que sur un titre en cours qui a réellement avancé — à 0 % elle
+          n'apprend rien que les chips ne disent déjà. */}
+      {status === 'watching' && projection.percent > 0 && (
+        <div className="mt-3 max-w-[420px]">
+          <ProgressBar percent={projection.percent} />
+        </div>
+      )}
+
+      {/* CTA plein unique, exclusif par statut — jamais deux à la fois.
+          « vu » propose REVOIR, « en cours » propose le geste du play
+          adaptatif : épisode suivant sur un média à épisodes, marquer vu
+          sur un film. Les autres statuts n'ont aucun CTA plein. */}
       {status === 'seen' && (
         <>
-          <button
-            type="button"
-            onClick={() => void media.watchAgain()}
-            className="mt-4 flex h-11 w-full max-w-[420px] items-center justify-center gap-2.5 rounded-action bg-gradient-action shadow-glow-strong"
-          >
-            <span className="text-base text-bg">↻</span>
-            <span className="font-display text-[13px] font-semibold tracking-wide text-bg">
-              {t('media.rewatch')}
-            </span>
-          </button>
+          <ActionCta icon="↻" label={t('media.rewatch')} onTap={() => void media.watchAgain()} />
           <p className="mt-2 font-mono text-[9.5px] text-subtle">
             {t('media.rewatchHint', { number: (state?.seenCount ?? 0) + 1 })}
           </p>
         </>
       )}
+
+      {status === 'watching' &&
+        (hasEpisodes(mediaRef) ? (
+          <ActionCta
+            icon="▸"
+            // Trois niveaux de précision, du plus dit au plus déduit : le
+            // label saisi (`S02E06`), le rang déduit du pourcentage
+            // (`ÉP. 4`), puis rien quand on ne sait rien.
+            label={
+              nextLabel !== null
+                ? t('media.nextEpisode', { label: nextLabel })
+                : nextNumber !== null
+                  ? t('media.nextEpisodeNumber', { number: nextNumber })
+                  : t('media.nextEpisodeUnknown')
+            }
+            onTap={() => tap(mediaRef, increment)}
+          />
+        ) : (
+          <ActionCta icon="✓" label={t('media.markSeen')} onTap={() => void markSeen(mediaRef)} />
+        ))}
 
       {cache?.overview && (
         <p className="mt-[18px] max-w-[620px] text-[13.5px] leading-[1.55] text-muted">
@@ -154,6 +204,35 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
 
       <Journal entries={journalOf(journal)} onCancel={(id) => void media.cancel(id)} />
     </div>
+  )
+}
+
+/**
+ * Le CTA plein de la fiche : 44 px, dégradé et glow, pleine largeur.
+ *
+ * Un seul composant pour REVOIR, ÉPISODE SUIVANT et MARQUER VU : la
+ * géométrie et les tokens du handoff n'existent qu'ici, et l'exclusivité —
+ * jamais deux CTA pleins — se lit dans le rendu par statut, pas dans trois
+ * boutons recopiés qui pourraient diverger.
+ */
+function ActionCta({
+  icon,
+  label,
+  onTap,
+}: {
+  icon: string
+  label: string
+  onTap: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className="mt-4 flex h-11 w-full max-w-[420px] items-center justify-center gap-2.5 rounded-action bg-gradient-action shadow-glow-strong"
+    >
+      <span className="text-base text-bg">{icon}</span>
+      <span className="font-display text-[13px] font-semibold tracking-wide text-bg">{label}</span>
+    </button>
   )
 }
 

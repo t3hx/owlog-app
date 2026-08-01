@@ -1,6 +1,7 @@
 import { applyVoids } from './applyVoids.ts'
 import { filterLibrary, type MediaStateRow } from './mediaState.ts'
 import { cycles, type Cycle } from '../rules/cycles.ts'
+import { episodesFromPercent } from '../rules/progression.ts'
 import type { DatePrecision, MediaRef, StoredEvent, Timestamp } from '../types.ts'
 
 /** Fenêtre du sélecteur de période : 30 jours, un an, ou tout. */
@@ -187,8 +188,10 @@ export function stats(input: StatsInput): StatsView {
       }
     }
 
-    if (media?.numberOfEpisodes != null && row.percent > 0) {
-      episodesSeen += Math.round((media.numberOfEpisodes * row.percent) / 100)
+    // Même règle que la numérotation d'épisodes de l'accueil et de la
+    // fiche : une seule définition, dans `rules/progression`.
+    if (row.percent > 0) {
+      episodesSeen += episodesFromPercent(row.percent, media?.numberOfEpisodes) ?? 0
     }
 
     for (const value of ratingsOfCycles(all, input.window, accepted)) ratings.push(value)

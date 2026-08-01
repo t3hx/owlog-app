@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { mediaState, type MediaStateRow, type StoredEvent } from '@owlog/domain'
@@ -104,6 +104,25 @@ function watchingSeries(): {
   }
 }
 
+/** Film en cours : le play adaptatif doit marquer vu, pas faire progresser. */
+function watchingMovie(): {
+  events: readonly StoredEvent[]
+  state: MediaStateRow
+  cache: MediaCacheRow
+} {
+  const f = createFactory(MOVIE)
+  const events = [f.watch(), f.start('c1')]
+
+  return {
+    events,
+    state: mediaState(events, MOVIE),
+    cache: partialCacheRow(
+      { ref: MOVIE, kind: 'movie', title: 'Dune', year: 2021, posterPath: null },
+      '2026-01-01T00:00:00.000Z',
+    ),
+  }
+}
+
 /**
  * Bouton play.
  *
@@ -171,6 +190,81 @@ describe('bouton play', () => {
     expect(progs[0]?.payload).toMatchObject({ percent: 30, label: 'S01E04' })
   })
 
+  it('marque vu un film au tap, sans écrire de progression', async () => {
+    const { events, state, cache } = watchingMovie()
+    const appended: StoredEvent[][] = []
+
+    render(
+      <PortsProvider
+        ports={fakePorts({
+          mediaStates: [state],
+          mediaEvents: events,
+          mediaCache: [cache],
+          onAppend: (produced) => appended.push([...produced]),
+        })}
+      >
+        <Home firstName="Tx" />
+      </PortsProvider>,
+    )
+
+    // Le libellé accessible dit le geste réel : marquer vu, pas avancer.
+    fireEvent.click(screen.getByLabelText('Marquer Dune vu'))
+
+    // Pas de regroupement pour un film : un seul événement possible, il
+    // s'écrit tout de suite — et c'est un SEEN, jamais un PROG.
+    await waitFor(() => expect(appended).toHaveLength(1))
+    const produced = appended[0] ?? []
+    expect(produced.filter((event) => event.type === 'SEEN')).toHaveLength(1)
+    expect(produced.filter((event) => event.type === 'PROG')).toHaveLength(0)
+  })
+
+  it('absorbe le double-tap sur un film : une seule écriture', async () => {
+    const { events, state, cache } = watchingMovie()
+    const appended: StoredEvent[][] = []
+
+    render(
+      <PortsProvider
+        ports={fakePorts({
+          mediaStates: [state],
+          mediaEvents: events,
+          mediaCache: [cache],
+          onAppend: (produced) => appended.push([...produced]),
+        })}
+      >
+        <Home firstName="Tx" />
+      </PortsProvider>,
+    )
+
+    const play = screen.getByLabelText('Marquer Dune vu')
+    fireEvent.click(play)
+    fireEvent.click(play)
+
+    await waitFor(() => expect(appended).toHaveLength(1))
+    // Laisse retomber les microtâches : une seconde écriture tardive doit
+    // apparaître ici, pas passer entre deux assertions.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(appended).toHaveLength(1)
+    expect((appended[0] ?? []).filter((event) => event.type === 'SEEN')).toHaveLength(1)
+  })
+
+  it('affiche le rang deduit quand aucun label n a ete saisi', () => {
+    const f = createFactory(SERIES)
+    const events = [f.watch(), f.start('c1'), f.prog('c1', 30)]
+    const { cache } = watchingSeries()
+    const state = mediaState(events, SERIES)
+
+    render(
+      <PortsProvider ports={fakePorts({ mediaStates: [state], mediaEvents: events, mediaCache: [cache] })}>
+        <Home firstName="Tx" />
+      </PortsProvider>,
+    )
+
+    // Sans label saisi, la saison est inconnue — pas de `S01E03` inventé —
+    // mais 30 % de dix épisodes se lisent « ép. 3/10 ».
+    expect(screen.getByText('ép. 3/10 · 30%')).toBeDefined()
+  })
+
   it('clot le cycle au dixieme tap, sans toucher au statut a la main', async () => {
     vi.useFakeTimers()
     const { events, state, cache } = watchingSeries()
@@ -202,5 +296,88 @@ describe('bouton play', () => {
     // personne n'ait touche a la pastille.
     const produced = appended[0] ?? []
     expect(produced.filter((event) => event.type === 'SEEN')).toHaveLength(1)
+  })
+})
+
+/**
+ * Play discret de l'étagère « À VOIR ».
+ *
+ * Un tap sur le ▶ superposé à l'affiche fait passer le titre « en cours »
+ * sans ouvrir la fiche. Le geste vit sur l'accueil seulement, jamais en
+ * Bibliothèque (décision D2.3).
+ */
+describe('play de l etagere a voir', () => {
+  function toWatchSeries(): {
+    events: readonly StoredEvent[]
+    state: MediaStateRow
+    cache: MediaCacheRow
+  } {
+    const f = createFactory(SERIES)
+    const events = [f.watch()]
+
+    return {
+      events,
+      state: mediaState(events, SERIES),
+      cache: partialCacheRow(
+        { ref: SERIES, kind: 'tv', title: 'Severance', year: 2022, posterPath: null },
+        '2026-01-01T00:00:00.000Z',
+      ),
+    }
+  }
+
+  it('un tap ouvre un cycle : le titre passe en cours', async () => {
+    const { events, state, cache } = toWatchSeries()
+    const appended: StoredEvent[][] = []
+
+    render(
+      <PortsProvider
+        ports={fakePorts({
+          mediaStates: [state],
+          mediaEvents: events,
+          mediaCache: [cache],
+          onAppend: (produced) => appended.push([...produced]),
+        })}
+      >
+        <Home firstName="Tx" />
+      </PortsProvider>,
+    )
+
+    fireEvent.click(screen.getByLabelText('Commencer Severance'))
+
+    // Le titre est déjà en bibliothèque : le geste n'écrit qu'un `START`,
+    // jamais un second `WATCH`.
+    await waitFor(() => expect(appended).toHaveLength(1))
+    const produced = appended[0] ?? []
+    expect(produced.filter((event) => event.type === 'START')).toHaveLength(1)
+    expect(produced.filter((event) => event.type === 'WATCH')).toHaveLength(0)
+  })
+
+  it('absorbe le double-tap : une seule écriture', async () => {
+    const { events, state, cache } = toWatchSeries()
+    const appended: StoredEvent[][] = []
+
+    render(
+      <PortsProvider
+        ports={fakePorts({
+          mediaStates: [state],
+          mediaEvents: events,
+          mediaCache: [cache],
+          onAppend: (produced) => appended.push([...produced]),
+        })}
+      >
+        <Home firstName="Tx" />
+      </PortsProvider>,
+    )
+
+    const play = screen.getByLabelText('Commencer Severance')
+    fireEvent.click(play)
+    fireEvent.click(play)
+
+    await waitFor(() => expect(appended).toHaveLength(1))
+    // Laisse retomber les microtâches : une seconde écriture tardive doit
+    // apparaître ici, pas passer entre deux assertions.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(appended).toHaveLength(1)
   })
 })

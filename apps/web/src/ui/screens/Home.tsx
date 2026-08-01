@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
-import { homeCounters, type MediaStateRow, applyTaps, episodeIncrement, type MediaRef } from '@owlog/domain'
+import { homeCounters, type MediaStateRow, applyTaps, episodeIncrement, hasEpisodes, type MediaRef } from '@owlog/domain'
 import { ToWatchShelf } from '@/ui/components/home/ToWatchShelf'
 import { WatchingRow } from '@/ui/components/home/WatchingRow'
 import { Search } from '@/ui/components/search/Search'
@@ -30,7 +30,7 @@ export function Home({ firstName }: { firstName: string }) {
   const { t } = useTranslation()
   const [, navigate] = useLocation()
   const { live } = usePorts()
-  const { tap, pendingTaps } = usePlay()
+  const { tap, pendingTaps, markSeen, startWatching } = usePlay()
 
   const states = live.useMediaStates()
   const cache = live.useMediaCacheRows()
@@ -79,7 +79,12 @@ export function Home({ firstName }: { firstName: string }) {
                       )}
                       labelStale={row.labelStale}
                       onOpen={() => open(row.ref)}
-                      onPlay={() => tap(row.ref, increment)}
+                      // Play adaptatif : un média à épisodes avance d'un
+                      // épisode, un film se marque vu — une progression n'y
+                      // aurait pas de sens.
+                      onPlay={() =>
+                        hasEpisodes(row.ref) ? tap(row.ref, increment) : void markSeen(row.ref)
+                      }
                     />
                   )
                 })}
@@ -104,7 +109,14 @@ export function Home({ firstName }: { firstName: string }) {
                   {t('home.seeAll')}
                 </button>
               </div>
-              <ToWatchShelf rows={toWatch.map((row) => cacheFor(row.ref))} onOpen={open} />
+              <ToWatchShelf
+                rows={toWatch.map((row) => cacheFor(row.ref))}
+                onOpen={open}
+                // Le play discret de l'affiche : le titre passe « en cours »
+                // sans ouvrir la fiche. Le geste vit ici seulement, jamais en
+                // Bibliothèque (décision D2.3).
+                onStart={(ref) => void startWatching(ref as MediaRef)}
+              />
             </>
           )}
         </div>

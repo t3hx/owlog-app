@@ -1,7 +1,7 @@
 import { posterUrl } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 
-import type { MediaStateRow, Status } from '@owlog/domain'
+import { episodesFromPercent, hasEpisodes, type MediaStateRow, type Status } from '@owlog/domain'
 import { ProgressBar } from '@/ui/components/home/ProgressBar'
 import { STATUS_CHIP, STATUS_GLYPH } from '@/ui/components/status/statusStyle'
 import type { MediaCacheRow } from '@/ports/MediaCache'
@@ -42,19 +42,7 @@ export function LibraryRow({ row, cache, onOpen, onCycle, onMenu }: LibraryRowPr
         onClick={onOpen}
         className="flex min-w-0 flex-1 items-center gap-3 text-left"
       >
-        {poster ? (
-          <img
-            src={poster}
-            alt=""
-            width={48}
-            height={72}
-            loading="lazy"
-            crossOrigin="anonymous"
-            className="h-[72px] w-12 flex-none rounded-poster-sm object-cover"
-          />
-        ) : (
-          <span className="h-[72px] w-12 flex-none rounded-poster-sm bg-poster-placeholder" />
-        )}
+        <RowPoster src={poster} favorite={row.favorite} />
 
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">
           <span className="w-full truncate text-sm font-semibold text-text">{cache.title}</span>
@@ -118,9 +106,64 @@ function meta(
     t(cache.kind === 'tv' ? 'search.kindSeries' : 'search.kindMovie'),
   ]
 
-  if (row.status === 'watching' && row.label !== null) parts.push(row.label)
+  if (row.status === 'watching') {
+    if (row.label !== null) {
+      parts.push(row.label)
+    } else if (hasEpisodes(row.ref)) {
+      // Sans label saisi, le rang se déduit du pourcentage et du compte
+      // d'épisodes — même règle que la rangée « en cours » de l'accueil.
+      const seen = episodesFromPercent(row.percent, cache.numberOfEpisodes)
+      if (seen !== null) {
+        parts.push(t('home.episodeCount', { seen, total: cache.numberOfEpisodes }))
+      }
+    }
+  }
 
   return parts.join(' · ')
+}
+
+/**
+ * Affiche de la rangée.
+ *
+ * Coup de cœur : liseré dégradé 1px + glow **sur l'affiche**, jamais sur la
+ * card — la règle ♥ du handoff, identique à celle de la fiche média.
+ */
+function RowPoster({ src, favorite }: { src: string | null; favorite: boolean }) {
+  const shape = 'h-[72px] w-12 flex-none rounded-poster-sm'
+
+  if (!favorite) {
+    return src ? (
+      <img
+        src={src}
+        alt=""
+        width={48}
+        height={72}
+        loading="lazy"
+        crossOrigin="anonymous"
+        className={`${shape} object-cover`}
+      />
+    ) : (
+      <span className={`${shape} bg-poster-placeholder`} />
+    )
+  }
+
+  return (
+    <span className={`${shape} border-gradient shadow-glow`}>
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          width={48}
+          height={72}
+          loading="lazy"
+          crossOrigin="anonymous"
+          className="size-full rounded-[5px] object-cover"
+        />
+      ) : (
+        <span className="block size-full rounded-[5px] bg-poster-placeholder" />
+      )}
+    </span>
+  )
 }
 
 /**

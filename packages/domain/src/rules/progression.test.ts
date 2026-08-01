@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { advancePercent, applyTaps, episodeIncrement, nextEpisodeLabel } from './progression.ts'
+import {
+  advancePercent,
+  applyTaps,
+  episodeIncrement,
+  episodesFromPercent,
+  hasEpisodes,
+  nextEpisodeLabel,
+  upcomingEpisodeLabel,
+  upcomingEpisodeNumber,
+} from './progression.ts'
 
 /**
  * Règles du bouton play.
@@ -71,6 +80,113 @@ describe('auto-incrément du label', () => {
     // Sans label existant, on ne connait pas la saison. Ecrire `S01E01`
     // affirmerait quelque chose que personne n'a dit.
     expect(nextEpisodeLabel(null)).toBeNull()
+  })
+})
+
+describe('média à épisodes', () => {
+  it('une serie a des episodes', () => {
+    expect(hasEpisodes('tmdb:tv/95396')).toBe(true)
+  })
+
+  it('un film n en a pas', () => {
+    // C'est ce qui rend le play adaptatif : sur un film, un tap marque vu
+    // au lieu d'avancer une progression qui n'aurait pas de sens.
+    expect(hasEpisodes('tmdb:movie/693134')).toBe(false)
+  })
+})
+
+describe('label du CTA « épisode suivant »', () => {
+  it('designe l episode qui suit la progression courante', () => {
+    expect(upcomingEpisodeLabel('S02E05')).toBe('S02E06')
+  })
+
+  it('garde la largeur d origine du numero', () => {
+    expect(upcomingEpisodeLabel('S1E9')).toBe('S1E10')
+  })
+
+  it('se tait sur un label libre au lieu de le recopier', () => {
+    // `nextEpisodeLabel` rend un label libre tel quel — juste pour un
+    // journal, absurde pour un bouton : « ÉPISODE SUIVANT la fin » ne veut
+    // rien dire. Le CTA affiche alors « ÉPISODE SUIVANT » sans précision.
+    expect(upcomingEpisodeLabel('la fin')).toBeNull()
+  })
+
+  it('se tait quand aucun label n existe', () => {
+    expect(upcomingEpisodeLabel(null)).toBeNull()
+    expect(upcomingEpisodeLabel(undefined)).toBeNull()
+  })
+})
+
+/**
+ * Épisodes vus, déduits du pourcentage.
+ *
+ * La règle existait déjà dans `stats()` sous forme d'une multiplication en
+ * ligne : la sortir ici la met au seul endroit où une règle métier a le droit
+ * d'exister, et permet à l'accueil et à la fiche d'afficher la même
+ * numérotation que les stats comptent.
+ */
+describe('épisodes vus déduits du pourcentage', () => {
+  it('multiplie le pourcentage par le compte d episodes', () => {
+    expect(episodesFromPercent(30, 10)).toBe(3)
+    expect(episodesFromPercent(100, 8)).toBe(8)
+  })
+
+  it('rend zero a zero pour cent', () => {
+    expect(episodesFromPercent(0, 10)).toBe(0)
+  })
+
+  it('arrondit au plus proche, comme les stats', () => {
+    // 12,5 % de huit episodes font exactement un episode : les increments
+    // exacts retombent toujours sur un entier, l'arrondi absorbe la derive
+    // binaire (100 / 3 x 2 ne vaut pas exactement 66,67).
+    expect(episodesFromPercent(12.5, 8)).toBe(1)
+    expect(episodesFromPercent((100 / 3) * 2, 3)).toBe(2)
+  })
+
+  it('se tait quand le compte d episodes est inconnu ou absurde', () => {
+    // C'est le cas des films, et celui des series dont TMDB ne renvoie pas
+    // le compte — ou renvoie 0 sur une serie annoncee non diffusee.
+    expect(episodesFromPercent(50, null)).toBeNull()
+    expect(episodesFromPercent(50, undefined)).toBeNull()
+    expect(episodesFromPercent(50, 0)).toBeNull()
+    expect(episodesFromPercent(50, -3)).toBeNull()
+  })
+
+  it('borne un pourcentage hors gamme au lieu d inventer des episodes', () => {
+    // Un pourcentage vient d'un evenement ecrit pour toujours : une valeur
+    // hors gamme ne doit pas produire un onzieme episode d'une serie de dix.
+    expect(episodesFromPercent(120, 10)).toBe(10)
+    expect(episodesFromPercent(-5, 10)).toBe(0)
+  })
+})
+
+/**
+ * Numéro du prochain épisode, pour le CTA de la fiche.
+ *
+ * C'est la moitié « sans label » du CTA « ÉPISODE SUIVANT » : quand personne
+ * n'a jamais saisi de `S01E04`, la saison est inconnue mais le rang de
+ * l'épisode, lui, se déduit du pourcentage et du compte d'épisodes.
+ */
+describe('numéro du prochain épisode', () => {
+  it('designe l episode qui suit ceux deja vus', () => {
+    expect(upcomingEpisodeNumber(0, 10)).toBe(1)
+    expect(upcomingEpisodeNumber(30, 10)).toBe(4)
+  })
+
+  it('designe le dernier episode juste avant la fin', () => {
+    expect(upcomingEpisodeNumber(90, 10)).toBe(10)
+  })
+
+  it('se tait une fois le cycle clos', () => {
+    // A 100 % il n'y a plus de suivant : designer un onzieme episode d'une
+    // serie de dix serait un episode qui n'existe pas.
+    expect(upcomingEpisodeNumber(100, 10)).toBeNull()
+  })
+
+  it('se tait quand le compte d episodes est inconnu', () => {
+    expect(upcomingEpisodeNumber(30, null)).toBeNull()
+    expect(upcomingEpisodeNumber(30, undefined)).toBeNull()
+    expect(upcomingEpisodeNumber(30, 0)).toBeNull()
   })
 })
 

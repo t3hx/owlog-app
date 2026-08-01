@@ -10,6 +10,8 @@
  * regroupement des taps en un seul événement est une affaire d'écran.
  */
 
+import type { MediaRef } from '../types.ts'
+
 /**
  * Incrément appliqué quand le nombre d'épisodes est inconnu ou inutilisable.
  *
@@ -124,6 +126,71 @@ function labelSteps(percent: number, taps: number, increment: number): number {
   return Math.max(0, Math.min(taps, toComplete - 1))
 }
 
+/**
+ * Nombre d'épisodes vus, déduit du pourcentage de progression.
+ *
+ * C'est la réciproque d'`episodeIncrement` : la progression s'écrit en
+ * pourcentage — l'unité qui vaut aussi pour les médias sans épisodes — et
+ * l'affichage la retraduit en épisodes quand le compte est connu. Trois
+ * consommateurs partagent cette règle : la rangée « en cours » de l'accueil
+ * (`ép. 3/10`), le CTA de la fiche via `upcomingEpisodeNumber`, et le
+ * compteur d'épisodes vus des stats.
+ *
+ * L'arrondi au plus proche absorbe la dérive binaire : `100 / 3 × 2` ne vaut
+ * pas exactement 66,67, mais désigne bien deux épisodes. Le pourcentage est
+ * borné à `[0, 100]` avant conversion : il vient d'un événement écrit pour
+ * toujours, et une valeur hors gamme ne doit pas inventer un onzième épisode
+ * d'une série de dix.
+ *
+ * `null` quand le compte est inconnu ou inutilisable (TMDB renvoie parfois 0
+ * sur une série annoncée non diffusée) : on ne devine pas un rang d'épisode.
+ */
+export function episodesFromPercent(
+  percent: number,
+  episodeCount: number | null | undefined,
+): number | null {
+  if (episodeCount === null || episodeCount === undefined) return null
+  if (!Number.isFinite(episodeCount) || episodeCount <= 0) return null
+  if (!Number.isFinite(percent)) return null
+
+  const bounded = Math.max(0, Math.min(COMPLETE_PERCENT, percent))
+  return Math.round((episodeCount * bounded) / COMPLETE_PERCENT)
+}
+
+/**
+ * Numéro du prochain épisode, déduit du pourcentage.
+ *
+ * C'est la moitié « sans label » du CTA « ÉPISODE SUIVANT » : quand personne
+ * n'a jamais saisi de `S01E04`, la saison est inconnue — donc pas de label
+ * inventé — mais le rang de l'épisode, lui, se déduit du compte d'épisodes.
+ *
+ * Se tait une fois le cycle clos : à 100 % il n'y a plus de suivant, même
+ * règle que le garde-fou du label dans `applyTaps`.
+ */
+export function upcomingEpisodeNumber(
+  percent: number,
+  episodeCount: number | null | undefined,
+): number | null {
+  const seen = episodesFromPercent(percent, episodeCount)
+  if (seen === null || episodeCount === null || episodeCount === undefined) return null
+  if (seen >= episodeCount) return null
+
+  return seen + 1
+}
+
+/**
+ * Le média se regarde-t-il par épisodes ?
+ *
+ * C'est la règle du play adaptatif : sur un média à épisodes, un tap avance
+ * d'un épisode ; sur un film, une progression n'a pas de sens et le tap
+ * marque vu. Le discriminant est la référence elle-même — `tmdb:tv/N` face à
+ * `tmdb:movie/N` — parce qu'elle est toujours là, y compris quand le cache
+ * TMDB manque ou n'a pas encore de `number_of_episodes`.
+ */
+export function hasEpisodes(ref: MediaRef): boolean {
+  return ref.startsWith('tmdb:tv/')
+}
+
 /** Un label d'épisode : `S` puis la saison, `E` puis l'épisode. */
 const EPISODE_LABEL = /^s\d+e\d+$/i
 
@@ -158,4 +225,20 @@ export function nextEpisodeLabel(label: string | null | undefined): string | nul
   const next = String(Number(episode) + 1)
 
   return prefix + next.padStart(episode.length, '0')
+}
+
+/**
+ * Label affiché par le CTA « ▸ ÉPISODE SUIVANT » de la fiche.
+ *
+ * Même incrément que `nextEpisodeLabel`, mais l'usage diffère : un journal
+ * peut recopier un label libre (« la fin ») tel quel, un bouton ne le peut
+ * pas — « ÉPISODE SUIVANT la fin » ne désigne rien. Ici, tout ce qui n'est
+ * pas un numéro d'épisode se tait, et le CTA affiche « ÉPISODE SUIVANT »
+ * sans précision plutôt qu'une phrase absurde.
+ */
+export function upcomingEpisodeLabel(label: string | null | undefined): string | null {
+  if (label === null || label === undefined) return null
+  if (!EPISODE_LABEL.test(label)) return null
+
+  return nextEpisodeLabel(label)
 }
