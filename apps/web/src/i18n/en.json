@@ -211,9 +211,16 @@
     "nextEpisode": "NEXT EPISODE {{label}}",
     "nextEpisodeNumber": "NEXT EPISODE · EP. {{number}}",
     "nextEpisodeUnknown": "NEXT EPISODE",
+    "nextEpisodeTitle": "“{{title}}”",
+    "seasonsWord_one": "season",
+    "seasonsWord_other": "seasons",
+    "episodesWord_one": "episode",
+    "episodesWord_other": "episodes",
+    "statusMenu": "status options",
     "markSeen": "MARK SEEN",
     "seenCount": "✓ seen ×{{count}}",
-    "cancelHint": "long-press an entry to undo it"
+    "cancelHint": "long-press an entry to undo it",
+    "journalLastEpisode": "last episode watched · {{label}}"
   },
   "journal": {
     "WATCH": "added to « to watch »",

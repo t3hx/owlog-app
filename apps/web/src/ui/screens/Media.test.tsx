@@ -1,11 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import type { SeasonDetail } from '@owlog/contracts'
 import { mediaState, type StoredEvent } from '@owlog/domain'
 import { createFactory, MOVIE, SERIES } from '@owlog/domain/test'
 import i18next from '@/i18n'
 import { MEDIA_CACHE_STALE_MS, completeCacheRow, partialCacheRow } from '@/ports/MediaCache'
-import { PortsProvider } from '@/ui/PortsProvider'
+import { PortsProvider, type Ports } from '@/ui/PortsProvider'
 import { Media } from '@/ui/screens/Media'
 import { fakePorts } from '@/ui/test/fakePorts'
 
@@ -46,41 +48,58 @@ interface RenderOptions {
   onAppend?: (produced: readonly StoredEvent[]) => void
   /** Compte d'épisodes du cache. Dix par défaut, `null` pour l'inconnu. */
   numberOfEpisodes?: number | null
+  /** Compte de saisons du cache. `null` (inconnu) par défaut. */
+  numberOfSeasons?: number | null
+  /** Ce que `catalog.season` répond. Absent : hors-ligne. */
+  seasonDetail?: SeasonDetail
+}
+
+/**
+ * L'arbre réel : les ports et le client TanStack Query. Un client neuf par
+ * rendu — un cache partagé entre tests ferait passer le second pour la
+ * mauvaise raison.
+ */
+function renderScreen(ports: Ports, ref: typeof MOVIE | typeof SERIES) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <PortsProvider ports={ports}>
+        <Media ref={ref} />
+      </PortsProvider>
+    </QueryClientProvider>,
+  )
 }
 
 function renderMedia(events: readonly StoredEvent[], options: RenderOptions = {}) {
-  return render(
-    <PortsProvider
-      ports={fakePorts({
-        mediaEvents: events,
-        mediaStates: [mediaState(events, MOVIE)],
-        mediaCache: [partialCacheRow(HIT, 'now')],
-        ...(options.onAppend === undefined ? {} : { onAppend: options.onAppend }),
-      })}
-    >
-      <Media ref={MOVIE} />
-    </PortsProvider>,
+  return renderScreen(
+    fakePorts({
+      mediaEvents: events,
+      mediaStates: [mediaState(events, MOVIE)],
+      mediaCache: [partialCacheRow(HIT, 'now')],
+      ...(options.onAppend === undefined ? {} : { onAppend: options.onAppend }),
+    }),
+    MOVIE,
   )
 }
 
 /** Série de dix épisodes : l'incrément d'un tap vaut dix points. */
 function renderSeries(events: readonly StoredEvent[], options: RenderOptions = {}) {
-  return render(
-    <PortsProvider
-      ports={fakePorts({
-        mediaEvents: events,
-        mediaStates: [mediaState(events, SERIES)],
-        mediaCache: [
-          {
-            ...partialCacheRow(SERIES_HIT, 'now'),
-            numberOfEpisodes: options.numberOfEpisodes === undefined ? 10 : options.numberOfEpisodes,
-          },
-        ],
-        ...(options.onAppend === undefined ? {} : { onAppend: options.onAppend }),
-      })}
-    >
-      <Media ref={SERIES} />
-    </PortsProvider>,
+  return renderScreen(
+    fakePorts({
+      mediaEvents: events,
+      mediaStates: [mediaState(events, SERIES)],
+      mediaCache: [
+        {
+          ...partialCacheRow(SERIES_HIT, 'now'),
+          numberOfEpisodes: options.numberOfEpisodes === undefined ? 10 : options.numberOfEpisodes,
+          ...(options.numberOfSeasons === undefined
+            ? {}
+            : { numberOfSeasons: options.numberOfSeasons }),
+        },
+      ],
+      ...(options.seasonDetail === undefined ? {} : { seasonDetail: options.seasonDetail }),
+      ...(options.onAppend === undefined ? {} : { onAppend: options.onAppend }),
+    }),
+    SERIES,
   )
 }
 
@@ -131,11 +150,13 @@ describe('fraîcheur du cache média', () => {
     )
 
     render(
-      <PortsProvider
-        ports={fakePorts({ mediaCache: [completeCacheRow(DETAIL, fetchedAt)], detail })}
-      >
-        <Media ref={MOVIE} />
-      </PortsProvider>,
+      <QueryClientProvider client={new QueryClient()}>
+        <PortsProvider
+          ports={fakePorts({ mediaCache: [completeCacheRow(DETAIL, fetchedAt)], detail })}
+        >
+          <Media ref={MOVIE} />
+        </PortsProvider>
+      </QueryClientProvider>,
     )
 
     return detail
@@ -153,6 +174,96 @@ describe('fraîcheur du cache média', () => {
     const detail = renderWithFetchedAt(stale)
 
     await waitFor(() => expect(detail).toHaveBeenCalledOnce())
+  })
+})
+
+/**
+ * Ligne synthétique du journal — arbitrage utilisateur (option A).
+ *
+ * Les PROG restent exclus du journal ; le dernier épisode vu du cycle en
+ * cours se lit sur une ligne dérivée, jamais une par épisode.
+ */
+describe('dernier épisode vu au journal', () => {
+  it('affiche le label du cycle en cours', async () => {
+    const f = createFactory(SERIES)
+    renderSeries([f.watch(), f.start('c1'), f.prog('c1', 10, { label: 'S02E05' })] as StoredEvent[])
+
+    expect(await screen.findByText('dernier épisode vu · S02E05')).toBeDefined()
+  })
+
+  it('déduit le rang quand aucun label n existe', async () => {
+    const f = createFactory(SERIES)
+    renderSeries([f.watch(), f.start('c1'), f.prog('c1', 30)] as StoredEvent[])
+
+    expect(await screen.findByText('dernier épisode vu · ép. 3/10')).toBeDefined()
+  })
+
+  it('se tait sur un titre vu', async () => {
+    const f = createFactory()
+    renderMedia([f.watch(), f.start('c1'), f.seen('c1')] as StoredEvent[])
+
+    await screen.findByText('Dune')
+    expect(screen.queryByText(/dernier épisode vu/)).toBeNull()
+  })
+})
+
+/**
+ * Encart saisons/épisodes, à droite du titre.
+ *
+ * Il n'affiche que ce qui est connu : les lignes de cache écrites avant
+ * `numberOfSeasons` n'ont que le compte d'épisodes, et un film n'a rien.
+ */
+describe('encart saisons/épisodes', () => {
+  /** La ligne de l'encart : chiffre et mot vivent dans deux spans. */
+  function tileLine(count: number, word: string) {
+    return screen.findByText(
+      (_, element) =>
+        element?.tagName === 'P' && element.textContent === `${count} ${word}`,
+    )
+  }
+
+  it('affiche saisons et épisodes quand le cache les connaît', async () => {
+    const f = createFactory(SERIES)
+    renderSeries([f.watch()] as StoredEvent[], { numberOfSeasons: 2 })
+
+    expect(await tileLine(2, 'saisons')).toBeDefined()
+    expect(await tileLine(10, 'épisodes')).toBeDefined()
+  })
+
+  it('accorde le singulier', async () => {
+    const f = createFactory(SERIES)
+    renderSeries([f.watch()] as StoredEvent[], { numberOfSeasons: 1, numberOfEpisodes: 1 })
+
+    expect(await tileLine(1, 'saison')).toBeDefined()
+    expect(await tileLine(1, 'épisode')).toBeDefined()
+  })
+
+  it('n affiche que les épisodes quand le compte de saisons manque', async () => {
+    // C'est la ligne de cache d'avant ce champ : elle ne se répare qu'à la
+    // prochaine ouverture en ligne, et l'encart doit vivre sans elle.
+    const f = createFactory(SERIES)
+    renderSeries([f.watch()] as StoredEvent[])
+
+    expect(await tileLine(10, 'épisodes')).toBeDefined()
+    expect(screen.queryByText('saisons')).toBeNull()
+  })
+
+  it('disparaît quand rien n est connu', async () => {
+    const f = createFactory(SERIES)
+    renderSeries([f.watch()] as StoredEvent[], { numberOfEpisodes: null })
+
+    await screen.findByText('Severance')
+    expect(screen.queryByText('épisodes')).toBeNull()
+    expect(screen.queryByText('saisons')).toBeNull()
+  })
+
+  it('reste muet sur un film', async () => {
+    const f = createFactory()
+    renderMedia([f.watch()] as StoredEvent[])
+
+    await screen.findByText('Dune')
+    expect(screen.queryByText('saisons')).toBeNull()
+    expect(screen.queryByText('épisodes')).toBeNull()
   })
 })
 
@@ -243,6 +354,132 @@ describe('CTA de la fiche', () => {
     expect(screen.queryByText('REVOIR')).toBeNull()
     expect(screen.queryByText('MARQUER VU')).toBeNull()
     expect(screen.queryByText(/ÉPISODE SUIVANT/)).toBeNull()
+  })
+})
+
+/**
+ * Titre de l'épisode suivant, sous le CTA.
+ *
+ * La règle d'accès est celle du domaine (`upcomingEpisodeRank`) : saison
+ * sue par le label, ou saison unique. Ici se vérifie le reste — l'appel au
+ * catalogue, l'affichage, et surtout le silence sur tout ce qui manque.
+ */
+describe('titre de l’épisode suivant', () => {
+  const SEASON_TWO: SeasonDetail = {
+    seasonNumber: 2,
+    episodes: [
+      { episodeNumber: 5, name: 'La balise' },
+      { episodeNumber: 6, name: 'Le retour' },
+    ],
+  }
+
+  it('affiche le titre quand le label dit la saison', async () => {
+    const f = createFactory(SERIES)
+    renderSeries(
+      [f.watch(), f.start('c1'), f.prog('c1', 10, { label: 'S02E05' })] as StoredEvent[],
+      { seasonDetail: SEASON_TWO },
+    )
+
+    expect(await screen.findByText('« Le retour »')).toBeDefined()
+  })
+
+  it('affiche le titre d un rang déduit quand la série n a qu une saison', async () => {
+    const f = createFactory(SERIES)
+    renderSeries([f.watch(), f.start('c1')] as StoredEvent[], {
+      numberOfSeasons: 1,
+      seasonDetail: {
+        seasonNumber: 1,
+        episodes: [{ episodeNumber: 1, name: 'Pilote' }],
+      },
+    })
+
+    expect(await screen.findByText('« Pilote »')).toBeDefined()
+  })
+
+  it('se tait sur un rang déduit quand la série a plusieurs saisons', async () => {
+    // La saison n'a jamais été dite : deviner « saison 1 » afficherait le
+    // titre d'un autre épisode que celui qu'on regarde.
+    const f = createFactory(SERIES)
+    renderSeries([f.watch(), f.start('c1')] as StoredEvent[], {
+      numberOfSeasons: 3,
+      seasonDetail: SEASON_TWO,
+    })
+
+    expect(await screen.findByText('ÉPISODE SUIVANT · ÉP. 1')).toBeDefined()
+    expect(screen.queryByText(/^« .+ »$/)).toBeNull()
+  })
+
+  it('se tait hors-ligne, sans placeholder', async () => {
+    // `seasonDetail` absent : le catalogue répond hors-ligne. Le CTA reste
+    // entier, la ligne de titre n'existe pas — jamais un « … » bruyant.
+    const f = createFactory(SERIES)
+    renderSeries(
+      [f.watch(), f.start('c1'), f.prog('c1', 10, { label: 'S02E05' })] as StoredEvent[],
+    )
+
+    expect(await screen.findByText('ÉPISODE SUIVANT S02E06')).toBeDefined()
+    expect(screen.queryByText(/^« .+ »$/)).toBeNull()
+  })
+
+  it('se tait quand l épisode manque à la saison', async () => {
+    const f = createFactory(SERIES)
+    renderSeries(
+      [f.watch(), f.start('c1'), f.prog('c1', 10, { label: 'S02E09' })] as StoredEvent[],
+      { seasonDetail: SEASON_TWO },
+    )
+
+    expect(await screen.findByText('ÉPISODE SUIVANT S02E10')).toBeDefined()
+    expect(screen.queryByText(/^« .+ »$/)).toBeNull()
+  })
+})
+
+/**
+ * Bouton `⋯` du backdrop : le choix direct de statut, sans appui long.
+ *
+ * C'est la même feuille que la bibliothèque — aucune surface inventée — et
+ * le même garde-fou : choisir un statut écrit un événement, fermer n'écrit
+ * rien.
+ */
+describe('menu de statut de la fiche', () => {
+  it('ouvre la feuille de choix direct', async () => {
+    const f = createFactory()
+    renderMedia([f.watch()] as StoredEvent[])
+
+    fireEvent.click(await screen.findByLabelText('options de statut'))
+
+    expect(screen.getByText('choisir directement un statut')).toBeDefined()
+  })
+
+  it('choisir un statut écrit l événement et referme la feuille', async () => {
+    const f = createFactory()
+    const appended: StoredEvent[][] = []
+    renderMedia([f.watch()] as StoredEvent[], {
+      onAppend: (produced) => appended.push([...produced]),
+    })
+
+    fireEvent.click(await screen.findByLabelText('options de statut'))
+    // La feuille repose sur les mêmes libellés que les chips de la page :
+    // le geste se cible dans la section du menu, pas dans tout l'écran.
+    const sheet = screen.getByText('choisir directement un statut').closest('section')
+    fireEvent.click(within(sheet as HTMLElement).getByRole('button', { name: /en cours/ }))
+
+    await waitFor(() => expect(appended).toHaveLength(1))
+    expect((appended[0] ?? []).some((event) => event.type === 'START')).toBe(true)
+    expect(screen.queryByText('choisir directement un statut')).toBeNull()
+  })
+
+  it('fermer la feuille n écrit rien', async () => {
+    const f = createFactory()
+    const appended: StoredEvent[][] = []
+    renderMedia([f.watch()] as StoredEvent[], {
+      onAppend: (produced) => appended.push([...produced]),
+    })
+
+    fireEvent.click(await screen.findByLabelText('options de statut'))
+    fireEvent.click(screen.getByLabelText('fermer'))
+
+    expect(screen.queryByText('choisir directement un statut')).toBeNull()
+    expect(appended).toHaveLength(0)
   })
 })
 

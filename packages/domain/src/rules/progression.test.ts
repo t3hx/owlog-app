@@ -9,6 +9,7 @@ import {
   nextEpisodeLabel,
   upcomingEpisodeLabel,
   upcomingEpisodeNumber,
+  upcomingEpisodeRank,
 } from './progression.ts'
 
 /**
@@ -114,6 +115,48 @@ describe('label du CTA « épisode suivant »', () => {
   it('se tait quand aucun label n existe', () => {
     expect(upcomingEpisodeLabel(null)).toBeNull()
     expect(upcomingEpisodeLabel(undefined)).toBeNull()
+  })
+})
+
+/**
+ * Rang complet (saison + épisode) de l'épisode suivant.
+ *
+ * C'est la règle qui décide si la fiche a le droit d'aller chercher un titre
+ * d'épisode : sans saison affirmée, on ne demande rien plutôt que de deviner.
+ */
+describe('rang complet de l épisode suivant', () => {
+  it('lit saison et episode dans un label SxxEyy', () => {
+    expect(upcomingEpisodeRank('S02E06', null, 2)).toEqual({ season: 2, episode: 6 })
+  })
+
+  it('tolere un label sans zeros de tete', () => {
+    expect(upcomingEpisodeRank('S1E10', null, null)).toEqual({ season: 1, episode: 10 })
+  })
+
+  it('prend la saison 1 pour un rang deduit quand la serie n en a qu une', () => {
+    // Sans label, la saison n'a jamais été dite — mais une série à saison
+    // unique ne laisse aucune ambiguïté : le rang suffit.
+    expect(upcomingEpisodeRank(null, 4, 1)).toEqual({ season: 1, episode: 4 })
+  })
+
+  it('se tait pour un rang deduit quand la serie a plusieurs saisons', () => {
+    // Deviner « saison 1 » sur une série de trois saisons afficherait le
+    // titre d'un autre épisode que celui qu'on regarde.
+    expect(upcomingEpisodeRank(null, 4, 3)).toBeNull()
+  })
+
+  it('se tait pour un rang deduit quand le compte de saisons est inconnu', () => {
+    // C'est le cas des lignes de cache écrites avant ce champ.
+    expect(upcomingEpisodeRank(null, 4, null)).toBeNull()
+    expect(upcomingEpisodeRank(null, 4, undefined)).toBeNull()
+  })
+
+  it('se tait sur un label libre', () => {
+    expect(upcomingEpisodeRank('la fin', null, 1)).toBeNull()
+  })
+
+  it('se tait quand rien n est connu', () => {
+    expect(upcomingEpisodeRank(null, null, 1)).toBeNull()
   })
 })
 

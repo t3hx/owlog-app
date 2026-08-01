@@ -4,6 +4,7 @@ import {
   type MediaDetail,
   type MediaRef,
   type SearchResponse,
+  type SeasonDetail,
 } from '@owlog/contracts'
 
 import type { CatalogFailure, CatalogResult, MediaCatalog } from '@/ports/MediaCatalog'
@@ -65,6 +66,11 @@ export function createMediaCatalog(options: {
     detail(ref: MediaRef, language) {
       const params = new URLSearchParams({ lang: language })
       return call<MediaDetail>(`/media/${ref}?${params.toString()}`)
+    },
+
+    season(ref: MediaRef, seasonNumber, language) {
+      const params = new URLSearchParams({ lang: language })
+      return call<SeasonDetail>(`/media/${ref}/season/${seasonNumber}?${params.toString()}`)
     },
   }
 }

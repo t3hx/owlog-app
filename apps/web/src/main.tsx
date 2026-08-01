@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -61,6 +62,21 @@ const sharedToken = orFallback(import.meta.env.VITE_SHARED_TOKEN, 'local-token')
 
 const catalog = createMediaCatalog({ baseUrl, sharedToken })
 
+/**
+ * Cache de session TanStack Query — **mémoire seule, jamais persisté**.
+ *
+ * `media_cache` (Dexie) reste la seule source hors-ligne ; ce cache-ci évite
+ * seulement de rappeler l'API pour une saison déjà vue pendant la session.
+ * `retry: false` parce que le port rend ses erreurs au lieu de les lever :
+ * TanStack ne voit jamais d'échec à réessayer, et un vrai retry vivrait au
+ * mauvais étage.
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false, staleTime: 24 * 60 * 60 * 1000 },
+  },
+})
+
 function orFallback(value: string | undefined, fallback: string): string {
   return value === undefined || value.trim() === '' ? fallback : value
 }
@@ -123,9 +139,11 @@ async function boot(): Promise<void> {
           auth: createAuthGateway({ baseUrl, sharedToken }),
           local: localData,
         }}>
-        <SessionProvider>
-          <App />
-        </SessionProvider>
+        <QueryClientProvider client={queryClient}>
+          <SessionProvider>
+            <App />
+          </SessionProvider>
+        </QueryClientProvider>
       </PortsProvider>
     </StrictMode>,
   )

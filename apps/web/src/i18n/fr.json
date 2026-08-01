@@ -211,9 +211,16 @@
     "nextEpisode": "ÉPISODE SUIVANT {{label}}",
     "nextEpisodeNumber": "ÉPISODE SUIVANT · ÉP. {{number}}",
     "nextEpisodeUnknown": "ÉPISODE SUIVANT",
+    "nextEpisodeTitle": "« {{title}} »",
+    "seasonsWord_one": "saison",
+    "seasonsWord_other": "saisons",
+    "episodesWord_one": "épisode",
+    "episodesWord_other": "épisodes",
+    "statusMenu": "options de statut",
     "markSeen": "MARQUER VU",
     "seenCount": "✓ vu ×{{count}}",
-    "cancelHint": "appui long sur une entrée pour l'annuler"
+    "cancelHint": "appui long sur une entrée pour l'annuler",
+    "journalLastEpisode": "dernier épisode vu · {{label}}"
   },
   "journal": {
     "WATCH": "ajouté en « à voir »",

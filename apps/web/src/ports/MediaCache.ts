@@ -23,6 +23,12 @@ export interface MediaCacheRow {
   readonly genres: readonly string[]
   readonly totalRuntime: number | null
   readonly numberOfEpisodes: number | null
+  /**
+   * Nombre de saisons. **Optionnel** : les lignes écrites avant ce champ ne
+   * l'ont pas, et Dexie les rend telles quelles — tout consommateur lit
+   * `row.numberOfSeasons ?? null` plutôt que de supposer sa présence.
+   */
+  readonly numberOfSeasons?: number | null
   readonly overview: string
   readonly externalRatings: { readonly tmdb: number | null }
   readonly fetchedAt: string
@@ -46,6 +52,7 @@ export function partialCacheRow(
     genres: [],
     totalRuntime: null,
     numberOfEpisodes: null,
+    numberOfSeasons: null,
     overview: '',
     externalRatings: { tmdb: null },
     fetchedAt: now,
@@ -77,6 +84,7 @@ export function placeholderCacheRow(ref: MediaRef, title: string): MediaCacheRow
     genres: [],
     totalRuntime: null,
     numberOfEpisodes: null,
+    numberOfSeasons: null,
     overview: '',
     externalRatings: { tmdb: null },
     fetchedAt: '',
@@ -129,6 +137,9 @@ export function completeCacheRow(detail: MediaDetail, now: string): MediaCacheRo
     genres: detail.genres,
     totalRuntime: detail.totalRuntime,
     numberOfEpisodes: detail.numberOfEpisodes,
+    // `?? null` : le champ est optionnel dans le contrat, jamais dans une
+    // ligne neuve — l'absence reste réservée aux lignes d'avant ce champ.
+    numberOfSeasons: detail.numberOfSeasons ?? null,
     overview: detail.overview,
     externalRatings: detail.externalRatings,
     fetchedAt: now,

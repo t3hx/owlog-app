@@ -59,6 +59,16 @@ export function createApp(options: AppOptions) {
     ...(options.now ? { now: options.now } : {}),
   })
 
+  /**
+   * Cache des saisons, séparé du détail : ses clés vivent par saison et non
+   * par titre, et le partager brouillerait les comptes de `maxEntries`.
+   */
+  const seasonCache = createCache<unknown>({
+    ttlMs: CACHE_TTL_MS,
+    maxEntries: 500,
+    ...(options.now ? { now: options.now } : {}),
+  })
+
   const limiter = createRateLimiter({
     limit: 60,
     windowMs: 60_000,
@@ -169,6 +179,41 @@ export function createApp(options: AppOptions) {
     try {
       const result = await tmdb.search(query, language)
       searchCache.set(key, result)
+      return c.json(result)
+    } catch (error) {
+      return upstream(c, error)
+    }
+  })
+
+  /**
+   * Saison d'une série : rangs et titres d'épisodes, pour la ligne « titre
+   * de l'épisode suivant » de la fiche.
+   *
+   * Le motif décompose la référence (`:source/:id`) au lieu de réutiliser le
+   * `:ref{.+}` glouton de la route de détail : deux motifs gloutons qui se
+   * recouvrent laissent le routeur de Hono servir le détail — vérifié, pas
+   * supposé — et la saison répondrait 400 sur une référence imprononçable.
+   * La référence est recomposée puis validée par `parseMediaRef`, comme
+   * partout ailleurs.
+   */
+  routes.get('/media/:source{[a-z]+:[a-z]+}/:id{[0-9]+}/season/:season{[0-9]+}', async (c) => {
+    const parsed = parseMediaRef(`${c.req.param('source')}/${c.req.param('id')}`)
+    if (!parsed) return fail(c, 400, 'bad-request')
+
+    // Un film n'a pas de saisons. TMDB répondrait 404 ; le dire ici épargne
+    // un appel de quota pour une question déjà tranchée par la référence.
+    if (parsed.kind !== 'tv') return fail(c, 404, 'not-found')
+
+    const seasonNumber = Number(c.req.param('season'))
+    const language = c.req.query('lang') ?? DEFAULT_LANGUAGE
+    const key = `${language}::tv/${parsed.id}/season/${seasonNumber}`
+
+    const cached = seasonCache.get(key)
+    if (cached) return c.json(cached)
+
+    try {
+      const result = await tmdb.season(parsed.id, seasonNumber, language)
+      seasonCache.set(key, result)
       return c.json(result)
     } catch (error) {
       return upstream(c, error)

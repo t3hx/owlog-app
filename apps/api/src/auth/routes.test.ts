@@ -39,6 +39,9 @@ function fakeTmdb(): TmdbClient {
     detail: async () => {
       throw new Error('not used here')
     },
+    season: async () => {
+      throw new Error('not used here')
+    },
   }
 }
 

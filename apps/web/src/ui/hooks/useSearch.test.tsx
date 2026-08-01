@@ -31,6 +31,7 @@ function flakyCatalog(): MediaCatalog & { calls: () => number } {
       )
     },
     detail: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    season: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
   }
 }
 

@@ -1,4 +1,4 @@
-import type { MediaDetail, MediaRef, SearchResponse } from '@owlog/contracts'
+import type { MediaDetail, MediaRef, SearchResponse, SeasonDetail } from '@owlog/contracts'
 
 /**
  * Port du catalogue de médias.
@@ -15,6 +15,16 @@ import type { MediaDetail, MediaRef, SearchResponse } from '@owlog/contracts'
 export interface MediaCatalog {
   search(query: string, language: string): Promise<CatalogResult<SearchResponse>>
   detail(ref: MediaRef, language: string): Promise<CatalogResult<MediaDetail>>
+  /**
+   * Une saison d'une série : titres d'épisodes pour la ligne sous le CTA.
+   * Même promesse que les autres appels — erreurs rendues, jamais levées —
+   * et l'écran qui la consomme se tait sur tout échec, hors-ligne compris.
+   */
+  season(
+    ref: MediaRef,
+    seasonNumber: number,
+    language: string,
+  ): Promise<CatalogResult<SeasonDetail>>
 }
 
 export type CatalogResult<T> =

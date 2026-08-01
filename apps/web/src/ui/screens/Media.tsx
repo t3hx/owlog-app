@@ -1,4 +1,5 @@
 import { backdropUrl, posterUrl } from '@owlog/contracts'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
@@ -6,15 +7,19 @@ import {
   journal as journalOf,
   applyTaps,
   episodeIncrement,
+  episodesFromPercent,
   hasEpisodes,
   upcomingEpisodeLabel,
   upcomingEpisodeNumber,
+  upcomingEpisodeRank,
   type MediaRef,
   type StoredEvent,
 } from '@owlog/domain'
 import { ProgressBar } from '@/ui/components/home/ProgressBar'
 import { EventText } from '@/ui/components/journal/EventText'
+import { StatusMenu } from '@/ui/components/library/StatusMenu'
 import { STATUS_CHIP, STATUSES } from '@/ui/components/status/statusStyle'
+import { useEpisodeTitle } from '@/ui/hooks/useEpisodeTitle'
 import { useLongPress } from '@/ui/hooks/useLongPress'
 import { useMedia } from '@/ui/hooks/useMedia'
 import { usePlay } from '@/ui/hooks/usePlay'
@@ -36,6 +41,7 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
   const [, navigate] = useLocation()
   const media = useMedia(mediaRef)
   const { tap, pendingTaps, markSeen } = usePlay()
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false)
 
   const { state, cache, journal } = media
   const status = state?.status ?? 'absent'
@@ -50,15 +56,34 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
     pendingTaps(mediaRef),
     increment,
   )
+  // Le dernier épisode vu du cycle courant : le label saisi, sinon le rang
+  // déduit du pourcentage — la même matière que la rangée de l'accueil.
+  const seenEpisodes = episodesFromPercent(projection.percent, cache?.numberOfEpisodes)
+  const lastEpisodeSeen =
+    projection.label ??
+    (hasEpisodes(mediaRef) && seenEpisodes !== null && seenEpisodes > 0
+      ? t('home.episodeCount', { seen: seenEpisodes, total: cache?.numberOfEpisodes })
+      : null)
   const nextLabel = upcomingEpisodeLabel(projection.label)
   // Sans label saisi, la numérotation se déduit du pourcentage et du compte
   // d'épisodes : pas de saison affirmée, mais un rang.
   const nextNumber =
     nextLabel === null ? upcomingEpisodeNumber(projection.percent, cache?.numberOfEpisodes) : null
 
+  // Titre de l'épisode suivant, seulement quand le CTA qui le porte existe.
+  // Le rang décide aussi de l'appel réseau : `null` = rien demandé — et le
+  // hook se tait sur tout échec, hors-ligne compris.
+  const nextRank =
+    status === 'watching' && hasEpisodes(mediaRef)
+      ? upcomingEpisodeRank(nextLabel, nextNumber, cache?.numberOfSeasons)
+      : null
+  const nextEpisodeTitle = useEpisodeTitle(mediaRef, nextRank)
+
   return (
     <div className="mx-auto max-w-md px-4 pb-8">
-      <div className="relative -mx-4 h-[190px] overflow-hidden sm:mx-0 sm:rounded-card">
+      {/* Coins arrondis dès le mobile : le prototype cadre le backdrop en
+          carte (rayon 14, léger retrait du haut), pas en pleine largeur. */}
+      <div className="relative mt-1.5 h-[190px] overflow-hidden rounded-card">
         {backdrop ? (
           <img src={backdrop} alt="" crossOrigin="anonymous" className="size-full object-cover" />
         ) : (
@@ -77,6 +102,18 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
         >
           ←
         </button>
+
+        {/* Pendant droit du ← : mêmes 36 px, même habillage. Il ouvre le
+            menu de choix direct de statut — la même feuille que l'appui
+            long de la pastille en bibliothèque, aucune surface inventée. */}
+        <button
+          type="button"
+          onClick={() => setStatusMenuOpen(true)}
+          aria-label={t('media.statusMenu')}
+          className="absolute right-3.5 top-3.5 flex size-9 min-h-0 min-w-0 items-center justify-center rounded-tab border border-border-active bg-tabbar text-base text-text"
+        >
+          ⋯
+        </button>
       </div>
 
       <div className="relative -mt-14 flex items-end gap-4 px-1.5">
@@ -88,7 +125,26 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
           </h1>
           <p className="font-mono text-[10.5px] text-muted">{meta(cache, state, t)}</p>
         </div>
+
+        {cache?.kind === 'tv' && (
+          <SeasonsTile
+            seasons={cache.numberOfSeasons ?? null}
+            episodes={cache.numberOfEpisodes}
+          />
+        )}
       </div>
+
+      {statusMenuOpen && (
+        <StatusMenu
+          title={cache?.title ?? mediaRef}
+          current={status}
+          onPick={(target) => {
+            setStatusMenuOpen(false)
+            void media.pickStatus(target)
+          }}
+          onClose={() => setStatusMenuOpen(false)}
+        />
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {STATUSES.map((option) => (
@@ -161,20 +217,30 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
 
       {status === 'watching' &&
         (hasEpisodes(mediaRef) ? (
-          <ActionCta
-            icon="▸"
-            // Trois niveaux de précision, du plus dit au plus déduit : le
-            // label saisi (`S02E06`), le rang déduit du pourcentage
-            // (`ÉP. 4`), puis rien quand on ne sait rien.
-            label={
-              nextLabel !== null
-                ? t('media.nextEpisode', { label: nextLabel })
-                : nextNumber !== null
-                  ? t('media.nextEpisodeNumber', { number: nextNumber })
-                  : t('media.nextEpisodeUnknown')
-            }
-            onTap={() => tap(mediaRef, increment)}
-          />
+          <>
+            <ActionCta
+              icon="▸"
+              // Trois niveaux de précision, du plus dit au plus déduit : le
+              // label saisi (`S02E06`), le rang déduit du pourcentage
+              // (`ÉP. 4`), puis rien quand on ne sait rien.
+              label={
+                nextLabel !== null
+                  ? t('media.nextEpisode', { label: nextLabel })
+                  : nextNumber !== null
+                    ? t('media.nextEpisodeNumber', { number: nextNumber })
+                    : t('media.nextEpisodeUnknown')
+              }
+              onTap={() => tap(mediaRef, increment)}
+            />
+            {/* Le titre de l'épisode que le CTA désigne — « Le retour » —
+                quand la saison est sue et le réseau d'accord. Absent sinon,
+                sans placeholder : rien n'est dû ici. */}
+            {nextEpisodeTitle !== null && (
+              <p className="mt-2 font-mono text-[10px] text-muted">
+                {t('media.nextEpisodeTitle', { title: nextEpisodeTitle })}
+              </p>
+            )}
+          </>
         ) : (
           <ActionCta icon="✓" label={t('media.markSeen')} onTap={() => void markSeen(mediaRef)} />
         ))}
@@ -201,6 +267,16 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
       <h2 className="mb-2.5 mt-6 font-display text-[13px] font-semibold tracking-wide text-muted">
         {t('media.journal')}
       </h2>
+
+      {/* Ligne synthétique du cycle en cours — arbitrage utilisateur du
+          2026-08-01 (option A) : les PROG restent exclus du journal (le
+          journal raconte les cycles), mais le dernier épisode vu se lit
+          ici, dérivé de la projection — une ligne, pas cinquante. */}
+      {status === 'watching' && lastEpisodeSeen !== null && (
+        <p className="mb-2 border-l border-border pl-2.5 font-mono text-[10.5px] text-muted">
+          {t('media.journalLastEpisode', { label: lastEpisodeSeen })}
+        </p>
+      )}
 
       <Journal entries={journalOf(journal)} onCancel={(id) => void media.cancel(id)} />
     </div>
@@ -233,6 +309,43 @@ function ActionCta({
       <span className="text-base text-bg">{icon}</span>
       <span className="font-display text-[13px] font-semibold tracking-wide text-bg">{label}</span>
     </button>
+  )
+}
+
+/**
+ * Encart saisons/épisodes, à droite du titre d'une série.
+ *
+ * Carte du système (surface translucide, bordure, rayon 14) en deux lignes
+ * empilées — chiffre en Chakra Petch, mot en mono éteint. Chaque ligne ne
+ * s'affiche que si sa valeur est connue : les lignes de cache écrites avant
+ * `numberOfSeasons` n'ont que le compte d'épisodes, et un « ? saisons »
+ * annoncerait un manque là où il n'y a rien à attendre. Deux inconnues :
+ * pas d'encart du tout — le composant rend `null`.
+ */
+function SeasonsTile({ seasons, episodes }: { seasons: number | null; episodes: number | null }) {
+  const { t } = useTranslation()
+
+  if (seasons === null && episodes === null) return null
+
+  return (
+    <div className="mb-1 flex flex-none flex-col gap-0.5 rounded-card border border-border bg-surface-translucent px-2.5 py-1.5">
+      {seasons !== null && (
+        <p className="whitespace-nowrap">
+          <span className="font-display text-[13px] font-semibold text-text">{seasons}</span>{' '}
+          <span className="font-mono text-[9.5px] text-muted">
+            {t('media.seasonsWord', { count: seasons })}
+          </span>
+        </p>
+      )}
+      {episodes !== null && (
+        <p className="whitespace-nowrap">
+          <span className="font-display text-[13px] font-semibold text-text">{episodes}</span>{' '}
+          <span className="font-mono text-[9.5px] text-muted">
+            {t('media.episodesWord', { count: episodes })}
+          </span>
+        </p>
+      )}
+    </div>
   )
 }
 

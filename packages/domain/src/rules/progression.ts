@@ -227,6 +227,49 @@ export function nextEpisodeLabel(label: string | null | undefined): string | nul
   return prefix + next.padStart(episode.length, '0')
 }
 
+/** Rang complet d'un épisode : saison et numéro, tous deux affirmés. */
+export interface EpisodeRank {
+  readonly season: number
+  readonly episode: number
+}
+
+/** Saison et épisode d'un label `SxxEyy`, capturés séparément. */
+const EPISODE_LABEL_PARTS = /^s(\d+)e(\d+)$/i
+
+/**
+ * Rang complet (saison + épisode) de l'épisode que le CTA désigne.
+ *
+ * C'est la règle d'accès au titre d'épisode : la fiche ne demande un titre à
+ * l'API que si la saison est **connue**, jamais devinée. Deux sources la
+ * disent :
+ *
+ * - un label `SxxEyy` — celui que rend `upcomingEpisodeLabel` — porte la
+ *   saison en toutes lettres ;
+ * - un rang déduit du pourcentage n'affirme aucune saison, **sauf** quand la
+ *   série n'en a qu'une : « saison 1 » n'est alors pas une hypothèse.
+ *
+ * Tout le reste se tait : plusieurs saisons sans label, compte de saisons
+ * inconnu (lignes de cache écrites avant ce champ), label libre. Afficher le
+ * titre d'un autre épisode que celui qu'on regarde serait pire que rien.
+ */
+export function upcomingEpisodeRank(
+  nextLabel: string | null,
+  nextNumber: number | null,
+  seasonCount: number | null | undefined,
+): EpisodeRank | null {
+  if (nextLabel !== null) {
+    const match = EPISODE_LABEL_PARTS.exec(nextLabel)
+    if (!match) return null
+    return { season: Number(match[1]), episode: Number(match[2]) }
+  }
+
+  if (nextNumber !== null && seasonCount === 1) {
+    return { season: 1, episode: nextNumber }
+  }
+
+  return null
+}
+
 /**
  * Label affiché par le CTA « ▸ ÉPISODE SUIVANT » de la fiche.
  *
