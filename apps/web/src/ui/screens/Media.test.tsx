@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { mediaState, type StoredEvent } from '@owlog/domain'
 import { createFactory, MOVIE, SERIES } from '@owlog/domain/test'
 import i18next from '@/i18n'
-import { partialCacheRow } from '@/ports/MediaCache'
+import { MEDIA_CACHE_STALE_MS, completeCacheRow, partialCacheRow } from '@/ports/MediaCache'
 import { PortsProvider } from '@/ui/PortsProvider'
 import { Media } from '@/ui/screens/Media'
 import { fakePorts } from '@/ui/test/fakePorts'
@@ -99,6 +99,60 @@ describe('Media', () => {
     expect(
       await screen.findByText('rien encore. le premier geste écrira la première ligne.'),
     ).toBeDefined()
+  })
+})
+
+/**
+ * Rafraîchissement de `media_cache` à l'ouverture de la fiche.
+ *
+ * La règle elle-même est testée sur `isCacheRowStale` ; ici on affirme le
+ * câblage — une fiche dont le cache est frais ne touche pas au réseau, une
+ * fiche périmée le rafraîchit. C'est ce qui garantit qu'une session normale
+ * s'ouvre sans un seul appel `/media/:ref`.
+ */
+describe('fraîcheur du cache média', () => {
+  const DETAIL = {
+    ref: MOVIE,
+    kind: 'movie' as const,
+    title: 'Dune',
+    year: 2021,
+    posterPath: null,
+    backdropPath: null,
+    genres: ['Science-Fiction'],
+    totalRuntime: 155,
+    numberOfEpisodes: null,
+    overview: '',
+    externalRatings: { tmdb: 7.8 },
+  }
+
+  function renderWithFetchedAt(fetchedAt: string) {
+    const detail = vi.fn(() =>
+      Promise.resolve({ ok: false as const, failure: { kind: 'offline' as const } }),
+    )
+
+    render(
+      <PortsProvider
+        ports={fakePorts({ mediaCache: [completeCacheRow(DETAIL, fetchedAt)], detail })}
+      >
+        <Media ref={MOVIE} />
+      </PortsProvider>,
+    )
+
+    return detail
+  }
+
+  it('une ligne complète et fraîche ne déclenche aucun appel réseau', async () => {
+    const detail = renderWithFetchedAt(new Date().toISOString())
+
+    expect(await screen.findByText('Dune')).toBeDefined()
+    expect(detail).not.toHaveBeenCalled()
+  })
+
+  it('une ligne complète mais périmée se rafraîchit', async () => {
+    const stale = new Date(Date.now() - MEDIA_CACHE_STALE_MS - 60_000).toISOString()
+    const detail = renderWithFetchedAt(stale)
+
+    await waitFor(() => expect(detail).toHaveBeenCalledOnce())
   })
 })
 

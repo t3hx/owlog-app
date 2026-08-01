@@ -84,6 +84,39 @@ export function placeholderCacheRow(ref: MediaRef, title: string): MediaCacheRow
   }
 }
 
+/**
+ * Durée pendant laquelle une ligne complète est considérée fraîche.
+ *
+ * C'est l'équivalent local du `staleTime` de TanStack Query — qui n'est pas
+ * installé : Dexie et ses lectures réactives jouent le rôle du cache de
+ * session, et `media_cache` reste la seule source hors-ligne.
+ *
+ * Sept jours, parce qu'une ligne complète vieillit quand même : une série en
+ * diffusion gagne des épisodes, la note TMDB dérive. Une semaine borne cette
+ * dérive tout en gardant les ouvertures de fiche sans réseau dans l'usage
+ * courant. L'équivalent du `gcTime` est l'infini : `media_cache` n'est
+ * jamais purgé, c'est lui qui fait vivre la bibliothèque hors-ligne.
+ */
+export const MEDIA_CACHE_STALE_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Décide si une ligne mérite un rafraîchissement réseau.
+ *
+ * La règle vit ici, à côté du type, et nulle part ailleurs : `useMedia` ne
+ * fait que l'appliquer. Trois cas rendent une ligne périmée — incomplète
+ * (l'ajout depuis la recherche n'a ni genres ni durée), `fetchedAt`
+ * illisible (la ligne de secours après restauration), ou plus vieille que
+ * `MEDIA_CACHE_STALE_MS`.
+ */
+export function isCacheRowStale(row: MediaCacheRow, now: string): boolean {
+  if (!row.complete) return true
+
+  const fetched = Date.parse(row.fetchedAt)
+  if (Number.isNaN(fetched)) return true
+
+  return Date.parse(now) - fetched > MEDIA_CACHE_STALE_MS
+}
+
 /** Ligne complète, depuis la réponse de détail. */
 export function completeCacheRow(detail: MediaDetail, now: string): MediaCacheRow {
   return {

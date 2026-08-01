@@ -28,6 +28,8 @@ export function fakePorts(overrides: {
   mediaCache?: readonly MediaCacheRow[]
   /** Reçoit ce que les commandes écrivent, pour l'affirmer dans un test. */
   onAppend?: (produced: readonly StoredEvent[]) => void
+  /** Remplace `catalog.detail`, pour affirmer qu'un rafraîchissement part — ou pas. */
+  detail?: MediaCatalog['detail']
 } = {}): Ports {
   const mediaStates = overrides.mediaStates ?? []
   const pendingAdds = overrides.pendingAdds ?? []
@@ -68,7 +70,7 @@ export function fakePorts(overrides: {
 
   const catalog: MediaCatalog = {
     search: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
-    detail: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    detail: overrides.detail ?? (() => Promise.resolve({ ok: false, failure: { kind: 'offline' } })),
   }
 
   const pending: PendingAdds = {
