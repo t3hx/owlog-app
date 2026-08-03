@@ -625,6 +625,33 @@ describe.skipIf(!adminUrl)('session', () => {
     })
   })
 
+  it('accepte un pseudo seul, sans renvoyer le prenom', async () => {
+    // La rangee pseudo de Reglages ne connait pas le prenom. L exiger
+    // l obligerait a renvoyer une valeur qu elle n edite pas, et la
+    // premiere desynchronisation l ecraserait.
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    await app.fetch(post('/auth/profile', { firstName: 'Alex' }, { cookie }))
+    const response = await app.fetch(post('/auth/profile', { pseudo: 'nyx' }, { cookie }))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      user: { email: 'a@b.c', firstName: 'Alex', pseudo: 'nyx' },
+    })
+  })
+
+  it('refuse un corps qui n edite rien', async () => {
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    const response = await app.fetch(post('/auth/profile', {}, { cookie }))
+
+    expect(response.status).toBe(400)
+  })
+
   it('un pseudo deja pris par un autre compte repond 409 pseudo-taken', async () => {
     const firstMailer = captureMailer()
     const first = makeApp(firstMailer)

@@ -228,40 +228,49 @@ export function createAuthRoutes(deps: AuthDeps) {
     if (!user) return fail(c, 401, 'unauthorized')
 
     const body = await readJson(c)
-    const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : ''
-    if (firstName.length === 0 || firstName.length > 40) return fail(c, 400, 'bad-request')
 
     /**
-     * Le pseudo est **optionnel dans le corps**, et l'omettre le laisse
-     * intact. La rangée de Réglages n'envoie que ce qu'elle édite ; sans
-     * cette distinction, éditer le prénom effacerait l'identité sociale.
+     * **Les deux champs sont optionnels, et omettre laisse intact.**
      *
-     * Les minuscules sont forcées ici aussi, pas seulement à la saisie : le
-     * champ protège l'utilisateur, la route protège la donnée.
+     * L'écran Réglages a deux rangées éditables indépendamment : celle du
+     * pseudo ne connaît pas le prénom, celle du prénom n'a pas à connaître
+     * l'identité sociale. Exiger les deux à chaque écriture obligerait
+     * chaque rangée à renvoyer une valeur qu'elle n'édite pas — et la
+     * première désynchronisation l'écraserait.
+     *
+     * Présent mais invalide reste un 400 : « je n'y touche pas » se dit en
+     * omettant la clé, jamais en envoyant une valeur vide.
      */
-    const rawPseudo = body?.pseudo
-    let pseudo: string | undefined
-    if (rawPseudo !== undefined) {
-      if (typeof rawPseudo !== 'string') return fail(c, 400, 'bad-request')
-      pseudo = rawPseudo.trim().toLowerCase()
-      if (!isValidPseudo(pseudo)) return fail(c, 400, 'bad-request')
-    }
+    const firstName = readOptionalString(body?.firstName, (value) => {
+      const trimmed = value.trim()
+      return trimmed.length > 0 && trimmed.length <= 40 ? trimmed : null
+    })
+    // Les minuscules sont forcées ici aussi, pas seulement à la saisie : le
+    // champ protège l'utilisateur, la route protège la donnée.
+    const pseudo = readOptionalString(body?.pseudo, (value) => {
+      const normalized = value.trim().toLowerCase()
+      return isValidPseudo(normalized) ? normalized : null
+    })
 
-    // Le serveur fait autorité sur le prénom après connexion : l'écran
+    if (firstName === 'invalid' || pseudo === 'invalid') return fail(c, 400, 'bad-request')
+    if (firstName === undefined && pseudo === undefined) return fail(c, 400, 'bad-request')
+
+    // Le serveur fait autorité sur le profil après connexion : l'écran
     // Réglages pousse ici, et tout appareil relit par /me. La borne de 40
-    // est celle du champ de l'onboarding.
+    // sur le prénom est celle du champ de l'onboarding.
     //
-    // `COALESCE` sur le pseudo : `null` en paramètre veut dire « ne touche
-    // pas », jamais « efface ». Un pseudo ne se retire pas — il circule
+    // `COALESCE` : `null` en paramètre veut dire « ne touche pas », jamais
+    // « efface ». Un pseudo, en particulier, ne se retire pas — il circule
     // déjà chez les amis, et le libérer laisserait un autre compte le
     // reprendre en se faisant passer pour son propriétaire.
     let updated
     try {
       updated = await pool.query<UserRow>(
-        `UPDATE users SET first_name = $1, pseudo = COALESCE($2, pseudo)
+        `UPDATE users
+         SET first_name = COALESCE($1, first_name), pseudo = COALESCE($2, pseudo)
          WHERE id = $3
          RETURNING email, first_name, pseudo`,
-        [firstName, pseudo ?? null, user.id],
+        [firstName ?? null, pseudo ?? null, user.id],
       )
     } catch (error) {
       // L'unicité se CONSTATE. Un `SELECT ... WHERE pseudo = $1` avant
@@ -375,6 +384,23 @@ function toAuthUser(row: UserRow): AuthUser {
  * du compte — jamais nécessaire au client, et une clé de plus offerte à
  * qui lit les réponses.
  */
+/**
+ * Lit un champ de profil optionnel.
+ *
+ * Trois issues distinctes, et les confondre serait le bug : `undefined`
+ * (clé absente — ne pas toucher), `'invalid'` (clé présente, valeur
+ * refusée — 400), ou la valeur normalisée. Rendre `undefined` sur une
+ * valeur invalide laisserait passer en silence une saisie refusée.
+ */
+function readOptionalString(
+  raw: unknown,
+  normalize: (value: string) => string | null,
+): string | undefined | 'invalid' {
+  if (raw === undefined) return undefined
+  if (typeof raw !== 'string') return 'invalid'
+  return normalize(raw) ?? 'invalid'
+}
+
 function isUniqueViolation(error: unknown): boolean {
   // `23505` est le SQLSTATE de la violation d'unicité. Le code plutôt que le
   // message : le texte de Postgres est localisable et change de version en
