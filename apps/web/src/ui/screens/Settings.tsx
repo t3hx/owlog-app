@@ -297,6 +297,13 @@ function FirstNameRow() {
  *
  * Hors session, la rangée n'est pas rendue : réserver un pseudo suppose un
  * compte, et une rangée morte serait pire qu'une rangée absente.
+ *
+ * **Le lien `voir mon profil ›` n'est pas ici**, et c'est délibéré : il
+ * ouvre l'écran 9, que T3H-64 recrée au pixel. La projection qui
+ * l'alimente existe et est testée (`publicProfile`, `/social/profile/:pseudo`
+ * rend déjà son propre profil) ; seul le rendu manque. Le poser maintenant
+ * sur un écran provisoire reviendrait à livrer deux fois la même surface —
+ * et la seconde effacerait la première.
  */
 function PseudoRow() {
   const { t } = useTranslation()
