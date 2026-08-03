@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { entriesPerDay, metrics, type Metrics, type StoredEvent, type MediaRef } from '@owlog/domain'
 import type { SyncStatus } from '@/ports/Sync'
-import { useBackup } from '@/ui/hooks/useBackup'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { usePorts } from '@/ui/PortsProvider'
 
@@ -118,7 +117,6 @@ export function Debug() {
 
       <p className="mt-6 leading-relaxed text-subtle">{t('debug.note')}</p>
 
-      <Backup onRestored={() => void measure()} />
       <SyncPanel onPulled={() => void measure()} />
     </div>
   )
@@ -229,76 +227,6 @@ function Row({
       <dt className="whitespace-pre">{name}</dt>
       <dd className={warning ? 'text-status-watch' : 'text-text'}>{value}</dd>
     </div>
-  )
-}
-
-/**
- * Export et import du `.log`.
- *
- * Il vit sur `/debug` et non dans un écran de réglages, qui n'existe pas
- * encore. C'est provisoire, mais pas anodin : le filet de sécurité doit
- * exister **avant** la saisie de masse du rétro-datage, pas après.
- */
-function Backup({ onRestored }: { onRestored: () => void }) {
-  const { t } = useTranslation()
-  const { state, exportLog, importLog } = useBackup(onRestored)
-  const file = useRef<HTMLInputElement>(null)
-
-  return (
-    <section className="mt-8 border-t border-border pt-6">
-      <h2 className="mb-3 text-sm text-text">{t('debug.backupTitle')}</h2>
-
-      <div className="flex flex-col items-start gap-2">
-        <button
-          type="button"
-          onClick={() => void exportLog()}
-          disabled={state.status === 'exporting'}
-          className="rounded-action border border-border px-3 py-2 text-left text-[11px] text-text disabled:opacity-40"
-        >
-          {state.status === 'exporting' ? t('debug.exporting') : t('debug.export')}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => file.current?.click()}
-          disabled={state.status === 'importing'}
-          className="rounded-action border border-border px-3 py-2 text-left text-[11px] text-text disabled:opacity-40"
-        >
-          {state.status === 'importing' ? t('debug.importing') : t('debug.import')}
-        </button>
-
-        <input
-          ref={file}
-          type="file"
-          accept=".log,text/plain"
-          className="hidden"
-          onChange={(event) => {
-            const chosen = event.target.files?.[0]
-            // Le champ est remis a zero : sans ca, reimporter le meme fichier
-            // deux fois de suite n'emet aucun `change` et le bouton parait mort.
-            event.target.value = ''
-            if (chosen) void importLog(chosen)
-          }}
-        />
-      </div>
-
-      {state.status === 'imported' && (
-        <p className="mt-2 text-accent">
-          {t('debug.imported', {
-            added: state.report.added,
-            skipped: state.report.skipped,
-          })}
-        </p>
-      )}
-
-      {state.status === 'failed' && (
-        <p className="mt-2 text-status-watch">
-          {t('debug.importFailed', { reason: state.reason })}
-        </p>
-      )}
-
-      <p className="mt-3 leading-relaxed text-subtle">{t('debug.backupNote')}</p>
-    </section>
   )
 }
 
