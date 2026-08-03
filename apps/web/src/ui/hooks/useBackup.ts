@@ -45,7 +45,7 @@ export type BackupState =
   | { readonly status: 'imported'; readonly report: RestoreReport }
   | { readonly status: 'failed'; readonly reason: string }
 
-export function useBackup(onRestored?: () => void) {
+export function useBackup() {
   const { events, settings } = usePorts()
   const [state, setState] = useState<BackupState>({ status: 'idle' })
 
@@ -76,7 +76,6 @@ export function useBackup(onRestored?: () => void) {
         }
 
         setState({ status: 'imported', report })
-        onRestored?.()
       } catch (error) {
         // Le message vient du parseur, en anglais et destiné au développeur.
         // Le montrer tel quel vaut mieux qu'un « une erreur est survenue » :
@@ -84,7 +83,7 @@ export function useBackup(onRestored?: () => void) {
         setState({ status: 'failed', reason: reasonOf(error) })
       }
     },
-    [events, settings, onRestored],
+    [events, settings],
   )
 
   return { state, exportLog, importLog }
