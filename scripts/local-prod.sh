@@ -70,11 +70,26 @@ check_docker() {
   exit 1
 }
 
+# Le jeton TMDB vient de la config `dev` — jamais de `prd`. Rejouer la vraie
+# topologie ne demande pas les vrais secrets : ce script vérifie du routage,
+# des en-têtes et du service worker, et un jeton de développement suffit à
+# tout cela.
+#
+# Le couple projet/config n'est plus écrit ici : il vit dans `doppler.yaml`,
+# et `doppler setup` l'applique. Le répéter dans chaque appel en ferait une
+# troisième copie à maintenir en phase — c'est exactement la divergence que
+# ce fichier épinglé supprime.
+tmdb_token_from_doppler() {
+  require doppler
+  doppler setup --no-interactive >/dev/null
+  doppler secrets get TMDB_API_TOKEN --plain
+}
+
 # --- Commandes --------------------------------------------------------------
 
 up() {
   local tmdb_token
-  tmdb_token="$(doppler secrets get TMDB_API_TOKEN --project owlog-app --config dev --plain)"
+  tmdb_token="$(tmdb_token_from_doppler)"
 
   echo "▸ construction des images"
   docker build -q -f "$ROOT/apps/api/Dockerfile" -t "$API_IMAGE" "$ROOT" >/dev/null
@@ -168,7 +183,7 @@ refresh() {
   fi
 
   local tmdb_token
-  tmdb_token="$(doppler secrets get TMDB_API_TOKEN --project owlog-app --config dev --plain)"
+  tmdb_token="$(tmdb_token_from_doppler)"
 
   echo "▸ reconstruction des images (la base est préservée)"
   docker build -q -f "$ROOT/apps/api/Dockerfile" -t "$API_IMAGE" "$ROOT" >/dev/null
@@ -317,7 +332,6 @@ main() {
 
   case "$command" in
     up)
-      require doppler
       check_docker up
       up
       ;;
