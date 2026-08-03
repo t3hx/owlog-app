@@ -44,6 +44,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Le jeton partagé est lu DANS Doppler, pas dans un secret GitHub.
+      #
+      # Il vivait ici en double : `secrets.OWLOG_SHARED_TOKEN` côté Actions
+      # pour le bundle, `OWLOG_SHARED_TOKEN` côté Doppler pour le service.
+      # Rien n'imposait leur égalité, et leur divergence ne se manifeste pas
+      # au build : elle donne un bundle qui se charge, s'affiche, navigue —
+      # et répond 401 à la première frappe dans la recherche. Une seule
+      # source supprime le cas.
+      #
+      # Le `doppler.yaml` du dépôt épingle `dev` mais ne s'applique pas ici :
+      # il n'est lu que par `doppler setup`, et le jeton de service porte son
+      # propre couple projet/config. C'est donc bien `prd` qui répond.
+      - uses: dopplerhq/cli-action@v3
+      - name: Lire le jeton partagé dans Doppler
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PRD }}
+        run: |
+          token="$(doppler secrets get OWLOG_SHARED_TOKEN --plain)"
+          # Sans ce masquage, la valeur n'est pas un secret connu d'Actions :
+          # toute commande qui l'imprimerait plus tard la publierait en clair
+          # dans un journal de build lisible par quiconque a le dépôt.
+          echo "::add-mask::$token"
+          echo "OWLOG_SHARED_TOKEN=$token" >> "$GITHUB_ENV"
+
       - id: meta
         uses: docker/metadata-action@v5
         with:
@@ -54,12 +78,12 @@ jobs:
             type=raw,value=latest
             type=sha,format=long
 
-      # Les build-args vivent ICI, pas dans le matrix : le contexte `secrets`
-      # n'y est pas disponible (il s'évaluerait en chaîne vide, et le
-      # Dockerfile web refuserait de se construire). owlog-web les consomme —
-      # adresse d'API et jeton partagé, PUBLICS par nature ; la clé TMDB ne
-      # quitte jamais l'API. owlog-api ne déclare pas ces ARG : BuildKit les
-      # ignore avec un avertissement inoffensif.
+      # Les build-args vivent ICI, pas dans le matrix : le contexte `env` n'y
+      # est pas disponible (il s'évaluerait en chaîne vide, et le Dockerfile
+      # web refuserait de se construire). owlog-web les consomme — adresse
+      # d'API et jeton partagé, PUBLICS par nature ; la clé TMDB ne quitte
+      # jamais l'API. owlog-api ne déclare pas ces ARG : BuildKit les ignore
+      # avec un avertissement inoffensif.
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -67,7 +91,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_URL=/api
-            VITE_SHARED_TOKEN=${{ secrets.OWLOG_SHARED_TOKEN }}
+            VITE_SHARED_TOKEN=${{ env.OWLOG_SHARED_TOKEN }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.image }}

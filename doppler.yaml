@@ -1,0 +1,15 @@
+# Config Doppler du dépôt.
+#
+# Sans ce fichier, `doppler run` résout le projet et la config depuis
+# `~/.doppler` — un état propre à la machine, que rien dans le dépôt ne
+# contrôle. Sur ce poste, cet état pointait `prd` : le développement local
+# tournait donc sur les secrets de production, et `scripts/dev.sh` devait en
+# neutraliser trois à la main pour rendre l'app utilisable.
+#
+# Épingler le couple ici renverse la charge : un nouveau clone lance
+# `doppler setup` et obtient `dev`, sans rien savoir. La production, elle,
+# ne lit jamais ce fichier — elle passe par un jeton de service dont le
+# projet et la config sont encodés dans le jeton lui-même.
+setup:
+  project: owlog-app
+  config: dev

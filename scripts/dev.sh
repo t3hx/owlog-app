@@ -5,33 +5,34 @@
 #
 #   pnpm dev            # ce script
 #
-# Pourquoi un script plutot qu'un `pnpm -r dev` : la config Doppler du projet
-# est `prd`, et trois de ses valeurs sont justes en production et fausses en
-# local. Sans les neutraliser, l'app demarre et dit « hors-ligne » sans
-# expliquer pourquoi.
+# Pourquoi un script plutot qu'un `pnpm -r dev` : deux processus a lancer
+# ensemble sous une seule origine — l'API relayee sous `/api` par le proxy du
+# serveur de dev, aucun CORS, comme en ligne — et une valeur a faire traverser
+# la frontiere Doppler -> Vite (voir plus bas). Les secrets, eux, viennent
+# tous de la config `dev` de Doppler : ce script n'en connait plus aucun.
 #
-#   DATABASE_URL          pointe l'hote Postgres du VPS, injoignable d'ici.
-#                         Vide, l'API repond 503 sur /auth et /sync et sert
-#                         tout le reste. C'est le mode local-first du temps 1,
-#                         et il suffit a tout tester sauf la synchronisation.
-#   OWLOG_SHARED_TOKEN    le vrai jeton de production. Le bundle de dev, lui,
-#                         se rabat sur `local-token` : les deux doivent
-#                         coincider, sinon chaque recherche repond 401. On
-#                         aligne le service sur le client, pas l'inverse — le
-#                         jeton de production n'a rien a faire ici.
-#   OWLOG_BASE_PATH       reste `/api`. C'est la valeur de production, et le
-#                         proxy du serveur de dev relaie `/api` tel quel.
-#
-# La vraie correction est une config `dev` dans Doppler. Tant qu'elle
-# n'existe pas, ce script est le seul endroit qui connait l'ecart.
+# Ce fut longtemps l'inverse. La config resolue etait `prd`, et le script
+# neutralisait a la main les trois valeurs qui sont justes en production et
+# fausses en local. Il etait le seul endroit a connaitre l'ecart, et l'ecart
+# ne se voyait nulle part ailleurs. La config `dev` existe desormais et
+# `doppler.yaml` l'epingle : l'ecart n'existe plus, donc le script ne le
+# decrit plus.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 if ! command -v doppler > /dev/null 2>&1; then
   echo "doppler est introuvable. Les secrets du projet vivent dedans." >&2
+  echo "  brew install dopplerhq/cli/doppler && doppler login" >&2
   exit 1
 fi
+
+# `doppler.yaml` DECLARE le couple projet/config ; seul `doppler setup` le
+# POSE dans ~/.doppler, ou `doppler run` va le lire. Sans cette ligne, le
+# fichier reste decoratif et la resolution retombe sur l'etat de la machine
+# — c'est-a-dire, sur ce poste, sur `prd`. Idempotent : c'est une ecriture
+# de la meme valeur a chaque lancement, pas une question posee.
+doppler setup --no-interactive > /dev/null
 
 # Sans ce nettoyage, un service laisse par une session precedente garde le
 # port et le suivant meurt sur EADDRINUSE — message qui ne dit pas qu'il
@@ -43,10 +44,25 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-doppler run -- env \
-  DATABASE_URL= \
-  OWLOG_SHARED_TOKEN=local-token \
-  pnpm --filter @owlog/api dev &
+# `OWLOG_BASE_PATH` n'est pas un secret : c'est la topologie de montage, la
+# meme pour tout deploiement de ce service. Elle vit donc avec la definition
+# du runtime — ici, `ENV` dans apps/api/Dockerfile la-bas — et non dans le
+# coffre. `/api` parce que le proxy du serveur de dev relaie `/api` tel quel,
+# exactement comme le fait le tunnel en production.
+#
+# Pas de `--watch` ici, bien que le drapeau existe et redemarrerait le
+# service a chaque changement de secret : il echoue sur ce compte
+# (« Unable to watch for secrets changes ») sans empecher le demarrage. Le
+# service tourne, mais chaque lancement afficherait une erreur rouge qui ne
+# decrit aucun probleme reel — et un faux signal d'alarme quotidien finit
+# par masquer les vrais. Consequence a connaitre : faire tourner un secret
+# demande de relancer `pnpm dev`.
+OWLOG_BASE_PATH=/api doppler run -- pnpm --filter @owlog/api dev &
 API_PID=$!
 
-doppler run -- pnpm --filter @owlog/web dev
+# Vite n'expose au bundle que les variables prefixees `VITE_`. Le jeton
+# partage existe donc sous deux noms pour un seul et meme secret, et c'est
+# ici qu'on les raccorde plutot que de stocker la valeur deux fois dans
+# Doppler : deux entrees a maintenir en phase finiraient par diverger, et
+# une divergence se manifeste par un 401 sur chaque recherche.
+doppler run -- sh -c 'VITE_SHARED_TOKEN="$OWLOG_SHARED_TOKEN" exec pnpm --filter @owlog/web dev'

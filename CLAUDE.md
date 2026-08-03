@@ -171,16 +171,26 @@ Les messages d'erreur levés par le code sont en anglais : ils s'adressent au d�
 
 ## Secrets
 
-**Doppler**, projet `owlog-app`. Aucun secret n'est versionné, ni en clair ni chiffré, et aucun `.env` n'est commité.
+**Doppler est la table de vérité**, projet `owlog-app`, et il l'est mécaniquement — aucune valeur n'est recopiée nulle part. Aucun secret n'est versionné, ni en clair ni chiffré, et aucun `.env` n'est commité.
 
 ```bash
-pnpm dev                         # développement (le script appelle Doppler lui-même)
+doppler setup --no-interactive                    # une fois par clone
+doppler run -- pnpm dev                           # développement
 doppler secrets download --no-file --format env   # inspection
 ```
 
-`pnpm dev` lance `scripts/dev.sh`, qui démarre `owlog-api` **et** `owlog-web` sous la topologie de la production : une seule origine, l'API relayée sous `/api` par le proxy du serveur de dév. Aucun CORS, comme en ligne.
+Deux configs, deux consommateurs :
 
-La config Doppler du projet est `prd`, et trois de ses valeurs sont fausses en local — le script les neutralise, et il est le seul endroit qui connaît l'écart : `DATABASE_URL` (hôte du VPS injoignable ; vide, `/auth` et `/sync` répondent 503 et le reste vit), `OWLOG_SHARED_TOKEN` (le bundle de dév se rabat sur `local-token`, les deux doivent coïncider) et `OWLOG_BASE_PATH`, qui reste `/api` puisque le proxy relaie tel quel. **La correction durable est une config `dev` dans Doppler**, qui n'existe pas encore.
+| | Config | Comment les secrets arrivent |
+|---|---|---|
+| Développement | `dev` | les processus tournent sous `doppler run` |
+| Production | `prd` | `owlog-api` lit Doppler **au démarrage du conteneur**, via un jeton de service posé dans Dokploy |
+
+`doppler.yaml` épingle le couple projet/config du dépôt. Attention : il ne fait que le **déclarer** — seul `doppler setup --no-interactive` le **pose** dans `~/.doppler`, où `doppler run` va le lire. Les scripts du dépôt l'appellent donc avant tout usage ; lancé à la main, `doppler run` retombe sinon sur l'état de la machine, que rien dans le dépôt ne contrôle — et qui pointait `prd`.
+
+Ce que Dokploy détient se réduit à `DOPPLER_TOKEN` (scopé `prd`, lecture seule) et `PORT`. Un secret d'exécution qui change ne demande plus qu'un **redémarrage** du conteneur. Seul `OWLOG_SHARED_TOKEN` fait exception : figé dans le bundle web au build, il impose de reconstruire `owlog-web` — c'est aussi pourquoi `deploy.yml` le lit dans Doppler plutôt que dans un secret GitHub.
+
+`OWLOG_BASE_PATH` **n'est pas dans Doppler** : ce n'est pas un secret mais la topologie de montage, et le `HEALTHCHECK` de l'image doit pouvoir la lire — or il s'exécute hors de `doppler run` et ne voit aucune variable injectée. Elle vit en `ENV` dans `apps/api/Dockerfile` — et se pose dans l'environnement du processus pour le développement local.
 
 Secrets attendus à l'étape 3, côté `owlog-api` uniquement :
 
@@ -192,7 +202,6 @@ Secrets attendus à l'étape 3, côté `owlog-api` uniquement :
 | `OWLOG_SHARED_TOKEN`    | les deux    | Jeton partagé, public par nature                          |
 | `OWLOG_ALLOWED_ORIGINS` | `owlog-api` | Origines CORS autorisées                                  |
 | `OWLOG_TRUSTED_PROXIES` | `owlog-api` | Adresses ou **plages CIDR** des proxies devant le service |
-| `OWLOG_BASE_PATH`       | `owlog-api` | Préfixe de montage, `/api` en production                  |
 
 Ajoutés au temps 2 (tous optionnels : sans eux, l'API reste le proxy TMDB du temps 1) :
 

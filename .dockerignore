@@ -10,3 +10,8 @@ coverage
 !DEPLOY.md
 design_handoff_owlog
 .claude
+
+# Ce fichier epingle la config `dev`. Une image le contenant resoudrait `dev`
+# quand son jeton de service dit `prd` — au mieux un demarrage refuse, au pire
+# une production servie avec des secrets de developpement.
+doppler.yaml

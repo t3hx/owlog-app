@@ -17,61 +17,82 @@ L'infrastructure est décrite par [`runbook-vps-dokploy.md`](runbook-vps-dokploy
 |---|---|
 | Runbook, phases 0 à 5 | tunnel `nspace-tunnel` monté, 4 connexions edge |
 | Dépôt GitHub | fait — `t3hx/owlog-app`, privé |
-| Jeton TMDB dans Doppler | fait — `TMDB_API_TOKEN`, mais **dans `dev` seulement** |
-| Quatre variables dans la config `prd` | **à faire** — §1 |
-| Published route dans le tunnel | **à faire** — §2 |
+| Jeton TMDB dans Doppler | fait — `TMDB_API_TOKEN`, dans `dev` et dans `prd` |
+| Secrets dans la config `prd` | §1 |
+| Jeton de service `prd` pour Dokploy | §1 |
+| Jeton de service `prd` pour GitHub Actions | §4 bis |
+| Published route dans le tunnel | §2 |
 
 ## 1. Secrets
 
-La config `prd` est **vide** : `TMDB_API_KEY` et `TMDB_API_TOKEN` n'existent que dans `dev`.
+**Doppler est la table de vérité, et il l'est mécaniquement.** Aucun secret de production n'est recopié nulle part : `owlog-api` va les lire lui-même au démarrage du conteneur. Dokploy ne détient plus qu'un jeton de service — scopé à `prd`, en lecture seule, révocable d'une commande.
+
+Ce n'était pas le cas auparavant : les valeurs étaient collées à la main dans l'onglet Environment de Dokploy, et Doppler n'était la vérité que par discipline. Une valeur changée dans le coffre ne changeait rien en ligne, et rien ne signalait l'écart.
+
+### Ce que contient la config `prd`
 
 ```bash
-# Le jeton TMDB, recopié depuis dev. C'est le seul vrai secret des quatre,
-# et il ne quitte jamais owlog-api.
 doppler secrets set TMDB_API_TOKEN="$(doppler secrets get TMDB_API_TOKEN --plain \
   --project owlog-app --config dev)" --project owlog-app --config prd
 
-# Un jeton partagé, tiré au sort. Il n'est pas secret — il finit dans le
-# bundle web, lisible par quiconque ouvre les outils de développement.
+# Public par construction : il finit dans le bundle web, lisible par
+# quiconque ouvre les outils de développement. Il filtre le bruit, il ne
+# protège rien.
 doppler secrets set OWLOG_SHARED_TOKEN="$(openssl rand -hex 24)" --project owlog-app --config prd
 
-# Le préfixe sous lequel le service se monte lui-même.
-doppler secrets set OWLOG_BASE_PATH="/api" --project owlog-app --config prd
-
-# Les réseaux internes de Docker. Voir ci-dessous : ce sont des plages.
+# Les réseaux internes de Docker. Voir plus bas : ce sont des plages.
 doppler secrets set OWLOG_TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12" --project owlog-app --config prd
 ```
 
-`OWLOG_ALLOWED_ORIGINS` reste **vide** : même origine, donc aucun CORS. Le middleware ne se monte pas quand la liste est vide, ce qui est le comportement voulu.
+`OWLOG_ALLOWED_ORIGINS` reste **absente** : même origine, donc aucun CORS. Le middleware ne se monte pas quand la liste est vide, ce qui est le comportement voulu.
 
-### Comment ces valeurs arrivent sur le VPS
-
-**Par un copier-coller, et il n'y a pas de magie derrière.** Dokploy n'a aucune intégration avec un gestionnaire de secrets externe — c'est une demande de fonctionnalité ouverte, pas une fonction existante. Doppler n'est donc pas *injecté* en production : il est le **registre**, l'endroit où l'on sait ce que valent ces variables et depuis lequel on les recopie.
-
-Une commande produit le bloc prêt à coller dans l'onglet **Environment** de `owlog-api` :
+`OWLOG_BASE_PATH` **n'est plus dans Doppler** et doit en être retirée si elle y traîne :
 
 ```bash
-doppler secrets download --no-file --format docker --project owlog-app --config prd
+doppler secrets delete OWLOG_BASE_PATH --project owlog-app --config prd
 ```
 
-**`--format docker`, pas `--format env`.** Le format `env` entoure chaque valeur de guillemets — `OWLOG_BASE_PATH="/api"` — et un champ de formulaire qui ne les retire pas les fait entrer dans la valeur. Le service se monte alors sous `/"/api"` et répond `404` sur tout. Le format `docker` rend `OWLOG_BASE_PATH=/api`, sans guillemets.
+Ce n'est pas un secret mais la topologie de montage du service, et elle vit désormais en `ENV` dans `apps/api/Dockerfile`. La raison est concrète : le `HEALTHCHECK` de l'image s'exécute dans un processus séparé, qui ne passe pas par `doppler run` et **ne voit donc aucune variable injectée par Doppler**. Laissée dans le coffre, elle donnerait une sonde qui interroge `/health` pendant que le service écoute sur `/api/health` — conteneur déclaré mort alors qu'il sert parfaitement, et retour arrière automatique de Dokploy.
 
-Depuis, `owlog-api` refuse de démarrer sur un préfixe qui n'est pas un chemin, en nommant la cause. Et sa première ligne de log dit sous quel chemin il s'est monté :
+### Le jeton de service
 
+À créer une fois. `--copy` le met dans le presse-papier plutôt qu'à l'écran, où il finirait dans l'historique du shell :
+
+```bash
+doppler configs tokens create dokploy-owlog-api \
+  --project owlog-app --config prd --access read --copy
 ```
-owlog-api listening on :8787, routes mounted at /api
-```
 
-C'est la ligne à lire en premier quand `/api/health` répond `404` : elle distingue en un coup d'œil un problème de routage d'un problème de configuration.
+`--access read` est le défaut, écrit ici pour être explicite : **ce jeton ne peut rien modifier**. Il ne voit pas la config `dev`, ni aucun autre projet Doppler.
 
-Deux choses à savoir, et elles ne sont pas anodines :
+Il se colle ensuite dans l'onglet **Environment** de `owlog-api` (§3). C'est la seule chose que Dokploy détient.
 
-- **Dokploy stocke ses variables en clair dans sa base.** Le jeton TMDB vivra donc en clair sur le VPS. C'est acceptable ici parce que le serveur est verrouillé — aucun port entrant, admin par Tailscale uniquement — mais ce n'est pas la même chose que « géré par Doppler ».
-- **Un écart devient possible.** Modifier une valeur dans Doppler ne change rien en ligne tant qu'on n'a pas recollé et redéployé. Doppler cesse d'être la vérité au moment où on l'oublie.
+### Ce que ça change en cas de fuite
 
-Sur quatre variables, une seule est un vrai secret — `TMDB_API_TOKEN`. `OWLOG_SHARED_TOKEN` est public par construction, `OWLOG_BASE_PATH` et `OWLOG_TRUSTED_PROXIES` sont de la configuration. C'est ce qui rend le copier-coller raisonnable ici.
+Dokploy stocke ses variables en clair dans sa base — c'était vrai avant, ça l'est toujours. La différence est dans ce qui s'y trouve : un pointeur révocable au lieu des secrets eux-mêmes.
 
-> **L'alternative, et pourquoi elle n'est pas retenue.** On pourrait installer le client Doppler dans l'image et démarrer par `doppler run -- node …`, en ne posant qu'un `DOPPLER_TOKEN` dans Dokploy. Doppler redeviendrait autoritatif — mais ce jeton de service, lui aussi en clair dans la base de Dokploy, ouvre l'accès à **tous** les secrets du projet. On échangerait quatre valeurs de faible portée contre une de portée maximale, plus un appel réseau à chaque démarrage de conteneur : Doppler injoignable, le service ne démarre plus. Le calcul ne penche pas du bon côté pour une application à un seul utilisateur.
+| | Avant | Maintenant |
+|---|---|---|
+| Contenu de la base Dokploy | jeton TMDB, URL Postgres, jeton Resend | un jeton de service `prd`, lecture seule |
+| Remédiation après fuite | rotation chez TMDB, Postgres **et** Resend | `doppler configs tokens revoke`, une commande |
+| Changer un secret | éditer Doppler, recoller dans Dokploy, redéployer | éditer Doppler, redémarrer le conteneur |
+
+Le risque que ce montage **ajoute**, et qu'il faut connaître : le conteneur détient un identifiant vivant. Une exécution de code arbitraire dans `owlog-api` donnait auparavant les secrets présents dans l'environnement — un butin figé ; elle donne désormais en plus la capacité d'interroger Doppler à nouveau, depuis ailleurs. Le jeton étant en lecture seule et scopé à `prd`, l'attaquant n'obtient rien de plus que ce que le conteneur détenait déjà, mais il l'obtient de façon durable. `--max-age` sur le jeton borne cette fenêtre si le compromis ne convient pas.
+
+### Si Doppler est en panne
+
+Le conteneur démarre quand même — dans un cas sur deux, et il faut savoir lequel.
+
+`docker-entrypoint.sh` lance `doppler run --fallback`, qui écrit un instantané **chiffré** des secrets à chaque lecture réussie et le relit quand l'API est injoignable. Vérifié en conditions réelles : conteneur relancé avec `--network none`, journal `Reading secrets from fallback file`, service opérationnel.
+
+- **Redémarrage** d'un conteneur existant — crash, reboot du VPS, `docker restart` : le repli est là, le service repart. ✅
+- **Nouveau déploiement** pendant la panne : le conteneur est neuf, son système de fichiers est vierge, il n'a aucun repli et ne démarre pas. ❌
+
+Monter un volume Dokploy sur `/home/node` fait survivre le repli aux déploiements et couvre aussi le second cas. Ce n'est pas le défaut : cela laisse un fichier de secrets chiffrés en permanence sur le disque du VPS, pour un gain qui ne joue que dans la fenêtre étroite « Doppler en panne **et** déploiement au même moment ».
+
+> **L'alternative, et pourquoi elle n'est pas retenue.** On pourrait faire lire Doppler par la CI, qui pousserait ensuite les valeurs dans Dokploy via son API avant de déclencher le déploiement. Doppler resterait autoritatif sans que l'image apprenne son existence, et sans appel réseau au démarrage. Deux raisons de ne pas le faire : les secrets continueraient de vivre en clair dans la base Dokploy, ce que ce changement vise précisément à supprimer ; et le montage dépendrait d'un endpoint d'écriture de Dokploy que rien dans le runbook ne documente — une pièce dont on ne découvre le comportement qu'après un cycle de déploiement complet.
+>
+> Ce document a longtemps affirmé l'inverse, sur deux arguments qui se sont révélés faux à la vérification : un jeton de service Doppler n'ouvre **pas** l'accès à tous les secrets du projet — `doppler configs tokens create` prend `--config` et `--access read` par défaut — et une panne de Doppler n'empêche **pas** le service de démarrer, `--fallback` couvrant le cas.
 
 ### Pourquoi le service se monte lui-même sous `/api`
 
@@ -135,17 +156,25 @@ Crée-le **en premier** : il se teste seul, alors que le web dépend de lui.
 
 Le contexte de build est la racine et non `apps/api` : c'est un workspace pnpm, le lockfile et `@owlog/contracts` vivent à la racine. Un contexte sur `apps/api` échoue à l'installation.
 
-**Environment** — colle le bloc rendu par `doppler secrets download` (§1), puis ajoute `PORT` :
+**Environment** — deux lignes, et c'est tout :
 
 ```
-TMDB_API_TOKEN="..."
-OWLOG_SHARED_TOKEN="..."
-OWLOG_BASE_PATH="/api"
-OWLOG_TRUSTED_PROXIES="10.0.0.0/8,172.16.0.0/12"
+DOPPLER_TOKEN=dp.st.prd....
 PORT=8787
 ```
 
-`DOPPLER_PROJECT`, `DOPPLER_CONFIG` et `DOPPLER_ENVIRONMENT` figurent aussi dans l'export : ils sont sans effet ici, on peut les laisser ou les retirer.
+Le jeton est celui créé au §1. Tout le reste — jeton TMDB, jeton partagé, plages de proxies, `DATABASE_URL`, secrets e-mail — est lu chez Doppler au démarrage du conteneur et ne doit **pas** figurer ici. Une valeur posée dans ce panneau serait écrasée par celle de Doppler à chaque lecture, ce qui donne le pire des cas : un réglage visible qui ne s'applique pas.
+
+`PORT` reste une variable Dokploy : elle décrit l'écoute du conteneur, pas un secret, et l'image la fixe déjà à `8787`.
+
+La première ligne du journal dit quel mode a été retenu, et c'est la première chose à lire devant un incident :
+
+```
+owlog-api: starting through Doppler
+owlog-api listening on :8787, routes mounted at /api, db off
+```
+
+`starting without Doppler (environment as provided)` à la place signifie que `DOPPLER_TOKEN` est absent ou vide. Le service tentera alors de démarrer sur les variables du panneau et, n'y trouvant ni `TMDB_API_TOKEN` ni `OWLOG_SHARED_TOKEN`, mourra en nommant celle qui manque — un échec bruyant, jamais un service à moitié configuré.
 
 **Domains → Create :**
 
@@ -195,12 +224,31 @@ Ils se saisissent dans l'onglet **Environment**, dans le champ **« Build Time A
 
 ```
 VITE_API_URL=/api
-VITE_SHARED_TOKEN=<la même valeur que OWLOG_SHARED_TOKEN, recopiée depuis Doppler>
+VITE_SHARED_TOKEN=<la même valeur que OWLOG_SHARED_TOKEN dans Doppler prd>
 ```
+
+> **Ces deux champs ne servent que si Dokploy construit lui-même l'image.** Dans le circuit nominal, c'est `deploy.yml` qui construit et pousse sur GHCR, et il lit `OWLOG_SHARED_TOKEN` **directement dans Doppler `prd`** — plus aucune valeur à recopier à la main. Voir §4 bis.
 
 **Les oublier fait échouer le build**, volontairement. Un `ARG` Docker non fourni vaut la chaîne vide et non « absent » : le repli du code ne se déclenche pas, et le bundle sort avec une base d'API vide. Il appelle alors `/search` au lieu de `/api/search`, Caddy répond `index.html` avec un `200`, et l'application échoue à lire du HTML comme du JSON. Tout paraît fonctionner jusqu'à la première frappe dans la barre de recherche. Une image est un artefact de production : mieux vaut ne pas la construire que la construire fausse et muette.
 
 Changer `OWLOG_SHARED_TOKEN` demande donc de **reconstruire** `owlog-web`, pas seulement de le redémarrer — et de le reconstruire *après* l'API, sinon le client envoie l'ancien jeton et récolte des `401`.
+
+### 4 bis. Ce que la CI lit dans Doppler
+
+Le bundle web est le seul artefact qui a besoin d'un secret **au moment du build** : `VITE_SHARED_TOKEN` est figé dedans, il ne peut pas être lu au démarrage comme le fait `owlog-api`. `deploy.yml` va donc le chercher dans Doppler `prd` avant de construire l'image.
+
+Un secret GitHub à créer une fois, `DOPPLER_TOKEN_PRD` :
+
+```bash
+doppler configs tokens create github-actions-owlog \
+  --project owlog-app --config prd --access read --copy
+```
+
+puis **Settings → Secrets and variables → Actions → New repository secret**, nom `DOPPLER_TOKEN_PRD`.
+
+Le secret `OWLOG_SHARED_TOKEN` côté GitHub **devient inutile et doit être supprimé**. Il était une seconde source de vérité pour une valeur qui doit être identique à celle du service : rien n'imposait leur égalité, et leur divergence ne se voit pas au build. Elle donne un bundle qui se charge, s'affiche, navigue — et répond `401` à la première frappe dans la recherche.
+
+Ce jeton-ci est distinct de celui de Dokploy, bien que tous deux lisent `prd` : deux consommateurs, deux jetons, deux révocations indépendantes. Un incident sur les runners GitHub ne doit pas obliger à toucher au service en ligne.
 
 **Vérifier ce que le bundle appelle réellement**, une fois déployé :
 
@@ -311,7 +359,11 @@ un dépôt), et par hygiène à chaque changement de fournisseur :
 1. Créer le nouveau jeton chez le fournisseur — **avant** de révoquer
    l'ancien : les deux coexistent, aucun trou de service.
 2. `doppler secrets set OWLOG_EMAIL_API_TOKEN --project owlog-app --config prd`
-3. Redéployer `owlog-api` (le service lit ses secrets au démarrage).
+3. **Redémarrer** `owlog-api` — un simple restart suffit, le conteneur relit
+   Doppler au démarrage. Il n'y a plus rien à recopier dans Dokploy ni de
+   déploiement à déclencher, et c'est vrai de tout secret d'exécution.
+   Seul `OWLOG_SHARED_TOKEN` fait exception : il est figé dans le bundle web
+   au build, donc son changement impose de reconstruire `owlog-web`.
 4. Demander un lien de connexion réel et vérifier la réception.
 5. Révoquer l'ancien jeton chez le fournisseur — en dernier.
 
