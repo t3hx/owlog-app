@@ -174,9 +174,13 @@ Les messages d'erreur levés par le code sont en anglais : ils s'adressent au d�
 **Doppler**, projet `owlog-app`. Aucun secret n'est versionné, ni en clair ni chiffré, et aucun `.env` n'est commité.
 
 ```bash
-doppler run -- pnpm dev          # développement
+pnpm dev                         # développement (le script appelle Doppler lui-même)
 doppler secrets download --no-file --format env   # inspection
 ```
+
+`pnpm dev` lance `scripts/dev.sh`, qui démarre `owlog-api` **et** `owlog-web` sous la topologie de la production : une seule origine, l'API relayée sous `/api` par le proxy du serveur de dév. Aucun CORS, comme en ligne.
+
+La config Doppler du projet est `prd`, et trois de ses valeurs sont fausses en local — le script les neutralise, et il est le seul endroit qui connaît l'écart : `DATABASE_URL` (hôte du VPS injoignable ; vide, `/auth` et `/sync` répondent 503 et le reste vit), `OWLOG_SHARED_TOKEN` (le bundle de dév se rabat sur `local-token`, les deux doivent coïncider) et `OWLOG_BASE_PATH`, qui reste `/api` puisque le proxy relaie tel quel. **La correction durable est une config `dev` dans Doppler**, qui n'existe pas encore.
 
 Secrets attendus à l'étape 3, côté `owlog-api` uniquement :
 
