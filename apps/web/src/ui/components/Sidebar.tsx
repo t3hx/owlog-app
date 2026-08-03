@@ -27,7 +27,10 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-[216px] flex-none flex-col border-r border-border bg-sidebar px-4 py-[26px]">
-      <Logo className="ml-2.5 h-28" />
+      {/* Centré, pas aligné à gauche comme les items de nav : le wordmark du
+          mock remplit la colonne, l'image est presque carrée (888 × 903) et
+          laisse un vide à droite dès qu'on la cale sur le bord. */}
+      <Logo className="mx-auto h-28" />
 
       <nav aria-label={t('nav.ariaLabel')} className="mt-[34px]">
         <ul className="flex flex-col gap-1">

@@ -1,7 +1,8 @@
 {
   "app": {
     "tagline": "Everything you watch. One single log.",
-    "logoAlt": "Owlog"
+    "logoAlt": "Owlog",
+    "locale": "en-GB"
   },
   "nav": {
     "home": "home",

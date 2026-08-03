@@ -8,6 +8,13 @@ export interface ToWatchShelfProps {
   onOpen: (ref: string) => void
   /** Fait passer le titre « en cours » : le play discret de l'affiche. */
   onStart: (ref: string) => void
+  /**
+   * Au-dela de 1024px, l'etagere devient une grille de six colonnes (mock
+   * 10a). Le defilement horizontal repond a une contrainte de pouce que le
+   * pointeur n'a pas, et il cacherait des titres dans une largeur qui peut
+   * tous les montrer.
+   */
+  desktop?: boolean
 }
 
 /**
@@ -27,16 +34,16 @@ export interface ToWatchShelfProps {
  * Le débordement porte une bordure de sécurité en bas (`pb-1.5`) pour que le
  * halo des affiches ne soit pas rogné par la zone de défilement.
  */
-export function ToWatchShelf({ rows, onOpen, onStart }: ToWatchShelfProps) {
+export function ToWatchShelf({ rows, onOpen, onStart, desktop = false }: ToWatchShelfProps) {
   const { t } = useTranslation()
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1.5">
+    <div className={desktop ? 'grid grid-cols-6 gap-4' : 'flex gap-3 overflow-x-auto pb-1.5'}>
       {rows.map((row) => {
         const poster = posterUrl(row.posterPath, 'w342')
 
         return (
-          <div key={row.ref} className="relative w-[104px] flex-none">
+          <div key={row.ref} className={desktop ? 'relative' : 'relative w-[104px] flex-none'}>
             <button
               type="button"
               onClick={() => onOpen(row.ref)}
@@ -50,10 +57,20 @@ export function ToWatchShelf({ rows, onOpen, onStart }: ToWatchShelfProps) {
                   height={156}
                   loading="lazy"
                   crossOrigin="anonymous"
-                  className="h-[156px] w-[104px] rounded-poster object-cover"
+                  className={
+                    desktop
+                      ? 'aspect-[2/3] w-full rounded-poster object-cover'
+                      : 'h-[156px] w-[104px] rounded-poster object-cover'
+                  }
                 />
               ) : (
-                <span className="h-[156px] w-[104px] rounded-poster bg-poster-placeholder" />
+                <span
+                  className={
+                    desktop
+                      ? 'aspect-[2/3] w-full rounded-poster bg-poster-placeholder'
+                      : 'h-[156px] w-[104px] rounded-poster bg-poster-placeholder'
+                  }
+                />
               )}
               <span className="line-clamp-2 text-xs font-medium leading-tight text-text">
                 {row.title}
@@ -72,7 +89,11 @@ export function ToWatchShelf({ rows, onOpen, onStart }: ToWatchShelfProps) {
               type="button"
               onClick={() => onStart(row.ref)}
               aria-label={t('home.startWatching', { title: row.title })}
-              className="absolute right-0 top-[112px] flex size-11 items-center justify-center text-[15px] text-text/80"
+              className={
+                desktop
+                  ? 'absolute bottom-9 right-0 flex size-11 items-center justify-center text-[15px] text-text/80'
+                  : 'absolute right-0 top-[112px] flex size-11 items-center justify-center text-[15px] text-text/80'
+              }
             >
               ▶
             </button>

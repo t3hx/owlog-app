@@ -77,20 +77,25 @@ export function Search({
               onScopeChange={setScope}
               context={context}
             />
+            {/* Le sélecteur appartient à la barre, pas à l'écran : hors de sa
+                colonne il s'étirerait sur toute la largeur du contenu et se
+                lirait comme deux onglets de page. */}
+            {context === 'add' && <ModeSwitch mode={mode} onChange={setMode} />}
           </div>
           {aside}
         </div>
       ) : (
-        <SearchBar
-          value={query}
-          onChange={changeQuery}
-          scope={scope}
-          onScopeChange={setScope}
-          context={context}
-        />
+        <>
+          <SearchBar
+            value={query}
+            onChange={changeQuery}
+            scope={scope}
+            onScopeChange={setScope}
+            context={context}
+          />
+          {context === 'add' && <ModeSwitch mode={mode} onChange={setMode} />}
+        </>
       )}
-
-      {context === 'add' && <ModeSwitch mode={mode} onChange={setMode} />}
 
       <PendingQueue
         onResume={(entry) => {
