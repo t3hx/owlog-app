@@ -251,7 +251,7 @@ describe.skipIf(!adminUrl)('vérification du lien', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
-      user: { email: 'a@b.c', firstName: null },
+      user: { email: 'a@b.c', firstName: null, pseudo: null },
     })
 
     const cookie = response.headers.get('set-cookie')!
@@ -453,7 +453,7 @@ describe.skipIf(!adminUrl)('session', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
-      user: { email: 'a@b.c', firstName: null },
+      user: { email: 'a@b.c', firstName: null, pseudo: null },
     })
 
     const raw = cookie.split('=')[1]!
@@ -531,13 +531,13 @@ describe.skipIf(!adminUrl)('session', () => {
 
     expect(updated.status).toBe(200)
     await expect(updated.json()).resolves.toEqual({
-      user: { email: 'a@b.c', firstName: 'Alex' },
+      user: { email: 'a@b.c', firstName: 'Alex', pseudo: null },
     })
 
     // /auth/me rend la valeur écrite : c'est elle que tout appareil relit.
     const me = await app.fetch(get('/auth/me', { cookie }))
     await expect(me.json()).resolves.toEqual({
-      user: { email: 'a@b.c', firstName: 'Alex' },
+      user: { email: 'a@b.c', firstName: 'Alex', pseudo: null },
     })
   })
 
@@ -562,6 +562,114 @@ describe.skipIf(!adminUrl)('session', () => {
     expect(empty.status).toBe(400)
     expect(huge.status).toBe(400)
   })
+
+  it('le profil pose un pseudo et le rend sur tous les chemins de lecture', async () => {
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    const updated = await app.fetch(
+      post('/auth/profile', { firstName: 'Alex', pseudo: 'nyx_42' }, { cookie }),
+    )
+
+    expect(updated.status).toBe(200)
+    await expect(updated.json()).resolves.toEqual({
+      user: { email: 'a@b.c', firstName: 'Alex', pseudo: 'nyx_42' },
+    })
+
+    // Relu par /me : c'est le chemin qu'emprunte un second appareil.
+    const me = await app.fetch(get('/auth/me', { cookie }))
+    await expect(me.json()).resolves.toEqual({
+      user: { email: 'a@b.c', firstName: 'Alex', pseudo: 'nyx_42' },
+    })
+  })
+
+  it('le profil force les minuscules cote serveur, pas seulement dans le champ', async () => {
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    const updated = await app.fetch(
+      post('/auth/profile', { firstName: 'Alex', pseudo: '  NyX_42  ' }, { cookie }),
+    )
+
+    expect(updated.status).toBe(200)
+    await expect(updated.json()).resolves.toMatchObject({ user: { pseudo: 'nyx_42' } })
+  })
+
+  it('le profil refuse un pseudo hors format', async () => {
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    for (const pseudo of ['ab', 'x'.repeat(21), 'avec-tiret', 'avec espace', 'accentué']) {
+      const response = await app.fetch(
+        post('/auth/profile', { firstName: 'Alex', pseudo }, { cookie }),
+      )
+      expect(response.status, `pseudo refusé : ${pseudo}`).toBe(400)
+    }
+  })
+
+  it('omettre le pseudo laisse celui deja pose intact', async () => {
+    // La rangee de Reglages n envoie que ce qu elle edite : editer le prenom
+    // ne doit pas effacer l identite sociale.
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    await app.fetch(post('/auth/profile', { firstName: 'Alex', pseudo: 'nyx' }, { cookie }))
+    const renamed = await app.fetch(post('/auth/profile', { firstName: 'Alexandre' }, { cookie }))
+
+    await expect(renamed.json()).resolves.toEqual({
+      user: { email: 'a@b.c', firstName: 'Alexandre', pseudo: 'nyx' },
+    })
+  })
+
+  it('un pseudo deja pris par un autre compte repond 409 pseudo-taken', async () => {
+    const firstMailer = captureMailer()
+    const first = makeApp(firstMailer)
+    const firstCookie = await connectedCookie(first, firstMailer)
+    await setPseudo(first, firstCookie, 'nyx')
+
+    const secondMailer = captureMailer()
+    const second = makeApp(secondMailer)
+    await requestLink(second, 'other@b.c')
+    const { token } = secretsOf(secondMailer)
+    const secondCookie = sessionCookie(await second.fetch(post('/auth/verify', { token })))
+
+    const response = await setPseudo(second, secondCookie, 'nyx')
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({ error: 'pseudo-taken' })
+  })
+
+  it('deux reservations simultanees du meme pseudo : une seule passe, sans 500', async () => {
+    // LE test de ce ticket. Un `SELECT` avant l `INSERT` laisserait les deux
+    // requetes passer le controle ; la seconde echouerait alors en 500 au
+    // lieu du 409 que le client sait afficher.
+    const aMailer = captureMailer()
+    const a = makeApp(aMailer)
+    const aCookie = await connectedCookie(a, aMailer)
+
+    const bMailer = captureMailer()
+    const b = makeApp(bMailer)
+    await requestLink(b, 'race@b.c')
+    const { token } = secretsOf(bMailer)
+    const bCookie = sessionCookie(await b.fetch(post('/auth/verify', { token })))
+
+    const [first, second] = await Promise.all([
+      setPseudo(a, aCookie, 'contested'),
+      setPseudo(b, bCookie, 'contested'),
+    ])
+
+    const statuses = [first.status, second.status].sort()
+    expect(statuses).toEqual([200, 409])
+  })
+
+  /** Pousse un pseudo par la rangée de Réglages. */
+  function setPseudo(app: ReturnType<typeof makeApp>, cookie: string, pseudo: string) {
+    return app.fetch(post('/auth/profile', { firstName: 'Alex', pseudo }, { cookie }))
+  }
 })
 
 describe.skipIf(!adminUrl)('auth et base', () => {

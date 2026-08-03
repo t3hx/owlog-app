@@ -139,11 +139,45 @@ export type ApiErrorCode =
    * décompte plus d'essais.
    */
   | 'auth-locked'
+  /**
+   * Pseudo déjà pris. Rendu par `/auth/profile` sur violation de l'index
+   * unique — **constatée**, jamais anticipée par un `SELECT` préalable, qui
+   * laisserait passer deux réservations simultanées.
+   *
+   * Le contrat du dépôt porte un champ unique où `error` **est** le code ;
+   * `social.md` annonçait `{ error, code: "pseudo_taken" }`, ce qui aurait
+   * créé une seconde forme d'erreur pour une seule route.
+   */
+  | 'pseudo-taken'
 
 /** Ce que le serveur sait d'un compte connecté. */
 export interface AuthUser {
   readonly email: string
   readonly firstName: string | null
+  /**
+   * Identité sociale. `null` tant qu'aucun geste social ne l'a réclamée.
+   *
+   * **Le prénom est privé, le pseudo est public.** C'est du pseudo que sort
+   * l'initiale de l'avatar, jamais du prénom : un seul système d'avatar, et
+   * il ne diffuse rien qui ne soit déjà destiné à circuler.
+   */
+  readonly pseudo: string | null
+}
+
+/**
+ * Format d'un pseudo : 3 à 20 caractères, minuscules, chiffres et `_`.
+ *
+ * **Unique domicile de la règle.** Le champ de Réglages force les
+ * minuscules à la saisie, la route valide, et la base porte la même
+ * expression en contrainte `CHECK` — les trois lisent cette constante ou la
+ * recopient dans le seul dialecte qui ne la comprend pas, celui de
+ * Postgres. Les minuscules étant imposées, l'unicité se compare octet à
+ * octet : ni `citext`, ni index fonctionnel.
+ */
+export const PSEUDO_PATTERN = /^[a-z0-9_]{3,20}$/
+
+export function isValidPseudo(value: string): boolean {
+  return PSEUDO_PATTERN.test(value)
 }
 
 /** Réponse de `/auth/verify` et `/auth/verify-code` : la session est posée en cookie. */
