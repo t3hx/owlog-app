@@ -82,6 +82,52 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
   const nextEpisodeTitle = useEpisodeTitle(mediaRef, nextRank)
 
   /**
+   * Le CTA plein, unique et exclusif par statut — jamais deux à la fois.
+   *
+   * « vu » propose REVOIR ; « en cours » propose le geste du play adaptatif,
+   * épisode suivant sur un média à épisodes, marquer vu sur un film. Les
+   * autres statuts n'en ont aucun.
+   *
+   * Comme le journal, c'est un seul nœud monté à deux endroits : dans la
+   * rangée des notes en desktop (le mock 10c y aligne étoiles, ♥, CTA et note
+   * externe), sous elle en mobile où la ligne est déjà pleine.
+   */
+  const cta =
+    status === 'seen' ? (
+      <ActionCta
+        icon="↻"
+        label={t('media.rewatch')}
+        onTap={() => void media.watchAgain()}
+        desktop={desktop}
+      />
+    ) : status === 'watching' ? (
+      hasEpisodes(mediaRef) ? (
+        <ActionCta
+          icon="▸"
+          // Trois niveaux de précision, du plus dit au plus déduit : le label
+          // saisi (`S02E06`), le rang déduit du pourcentage (`ÉP. 4`), puis
+          // rien quand on ne sait rien.
+          label={
+            nextLabel !== null
+              ? t('media.nextEpisode', { label: nextLabel })
+              : nextNumber !== null
+                ? t('media.nextEpisodeNumber', { number: nextNumber })
+                : t('media.nextEpisodeUnknown')
+          }
+          onTap={() => tap(mediaRef, increment)}
+          desktop={desktop}
+        />
+      ) : (
+        <ActionCta
+          icon="✓"
+          label={t('media.markSeen')}
+          onTap={() => void markSeen(mediaRef)}
+          desktop={desktop}
+        />
+      )
+    ) : null
+
+  /**
    * Le journal, monté à deux endroits selon le format.
    *
    * En mobile il ferme la colonne, sous les genres. Au-delà de 1024px il
@@ -245,6 +291,8 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
           )}
         </button>
 
+        {desktop && cta}
+
         {cache?.externalRatings.tmdb != null && (
           <span className="ml-auto font-mono text-[10px] text-subtle">
             {t('media.tmdb', { rating: cache.externalRatings.tmdb.toFixed(1) })}
@@ -261,59 +309,25 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
         </div>
       )}
 
-      {/* CTA plein unique, exclusif par statut — jamais deux à la fois.
-          « vu » propose REVOIR, « en cours » propose le geste du play
-          adaptatif : épisode suivant sur un média à épisodes, marquer vu
-          sur un film. Les autres statuts n'ont aucun CTA plein. */}
+      {/* En desktop le CTA est déjà monté dans la rangée des notes. Ne reste
+          ici que ce qui le commente — le rang du prochain visionnage, le
+          titre de l'épisode visé. */}
+      {!desktop && cta}
+
       {status === 'seen' && (
-        <>
-          <ActionCta
-            icon="↻"
-            label={t('media.rewatch')}
-            onTap={() => void media.watchAgain()}
-            desktop={desktop}
-          />
-          <p className="mt-2 font-mono text-[9.5px] text-subtle">
-            {t('media.rewatchHint', { number: (state?.seenCount ?? 0) + 1 })}
-          </p>
-        </>
+        <p className="mt-2 font-mono text-[9.5px] text-subtle">
+          {t('media.rewatchHint', { number: (state?.seenCount ?? 0) + 1 })}
+        </p>
       )}
 
-      {status === 'watching' &&
-        (hasEpisodes(mediaRef) ? (
-          <>
-            <ActionCta
-              icon="▸"
-              // Trois niveaux de précision, du plus dit au plus déduit : le
-              // label saisi (`S02E06`), le rang déduit du pourcentage
-              // (`ÉP. 4`), puis rien quand on ne sait rien.
-              label={
-                nextLabel !== null
-                  ? t('media.nextEpisode', { label: nextLabel })
-                  : nextNumber !== null
-                    ? t('media.nextEpisodeNumber', { number: nextNumber })
-                    : t('media.nextEpisodeUnknown')
-              }
-              onTap={() => tap(mediaRef, increment)}
-              desktop={desktop}
-            />
-            {/* Le titre de l'épisode que le CTA désigne — « Le retour » —
-                quand la saison est sue et le réseau d'accord. Absent sinon,
-                sans placeholder : rien n'est dû ici. */}
-            {nextEpisodeTitle !== null && (
-              <p className="mt-2 font-mono text-[10px] text-muted">
-                {t('media.nextEpisodeTitle', { title: nextEpisodeTitle })}
-              </p>
-            )}
-          </>
-        ) : (
-          <ActionCta
-            icon="✓"
-            label={t('media.markSeen')}
-            onTap={() => void markSeen(mediaRef)}
-            desktop={desktop}
-          />
-        ))}
+      {/* Le titre de l'épisode que le CTA désigne — « Le retour » — quand la
+          saison est sue et le réseau d'accord. Absent sinon, sans
+          placeholder : rien n'est dû ici. */}
+      {status === 'watching' && hasEpisodes(mediaRef) && nextEpisodeTitle !== null && (
+        <p className="mt-2 font-mono text-[10px] text-muted">
+          {t('media.nextEpisodeTitle', { title: nextEpisodeTitle })}
+        </p>
+      )}
 
       {cache?.overview && (
         <p className="mt-[18px] max-w-[620px] text-[13.5px] leading-[1.55] text-muted">

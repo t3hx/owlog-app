@@ -103,7 +103,11 @@
     "splitSeries_other": "séries {{percent}}% · {{count}} titres",
     "splitMovies_other": "films {{percent}}% · {{count}} titres",
     "excludedProgress": "{{count}} titre en cours hors du total : son avancement n'est daté que sur « tout »",
-    "excludedProgress_other": "{{count}} titres en cours hors du total : leur avancement n'est daté que sur « tout »"
+    "excludedProgress_other": "{{count}} titres en cours hors du total : leur avancement n'est daté que sur « tout »",
+    "otherTitle": "AUTRES INDICATEURS",
+    "completionLine": "complétion {{percent}}% · vus vs abandonnés",
+    "rewatchesLine": "revisionnages ×{{count}}",
+    "episodesLine": "épisodes vus {{count}}"
   },
   "notFound": {
     "title": "Page introuvable",
