@@ -18,6 +18,20 @@
   --color-surface: #121724;
   --color-surface-translucent: rgb(18 23 36 / 0.75);
   --color-tabbar: rgb(10 14 23 / 0.92);
+  /*
+   * La sidebar desktop est un poil moins opaque que la tab bar (.9 contre
+   * .92) : valeur du mock 10a d'« Owlog Explorations », pas une approximation.
+   * Elle ne flotte pas au-dessus du contenu, elle le borde — le degrade de
+   * fond doit transparaitre un peu plus.
+   */
+  --color-sidebar: rgb(10 14 23 / 0.9);
+
+  /*
+   * Surface d'un cran au-dessus du fond, sous les elements pleins : pastille
+   * d'avatar, rayures du placeholder d'affiche. Elle etait ecrite en dur aux
+   * deux endroits ; la nommer est la regle DRY appliquee aux couleurs.
+   */
+  --color-surface-raised: #1a2032;
 
   /* --- Bordures --- */
   --color-border: #212a3d;
@@ -145,8 +159,8 @@
 @utility bg-poster-placeholder {
   background-image: repeating-linear-gradient(
     -45deg,
-    #1a2032,
-    #1a2032 6px,
+    var(--color-surface-raised),
+    var(--color-surface-raised) 6px,
     #151a29 6px,
     #151a29 12px
   );

@@ -16,6 +16,13 @@ import { useTranslation } from 'react-i18next'
  * `block` : une <img> inline s'aligne sur la baseline du texte, ce qui la
  * décale vers le haut dans les barres en `items-center`. En block, le
  * centrage vertical flex est exact.
+ *
+ * `w-fit` et non `w-auto` : dans un conteneur `flex-col`, `align-items:
+ * stretch` étire tout élément dont la largeur vaut `auto`. L'image y perdait
+ * ses proportions — écrasée sur toute la largeur de la sidebar, quelle que
+ * soit la hauteur demandée. `fit-content` n'est pas `auto`, donc la largeur
+ * se déduit du ratio natif (888 × 903, presque carré) et l'étirement ne peut
+ * plus se produire, dans aucun conteneur.
  */
 export function Logo({ className }: { className?: string }) {
   const { t } = useTranslation()
@@ -24,7 +31,7 @@ export function Logo({ className }: { className?: string }) {
     <img
       src="/owlog_logo_full.png"
       alt={t('app.logoAlt')}
-      className={`block w-auto select-none ${className ?? ''}`}
+      className={`block w-fit select-none ${className ?? ''}`}
       draggable={false}
     />
   )
