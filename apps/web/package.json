@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@owlog/contracts": "workspace:*",
+    "@owlog/domain": "workspace:*",
+    "@tanstack/react-query": "^5.101.4",
     "dexie": "^4.0.11",
     "dexie-react-hooks": "^1.1.7",
     "i18next": "^26.3.6",

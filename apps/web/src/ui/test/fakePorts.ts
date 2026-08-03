@@ -1,5 +1,5 @@
-import type { MediaStateRow } from '@/domain/reducers/mediaState'
-import type { StoredEvent } from '@/domain/types'
+import type { SeasonDetail } from '@owlog/contracts'
+import type { MediaStateRow, StoredEvent } from '@owlog/domain'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import type { EventStore } from '@/ports/EventStore'
 import type { LiveQueries } from '@/ports/LiveQueries'
@@ -27,8 +27,15 @@ export function fakePorts(overrides: {
   /** Ce que le LOG global reçoit à sa première page. */
   recentEvents?: readonly StoredEvent[]
   mediaCache?: readonly MediaCacheRow[]
+  /**
+   * Ce que `catalog.season` rend. Sans elle : hors-ligne — le défaut le plus
+   * honnête, celui où la fiche doit se taire plutôt qu'afficher un trou.
+   */
+  seasonDetail?: SeasonDetail
   /** Reçoit ce que les commandes écrivent, pour l'affirmer dans un test. */
   onAppend?: (produced: readonly StoredEvent[]) => void
+  /** Remplace `catalog.detail`, pour affirmer qu'un rafraîchissement part — ou pas. */
+  detail?: MediaCatalog['detail']
 } = {}): Ports {
   const mediaStates = overrides.mediaStates ?? []
   const pendingAdds = overrides.pendingAdds ?? []
@@ -69,7 +76,13 @@ export function fakePorts(overrides: {
 
   const catalog: MediaCatalog = {
     search: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
-    detail: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    detail: overrides.detail ?? (() => Promise.resolve({ ok: false, failure: { kind: 'offline' } })),
+    season: () =>
+      Promise.resolve(
+        overrides.seasonDetail === undefined
+          ? { ok: false, failure: { kind: 'offline' } }
+          : { ok: true, value: overrides.seasonDetail },
+      ),
   }
 
   const pending: PendingAdds = {

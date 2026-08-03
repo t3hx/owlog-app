@@ -1,37 +1,43 @@
-# CI — chaque poussée sur dev et chaque PR.
+# CI — chaque PR, et chaque poussée sur le tronc.
 #
-# Décision du gate final (D3) : ce sprint introduit le premier service à
+# Décision du gate temps 2 (D3) : ce sprint a introduit le premier service à
 # état du projet. Les tests d'intégration de l'API tournent contre un VRAI
 # Postgres — le harnais Vitest démarre un conteneur jetable et chaque test
 # reçoit une base vierge, donc **les migrations sont rejouées depuis zéro à
-# chaque exécution** (`migrate.test.ts` les exerce aussi en concurrence,
-# sous advisory lock). C'est la classe de bug la plus coûteuse à découvrir
-# sur le VPS, attrapée ici.
+# chaque exécution** (`migrate.test.ts` les exerce aussi en concurrence, sous
+# advisory lock). C'est la classe de bug la plus coûteuse à découvrir sur le
+# VPS, attrapée ici.
 #
 # Docker est préinstallé sur ubuntu-latest : le globalSetup des tests API
 # fonctionne tel quel. S'il venait à manquer, la suite SAUTE les tests DB
-# avec un avertissement — le grep final transforme ce saut silencieux en
-# échec de CI : une couverture qui disparaît doit se voir.
+# avec un avertissement — le grep de l'étape de test transforme ce saut
+# silencieux en échec de CI : une couverture qui disparaît doit se voir.
 name: ci
 
 on:
-  push:
-    branches: [dev, main]
   pull_request:
+  push:
+    # `dev` est transitoire : le projet migre vers un tronc `main` unique
+    # (T3H-73). Le retirer d'ici est la dernière étape de cette migration —
+    # d'ici là, les poussées directes sur `dev` restent couvertes.
+    branches: [main, dev]
+
+# Une nouvelle poussée sur la même réf annule le run précédent encore en vol.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      # pnpm d'abord : setup-node lit `packageManager` mais son cache a
-      # besoin du binaire déjà présent.
+      # pnpm d'abord : setup-node lit `packageManager` mais son cache a besoin
+      # du binaire déjà présent.
       - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
@@ -42,6 +48,9 @@ jobs:
       - name: Lint
         run: pnpm -r lint
 
+      # `build` EST le typecheck du projet : web fait `tsc -b && vite build`,
+      # api et domain font `tsc --noEmit`. Il n'existe pas de script
+      # `typecheck` séparé, et il n'en faut pas un.
       - name: Typecheck et build de production
         run: pnpm -r build
 
@@ -55,3 +64,30 @@ jobs:
             echo "::error::Les tests d'intégration DB ont été sautés — Postgres indisponible."
             exit 1
           fi
+
+  # Le titre de PR devient le commit de squash sur le tronc → c'est LUI qu'on
+  # lint, pas les commits de la branche. Les messages français passent : seul
+  # le type (feat, fix…) est contraint, et il est en anglais.
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            style
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false

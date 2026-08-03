@@ -23,6 +23,12 @@ export interface MediaCacheRow {
   readonly genres: readonly string[]
   readonly totalRuntime: number | null
   readonly numberOfEpisodes: number | null
+  /**
+   * Nombre de saisons. **Optionnel** : les lignes écrites avant ce champ ne
+   * l'ont pas, et Dexie les rend telles quelles — tout consommateur lit
+   * `row.numberOfSeasons ?? null` plutôt que de supposer sa présence.
+   */
+  readonly numberOfSeasons?: number | null
   readonly overview: string
   readonly externalRatings: { readonly tmdb: number | null }
   readonly fetchedAt: string
@@ -46,6 +52,7 @@ export function partialCacheRow(
     genres: [],
     totalRuntime: null,
     numberOfEpisodes: null,
+    numberOfSeasons: null,
     overview: '',
     externalRatings: { tmdb: null },
     fetchedAt: now,
@@ -77,11 +84,45 @@ export function placeholderCacheRow(ref: MediaRef, title: string): MediaCacheRow
     genres: [],
     totalRuntime: null,
     numberOfEpisodes: null,
+    numberOfSeasons: null,
     overview: '',
     externalRatings: { tmdb: null },
     fetchedAt: '',
     complete: false,
   }
+}
+
+/**
+ * Durée pendant laquelle une ligne complète est considérée fraîche.
+ *
+ * C'est l'équivalent local du `staleTime` de TanStack Query — qui n'est pas
+ * installé : Dexie et ses lectures réactives jouent le rôle du cache de
+ * session, et `media_cache` reste la seule source hors-ligne.
+ *
+ * Sept jours, parce qu'une ligne complète vieillit quand même : une série en
+ * diffusion gagne des épisodes, la note TMDB dérive. Une semaine borne cette
+ * dérive tout en gardant les ouvertures de fiche sans réseau dans l'usage
+ * courant. L'équivalent du `gcTime` est l'infini : `media_cache` n'est
+ * jamais purgé, c'est lui qui fait vivre la bibliothèque hors-ligne.
+ */
+export const MEDIA_CACHE_STALE_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Décide si une ligne mérite un rafraîchissement réseau.
+ *
+ * La règle vit ici, à côté du type, et nulle part ailleurs : `useMedia` ne
+ * fait que l'appliquer. Trois cas rendent une ligne périmée — incomplète
+ * (l'ajout depuis la recherche n'a ni genres ni durée), `fetchedAt`
+ * illisible (la ligne de secours après restauration), ou plus vieille que
+ * `MEDIA_CACHE_STALE_MS`.
+ */
+export function isCacheRowStale(row: MediaCacheRow, now: string): boolean {
+  if (!row.complete) return true
+
+  const fetched = Date.parse(row.fetchedAt)
+  if (Number.isNaN(fetched)) return true
+
+  return Date.parse(now) - fetched > MEDIA_CACHE_STALE_MS
 }
 
 /** Ligne complète, depuis la réponse de détail. */
@@ -96,6 +137,9 @@ export function completeCacheRow(detail: MediaDetail, now: string): MediaCacheRo
     genres: detail.genres,
     totalRuntime: detail.totalRuntime,
     numberOfEpisodes: detail.numberOfEpisodes,
+    // `?? null` : le champ est optionnel dans le contrat, jamais dans une
+    // ligne neuve — l'absence reste réservée aux lignes d'avant ce champ.
+    numberOfSeasons: detail.numberOfSeasons ?? null,
     overview: detail.overview,
     externalRatings: detail.externalRatings,
     fetchedAt: now,

@@ -1,7 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 
-import type { MediaStateRow } from '@/domain/reducers/mediaState'
-import type { StoredEvent } from '@/domain/types'
+import type { MediaStateRow, StoredEvent } from '@owlog/domain'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import type { PendingAdd } from '@/ports/PendingAdds'
 

@@ -138,7 +138,7 @@ export function Login() {
       <div className="flex flex-1 items-center justify-center px-5 pb-10">
         <div className="w-[420px] max-w-full rounded-sheet border border-border bg-surface-translucent p-8 shadow-[0_20px_60px_rgba(0,0,0,.45)]">
           <div className="flex flex-col items-center">
-            <Logo className="text-[26px]" />
+            <Logo className="h-56" />
             <p className="mt-2 font-mono text-[11px] text-muted">{t('login.tagline')}</p>
           </div>
 

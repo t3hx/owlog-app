@@ -19,8 +19,8 @@ export function Header() {
   const { t } = useTranslation()
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-tabbar px-5 py-3 backdrop-blur-lg">
-      <Logo className="text-base" />
+    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-tabbar px-5 py-2 backdrop-blur-lg">
+      <Logo className="h-16" />
       <Link
         href="/settings"
         aria-label={t('settings.title')}

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { db } from '@/adapters/dexie/db'
 import { createEventStore } from '@/adapters/dexie/eventStore'
-import type { MediaRef, StoredEvent, Timestamp } from '@/domain/types'
+import type { MediaRef, StoredEvent, Timestamp } from '@owlog/domain'
 
 /**
  * Budget de performance du pull initial — indicatif, pas un benchmark.

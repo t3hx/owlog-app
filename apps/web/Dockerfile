@@ -23,10 +23,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/web/package.json apps/web/
 COPY apps/api/package.json apps/api/
 COPY packages/contracts/package.json packages/contracts/
+COPY packages/domain/package.json packages/domain/
 
 RUN pnpm install --frozen-lockfile --filter @owlog/web...
 
 COPY packages/contracts packages/contracts
+COPY packages/domain packages/domain
 COPY apps/web apps/web
 
 # Adresse de l'API et jeton partagé : ils sont injectés dans le bundle, donc

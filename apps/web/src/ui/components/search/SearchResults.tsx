@@ -2,7 +2,7 @@ import type { SearchHit } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'wouter'
 
-import type { Status } from '@/domain/types'
+import type { Status } from '@owlog/domain'
 import type { CatalogFailure } from '@/ports/MediaCatalog'
 import { MediaRow } from '@/ui/components/search/MediaRow'
 import { usePorts } from '@/ui/PortsProvider'
@@ -60,7 +60,18 @@ export function SearchResults({
    *  passent pas tels quels dans un chemin. */
   const open = (ref: string) => () => navigate(`/media/${ref.replace('tmdb:', '')}`)
   const states = live.useMediaStates()
-  const { add, undoLast, forget, lastAdded } = useAddMedia()
+  const { add, addFavorite, addStarted, undoLast, forget, lastAdded } = useAddMedia()
+
+  /**
+   * Un geste d'ajout, quel que soit le bouton : oublier l'annulation
+   * précédente, écrire, puis signaler l'ajout pour résoudre l'entrée de la
+   * file hors-ligne. Trois boutons, une seule séquence — la faire diverger
+   * ferait des gestes rapides des ajouts qui ne vident pas la file.
+   */
+  const perform = (write: (hit: SearchHit) => Promise<void>) => (hit: SearchHit) => {
+    forget()
+    void write(hit).then(() => onAdded?.())
+  }
 
   if (state.status === 'idle') return null
 
@@ -148,10 +159,9 @@ export function SearchResults({
                 {...(mode === 'log' && onLog
                   ? { onLog: () => onLog(hit) }
                   : {
-                      onAdd: () => {
-                        forget()
-                        void add(hit).then(() => onAdded?.())
-                      },
+                      onAdd: () => perform(add)(hit),
+                      onAddFavorite: () => perform(addFavorite)(hit),
+                      onAddStarted: () => perform(addStarted)(hit),
                     })}
                 onUndo={() => void undoLast()}
               />

@@ -4,6 +4,7 @@ import {
   type MediaDetail,
   type MediaRef,
   type SearchResponse,
+  type SeasonDetail,
 } from '@owlog/contracts'
 
 import type { CatalogFailure, CatalogResult, MediaCatalog } from '@/ports/MediaCatalog'
@@ -16,8 +17,9 @@ import type { CatalogFailure, CatalogResult, MediaCatalog } from '@/ports/MediaC
  * — sans toucher au client.
  *
  * Aucune donnée n'est mise en cache ici : `media_cache` (Dexie) est la
- * seule source du rendu hors-ligne, et TanStack Query garde le cache de
- * session en mémoire. Un troisième cache créerait une troisième vérité.
+ * seule source du rendu hors-ligne, et sa fraîcheur est arbitrée par
+ * `isCacheRowStale`, à un seul endroit. Un deuxième cache ici créerait une
+ * deuxième vérité.
  */
 export function createMediaCatalog(options: {
   baseUrl: string
@@ -64,6 +66,11 @@ export function createMediaCatalog(options: {
     detail(ref: MediaRef, language) {
       const params = new URLSearchParams({ lang: language })
       return call<MediaDetail>(`/media/${ref}?${params.toString()}`)
+    },
+
+    season(ref: MediaRef, seasonNumber, language) {
+      const params = new URLSearchParams({ lang: language })
+      return call<SeasonDetail>(`/media/${ref}/season/${seasonNumber}?${params.toString()}`)
     },
   }
 }

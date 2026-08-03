@@ -1,0 +1,13 @@
+user_id,tv_show_id,is_followed,is_favorited,nb_episodes_seen,tv_show_name
+10000001,70350,1,0,0,Neon Genesis Evangelion
+10000001,70522,0,0,0,Farscape
+10000001,72449,1,0,214,Stargate SG-1
+10000001,73141,0,0,0,American Dad!
+10000001,73255,1,0,178,House
+10000001,73545,1,0,73,Battlestar Galactica (2003)
+10000001,73739,1,0,120,Lost
+10000001,74543,1,0,96,Entourage
+10000001,74599,1,0,74,Monster
+10000001,74796,1,0,385,Bleach
+10000001,74845,1,0,102,Weeds
+10000001,74852,0,0,0,Avatar: The Last Airbender

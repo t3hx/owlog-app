@@ -63,11 +63,38 @@ export interface MediaDetail extends SearchHit {
   readonly totalRuntime: number | null
   /** Sert l'incrément par épisode du bouton play. `null` pour un film. */
   readonly numberOfEpisodes: number | null
+  /**
+   * Nombre de saisons. `null` pour un film ou quand TMDB ne le donne pas.
+   *
+   * **Optionnel**, pas seulement nullable : les lignes de `media_cache`
+   * écrites avant ce champ ne l'ont pas, et une restauration peut les faire
+   * revivre longtemps. Tout consommateur tolère `undefined`.
+   */
+  readonly numberOfSeasons?: number | null
   readonly overview: string
   readonly externalRatings: {
     /** Note TMDB sur 10. `null` si aucun vote. */
     readonly tmdb: number | null
   }
+}
+
+/**
+ * Un épisode, tel que la fiche en a besoin : son rang et son titre.
+ *
+ * Volontairement minimal — pas de synopsis, pas de date, pas d'image. La
+ * seule consommatrice est la ligne « titre de l'épisode suivant » sous le
+ * CTA, et chaque champ ajouté ici serait promis au client pour toujours.
+ */
+export interface SeasonEpisode {
+  readonly episodeNumber: number
+  /** Titre localisé. Chaîne vide quand TMDB n'en a pas dans la langue. */
+  readonly name: string
+}
+
+/** Une saison d'une série : son numéro et ses épisodes. */
+export interface SeasonDetail {
+  readonly seasonNumber: number
+  readonly episodes: readonly SeasonEpisode[]
 }
 
 /** Réponse d'erreur, uniforme sur toutes les routes. */

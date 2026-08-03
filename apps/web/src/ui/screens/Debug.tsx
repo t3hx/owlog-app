@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { entriesPerDay, metrics, type Metrics } from '@/domain/reducers/metrics'
-import type { StoredEvent, MediaRef } from '@/domain/types'
+import { entriesPerDay, metrics, type Metrics, type StoredEvent, type MediaRef } from '@owlog/domain'
 import type { SyncStatus } from '@/ports/Sync'
 import { useBackup } from '@/ui/hooks/useBackup'
 import { useSetting } from '@/ui/hooks/useSetting'

@@ -1,9 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { mediaState } from '@/domain/reducers/mediaState'
-import { createFactory, MOVIE } from '@/domain/test/factory'
-import type { StoredEvent } from '@/domain/types'
+import { mediaState, type StoredEvent } from '@owlog/domain'
+import { createFactory, MOVIE } from '@owlog/domain/test'
 import i18next from '@/i18n'
 import { PortsProvider, type Ports } from '@/ui/PortsProvider'
 import { Debug } from '@/ui/screens/Debug'

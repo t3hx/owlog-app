@@ -13,6 +13,7 @@
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "@owlog/contracts": "workspace:*",
+    "@owlog/domain": "workspace:*",
     "hono": "^4.6.14",
     "pg": "^8.22.0",
     "uuidv7": "^1.2.1"

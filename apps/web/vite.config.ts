@@ -37,7 +37,13 @@ export default defineConfig({
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           {
-            src: '/icons/icon-512-maskable.png',
+            src: '/icons/icon-maskable-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
@@ -50,6 +56,13 @@ export default defineConfig({
         // ouverture hors-ligne retombe en polices système et la conformité
         // au design est perdue — défaut invisible tant qu'on est en ligne.
         globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
+
+        // Hors precache : le PNG source du logo (1,3 Mo) et l'image Open
+        // Graph ne sont jamais affichés par l'app — le premier n'est que la
+        // matière première des icônes, la seconde n'est lue que par les
+        // crawlers de partage. Les précacher ferait télécharger ~1,6 Mo à
+        // chaque client pour rien et gonflerait le quota d'origine.
+        globIgnores: ['og-image.png'],
 
         // Mode history : toute route inconnue sert `index.html`, hors-ligne
         // comme en ligne. C'est le pendant du rewrite SPA du Caddyfile.
@@ -65,8 +78,11 @@ export default defineConfig({
 
         runtimeCaching: [
           {
-            // Les affiches TMDB. `CacheFirst` parce qu'une affiche ne change
-            // jamais pour une URL donnée : elle est immuable par nature.
+            // Les affiches et backdrops TMDB. `CacheFirst` et non
+            // `StaleWhileRevalidate` : une image TMDB ne change jamais pour
+            // une URL donnée — une nouvelle affiche est un nouveau chemin —
+            // donc la revalidation en arrière-plan ne ferait que consommer
+            // du réseau pour recevoir à l'octet près la même réponse.
             urlPattern: /^https:\/\/image\.tmdb\.org\/t\/p\/.*/,
             handler: 'CacheFirst',
             options: {
@@ -79,7 +95,15 @@ export default defineConfig({
                 maxAgeSeconds: 30 * 24 * 60 * 60,
                 purgeOnQuotaError: true,
               },
-              cacheableResponse: { statuses: [0, 200] },
+              // `200` seul, jamais `0`. Tous les `<img>` de l'app portent
+              // `crossOrigin="anonymous"` : leurs requêtes sont en mode
+              // CORS, et une réponse opaque (statut 0, issue d'une requête
+              // no-cors) ne peut pas les satisfaire — servie depuis le
+              // cache, elle ferait échouer le chargement. Les opaques sont
+              // en prime facturées avec un rembourrage de plusieurs Mo sur
+              // le quota d'origine. On ne cache donc que de vraies réponses
+              // CORS complètes.
+              cacheableResponse: { statuses: [200] },
             },
           },
         ],

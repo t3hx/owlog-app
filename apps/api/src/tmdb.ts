@@ -4,6 +4,7 @@ import {
   type MediaKind,
   type SearchHit,
   type SearchResponse,
+  type SeasonDetail,
 } from '@owlog/contracts'
 
 /**
@@ -39,6 +40,8 @@ export class UpstreamError extends Error {
 export interface TmdbClient {
   search(query: string, language: string): Promise<SearchResponse>
   detail(kind: MediaKind, id: number, language: string): Promise<MediaDetail>
+  /** Une saison d'une série : rangs et titres d'épisodes, rien de plus. */
+  season(id: number, seasonNumber: number, language: string): Promise<SeasonDetail>
 }
 
 export function createTmdbClient(options: {
@@ -107,6 +110,29 @@ export function createTmdbClient(options: {
       const payload = await call<TmdbDetailPayload>(`/${kind}/${id}`, { language })
       return toMediaDetail(kind, payload)
     },
+
+    /**
+     * Saison d'une série, réduite à ce que la fiche affiche.
+     *
+     * TMDB renvoie ici des épisodes complets — synopsis, dates, images,
+     * équipes. Tout est jeté sauf le rang et le titre : chaque champ qui
+     * traverse le proxy devient un engagement du contrat.
+     */
+    async season(id, seasonNumber, language) {
+      const payload = await call<TmdbSeasonPayload>(`/tv/${id}/season/${seasonNumber}`, {
+        language,
+      })
+
+      return {
+        seasonNumber: payload.season_number ?? seasonNumber,
+        episodes: (payload.episodes ?? []).map((episode) => ({
+          episodeNumber: episode.episode_number,
+          // Une chaîne vide plutôt qu'`undefined` : sérialisé, `undefined`
+          // disparaît du JSON et le client lirait un trou dans le contrat.
+          name: episode.name ?? '',
+        })),
+      }
+    },
   }
 }
 
@@ -139,8 +165,17 @@ interface TmdbDetailPayload {
   runtime?: number | null
   episode_run_time?: number[]
   number_of_episodes?: number | null
+  number_of_seasons?: number | null
   vote_average?: number
   vote_count?: number
+}
+
+interface TmdbSeasonPayload {
+  season_number?: number
+  episodes?: {
+    episode_number: number
+    name?: string
+  }[]
 }
 
 function isMediaResult(result: TmdbSearchResult): boolean {
@@ -178,6 +213,7 @@ function toMediaDetail(kind: MediaKind, payload: TmdbDetailPayload): MediaDetail
     genres: (payload.genres ?? []).map((genre) => genre.name),
     totalRuntime: totalRuntime(kind, payload),
     numberOfEpisodes: kind === 'tv' ? (payload.number_of_episodes ?? null) : null,
+    numberOfSeasons: kind === 'tv' ? (payload.number_of_seasons ?? null) : null,
     overview: payload.overview ?? '',
     externalRatings: {
       // Une moyenne sans vote vaut 0 chez TMDB, ce qui n'est pas une note

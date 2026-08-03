@@ -13,3 +13,6 @@ coverage/
 
 # Reglages locaux de Claude Code : propres a la machine, jamais partages.
 .claude/settings.local.json
+
+# Dump GDPR TVTime personnel (tokens, hashs, IP) — ne jamais commiter
+docs/tvtime-gdpr-data/

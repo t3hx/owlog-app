@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { StatsPeriod, StatsRatings, StatsView } from '@/domain/reducers/stats'
+import type { StatsPeriod, StatsRatings, StatsView } from '@owlog/domain'
 import { useStats } from '@/ui/hooks/useStats'
 
 const PERIODS: readonly StatsPeriod[] = ['month', 'year', 'all']

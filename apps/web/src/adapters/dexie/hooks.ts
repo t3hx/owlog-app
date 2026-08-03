@@ -1,8 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '@/adapters/dexie/db'
-import type { MediaStateRow } from '@/domain/reducers/mediaState'
-import type { MediaRef, StoredEvent } from '@/domain/types'
+import type { MediaStateRow, MediaRef, StoredEvent } from '@owlog/domain'
 import type { LiveQueries } from '@/ports/LiveQueries'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import type { PendingAdd } from '@/ports/PendingAdds'

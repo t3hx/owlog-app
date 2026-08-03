@@ -1,0 +1,19 @@
+name: Task
+description: Unité de travail standard
+labels: ["type:feat","type:fix","type:bug"]
+body:
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intention
+      description: Le problème à résoudre, pas la solution.
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      placeholder: "- [ ] ..."
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / décisions

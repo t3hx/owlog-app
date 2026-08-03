@@ -1,5 +1,4 @@
-import type { MediaStateRow } from '@/domain/reducers/mediaState'
-import type { EventId, DomainEvent, StoredEvent, MediaRef } from '@/domain/types'
+import type { MediaStateRow, EventId, DomainEvent, StoredEvent, MediaRef } from '@owlog/domain'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 
 /**

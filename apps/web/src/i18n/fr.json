@@ -1,6 +1,7 @@
 {
   "app": {
-    "tagline": "Tout ce que tu regardes. Un seul log."
+    "tagline": "Tout ce que tu regardes. Un seul log.",
+    "logoAlt": "Owlog"
   },
   "nav": {
     "home": "accueil",
@@ -26,6 +27,9 @@
     "seeAll": "voir tout →",
     "percent": "{{percent}}%",
     "play": "Avancer {{title}}",
+    "markSeen": "Marquer {{title}} vu",
+    "startWatching": "Commencer {{title}}",
+    "episodeCount": "ép. {{seen}}/{{total}}",
     "uncached": "titre à recharger"
   },
   "library": {
@@ -172,6 +176,8 @@
     "rateLimitedHint": "Réessaie dans {{count}} seconde.",
     "rateLimitedHint_other": "Réessaie dans {{count}} secondes.",
     "addLabel": "Ajouter {{title}}",
+    "favoriteLabel": "Ajouter {{title}} en coup de cœur",
+    "startLabel": "Ajouter {{title}} et commencer",
     "added": "✓ ajouté",
     "undo": "annuler",
     "kindMovie": "film",
@@ -202,8 +208,19 @@
     "tmdb": "tmdb {{rating}}",
     "rewatch": "REVOIR",
     "rewatchHint": "repasse en « en cours » · ouvre le visionnage #{{number}} dans le journal",
+    "nextEpisode": "ÉPISODE SUIVANT {{label}}",
+    "nextEpisodeNumber": "ÉPISODE SUIVANT · ÉP. {{number}}",
+    "nextEpisodeUnknown": "ÉPISODE SUIVANT",
+    "nextEpisodeTitle": "« {{title}} »",
+    "seasonsWord_one": "saison",
+    "seasonsWord_other": "saisons",
+    "episodesWord_one": "épisode",
+    "episodesWord_other": "épisodes",
+    "statusMenu": "options de statut",
+    "markSeen": "MARQUER VU",
     "seenCount": "✓ vu ×{{count}}",
-    "cancelHint": "appui long sur une entrée pour l'annuler"
+    "cancelHint": "appui long sur une entrée pour l'annuler",
+    "journalLastEpisode": "dernier épisode vu · {{label}}"
   },
   "journal": {
     "WATCH": "ajouté en « à voir »",

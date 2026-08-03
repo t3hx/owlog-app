@@ -1,7 +1,7 @@
 import { posterUrl, type SearchHit } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 
-import type { Status } from '@/domain/types'
+import type { Status } from '@owlog/domain'
 
 /**
  * Rangée d'un média dans les résultats de recherche.
@@ -18,6 +18,10 @@ export interface MediaRowProps {
   status?: Status
   /** Absent quand le titre est déjà là : on n'ajoute pas deux fois. */
   onAdd?: () => void
+  /** Ajoute en bibliothèque **et** en coup de cœur. Voyage avec `onAdd`. */
+  onAddFavorite?: () => void
+  /** Ajoute directement « en cours ». Voyage avec `onAdd`. */
+  onAddStarted?: () => void
   /** Ouvre la saisie d'un souvenir. Remplace `onAdd` en mode « logger ». */
   onLog?: () => void
   /** Présent juste après un ajout, le temps de pouvoir revenir en arrière. */
@@ -25,7 +29,17 @@ export interface MediaRowProps {
   justAdded?: boolean
 }
 
-export function MediaRow({ hit, status, onAdd, onLog, onUndo, justAdded, onOpen }: MediaRowProps) {
+export function MediaRow({
+  hit,
+  status,
+  onAdd,
+  onAddFavorite,
+  onAddStarted,
+  onLog,
+  onUndo,
+  justAdded,
+  onOpen,
+}: MediaRowProps) {
   const { t } = useTranslation()
   const poster = posterUrl(hit.posterPath, 'w185')
 
@@ -92,14 +106,45 @@ export function MediaRow({ hit, status, onAdd, onLog, onUndo, justAdded, onOpen 
           ✓
         </button>
       ) : onAdd ? (
-        <button
-          type="button"
-          onClick={onAdd}
-          aria-label={t('search.addLabel', { title: hit.title })}
-          className="size-11 flex-none rounded-action border border-border-accent font-mono text-lg text-accent"
-        >
-          +
-        </button>
+        <div className="flex flex-none gap-1.5">
+          {/* Trois gestes, un événementiel chacun, du plus engagé au plus
+              neutre : ♥ ajoute et marque le coup de cœur, ▶ ajoute en
+              « en cours », + ajoute en « à voir ». Le gabarit est celui du
+              `+` ; seules les couleurs disent le geste. */}
+          {onAddFavorite && (
+            <button
+              type="button"
+              onClick={onAddFavorite}
+              aria-label={t('search.favoriteLabel', { title: hit.title })}
+              // Règle ♥ du design system : bordure et glyphe en dégradé,
+              // jamais de fond plein. `border-gradient` est la technique du
+              // handoff pour un liseré dégradé.
+              className="size-11 flex-none rounded-action border-gradient text-[17px]"
+            >
+              <span className="text-gradient-action">♥</span>
+            </button>
+          )}
+          {onAddStarted && (
+            <button
+              type="button"
+              onClick={onAddStarted}
+              aria-label={t('search.startLabel', { title: hit.title })}
+              // Bleu et non menthe : c'est ce qui le distingue du `+` d'à
+              // côté, même gabarit, autre destination.
+              className="size-11 flex-none rounded-action border border-blue/45 text-[13px] text-blue"
+            >
+              ▶
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onAdd}
+            aria-label={t('search.addLabel', { title: hit.title })}
+            className="size-11 flex-none rounded-action border border-border-accent font-mono text-lg text-accent"
+          >
+            +
+          </button>
+        </div>
       ) : null}
     </div>
   )

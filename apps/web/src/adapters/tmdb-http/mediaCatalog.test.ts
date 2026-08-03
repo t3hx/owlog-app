@@ -1,4 +1,4 @@
-import { SHARED_TOKEN_HEADER, type SearchResponse } from '@owlog/contracts'
+import { SHARED_TOKEN_HEADER, type SearchResponse, type SeasonDetail } from '@owlog/contracts'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createMediaCatalog } from './mediaCatalog'
@@ -74,6 +74,55 @@ describe('createMediaCatalog', () => {
     const result = await catalog.search('dune', 'fr-FR')
 
     expect(result).toEqual({ ok: false, failure: { kind: 'offline' } })
+  })
+
+  describe('saison', () => {
+    const SEASON: SeasonDetail = {
+      seasonNumber: 2,
+      episodes: [{ episodeNumber: 6, name: 'Le retour' }],
+    }
+
+    it('appelle la route saison avec le jeton et la langue', async () => {
+      const fetchImpl = responding(JSON.stringify(SEASON))
+      const catalog = catalogOver(fetchImpl)
+
+      await catalog.season('tmdb:tv/95396', 2, 'fr-FR')
+
+      expect(fetchImpl).toHaveBeenCalledWith(
+        '/api/media/tmdb:tv/95396/season/2?lang=fr-FR',
+        { headers: { [SHARED_TOKEN_HEADER]: 'shared-test-token' } },
+      )
+    })
+
+    it('rend la saison quand le service répond du JSON', async () => {
+      const catalog = catalogOver(responding(JSON.stringify(SEASON)))
+
+      const result = await catalog.season('tmdb:tv/95396', 2, 'fr-FR')
+
+      expect(result).toEqual({ ok: true, value: SEASON })
+    })
+
+    it('traduit une panne réseau en hors-ligne', async () => {
+      // C'est le cas que la fiche doit avaler en silence : pas de titre
+      // d'épisode hors-ligne, jamais de message.
+      const catalog = catalogOver(
+        vi.fn(async () => {
+          throw new TypeError('Failed to fetch')
+        }) as unknown as typeof fetch,
+      )
+
+      const result = await catalog.season('tmdb:tv/95396', 2, 'fr-FR')
+
+      expect(result).toEqual({ ok: false, failure: { kind: 'offline' } })
+    })
+
+    it('garde le sens d un 404 — saison inconnue ou film', async () => {
+      const catalog = catalogOver(responding(JSON.stringify({ error: 'not-found' }), { status: 404 }))
+
+      const result = await catalog.season('tmdb:movie/438631', 1, 'fr-FR')
+
+      expect(result).toEqual({ ok: false, failure: { kind: 'notFound' } })
+    })
   })
 
   describe('réponse qui n’est pas du JSON', () => {

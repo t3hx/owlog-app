@@ -1,6 +1,6 @@
 import { uuidv7 } from 'uuidv7'
 
-import type { IdGenerator, Clock } from '@/ports/Clock'
+import type { IdGenerator, Clock } from '@owlog/domain'
 
 /** Horloge système. */
 export const systemClock: Clock = {

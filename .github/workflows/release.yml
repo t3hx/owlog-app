@@ -1,0 +1,28 @@
+# release-please — tient à jour une « Release PR » sur le tronc : à chaque
+# poussée, il recalcule la prochaine version depuis les commits conventionnels
+# et met à jour CHANGELOG.md. La fusionner publie la release et pose le tag
+# `v*`, qui déclenche `deploy.yml`.
+name: release
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # Un tag poussé avec le GITHUB_TOKEN par défaut NE déclenche AUCUN
+          # workflow (garde-fou anti-boucle de GitHub) — `deploy.yml` resterait
+          # donc muet après chaque release. Un PAT contourne cette limite : le
+          # tag qu'il pose est vu comme une poussée « humaine ».
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          # Pas de `release-type` : sa présence ferait basculer l'action en
+          # mode config-inline et IGNORERAIT release-please-config.json (donc
+          # nos changelog-sections). Son absence est ce qui active le mode
+          # manifest, qui lit release-please-config.json + le manifest.

@@ -161,6 +161,50 @@ down() {
   echo "▸ pile arrêtée"
 }
 
+refresh() {
+  if ! docker ps --format '{{.Names}}' | grep -q "^$PG_NAME$"; then
+    echo "Postgres n'est pas démarré : rien à préserver, utilisez  $0 up" >&2
+    exit 1
+  fi
+
+  local tmdb_token
+  tmdb_token="$(doppler secrets get TMDB_API_TOKEN --project owlog-app --config dev --plain)"
+
+  echo "▸ reconstruction des images (la base est préservée)"
+  docker build -q -f "$ROOT/apps/api/Dockerfile" -t "$API_IMAGE" "$ROOT" >/dev/null
+  docker build -q -f "$ROOT/apps/web/Dockerfile" \
+    --build-arg VITE_API_URL=/api \
+    --build-arg VITE_SHARED_TOKEN="$SHARED_TOKEN" \
+    -t "$WEB_IMAGE" "$ROOT" >/dev/null
+  docker build -q -t "$EDGE_IMAGE" "$ROOT/scripts/local-prod" >/dev/null
+
+  echo "▸ remplacement des services (Postgres intact)"
+  docker rm -f "$API_NAME" "$WEB_NAME" "$EDGE_NAME" >/dev/null 2>&1 || true
+
+  local subnet
+  subnet="$(docker network inspect "$NETWORK" --format '{{(index .IPAM.Config 0).Subnet}}')"
+
+  docker run -d --name "$API_NAME" --network "$NETWORK" \
+    -e TMDB_API_TOKEN="$tmdb_token" \
+    -e OWLOG_SHARED_TOKEN="$SHARED_TOKEN" \
+    -e OWLOG_BASE_PATH=/api \
+    -e OWLOG_TRUSTED_PROXIES="$subnet" \
+    -e DATABASE_URL="postgresql://postgres:$PG_PASSWORD@$PG_NAME:5432/owlog" \
+    -e OWLOG_PUBLIC_ORIGIN="http://localhost:$PORT" \
+    "$API_IMAGE" >/dev/null
+
+  docker run -d --name "$WEB_NAME" --network "$NETWORK" "$WEB_IMAGE" >/dev/null
+
+  docker run -d --name "$EDGE_NAME" --network "$NETWORK" \
+    -p "$PORT:80" "$EDGE_IMAGE" >/dev/null
+
+  wait_healthy
+  echo
+  echo "  http://localhost:$PORT  (base préservée — accepter la bannière de mise à jour ou recharger)"
+  echo
+  docker ps --filter "name=owlog-" --format '  {{.Names}}\t{{.Status}}'
+}
+
 logs() {
   docker logs -f "$API_NAME" &
   docker logs -f "$WEB_NAME" &
@@ -281,6 +325,10 @@ main() {
       check_docker down
       down
       ;;
+    refresh)
+      check_docker refresh
+      refresh
+      ;;
     logs)
       check_docker logs
       logs
@@ -289,7 +337,7 @@ main() {
       check
       ;;
     *)
-      echo "usage: $0 [up|down|logs|check]" >&2
+      echo "usage: $0 [up|refresh|down|logs|check]" >&2
       exit 1
       ;;
   esac

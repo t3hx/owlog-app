@@ -1,4 +1,9 @@
-import { SHARED_TOKEN_HEADER, type MediaDetail, type SearchResponse } from '@owlog/contracts'
+import {
+  SHARED_TOKEN_HEADER,
+  type MediaDetail,
+  type SearchResponse,
+  type SeasonDetail,
+} from '@owlog/contracts'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createApp } from './app.ts'
@@ -43,14 +48,24 @@ const DETAIL: MediaDetail = {
   genres: ['Drame', 'Mystère'],
   totalRuntime: 1800,
   numberOfEpisodes: 19,
+  numberOfSeasons: 2,
   overview: 'Mark dirige une équipe…',
   externalRatings: { tmdb: 8.4 },
+}
+
+const SEASON: SeasonDetail = {
+  seasonNumber: 2,
+  episodes: [
+    { episodeNumber: 5, name: 'La balise' },
+    { episodeNumber: 6, name: 'Le retour' },
+  ],
 }
 
 function fakeTmdb(overrides: Partial<TmdbClient> = {}): TmdbClient {
   return {
     search: vi.fn(async () => HIT),
     detail: vi.fn(async () => DETAIL),
+    season: vi.fn(async () => SEASON),
     ...overrides,
   }
 }
@@ -203,6 +218,124 @@ describe('fiche média', () => {
     const response = await app.fetch(authenticated('/media/tmdb:movie/999999999'))
 
     expect(response.status).toBe(404)
+  })
+})
+
+/**
+ * Saison d'une série.
+ *
+ * La route sert **une seule chose** : les titres d'épisodes que la fiche
+ * affiche sous le CTA « épisode suivant ». Elle vit sous `/media/*`, donc
+ * derrière le même jeton et le même limiteur que le détail — et surtout, la
+ * clé TMDB ne la traverse jamais.
+ */
+describe('saison d’une série', () => {
+  it('rend la saison normalisée', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/media/tmdb:tv/95396/season/2'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual(SEASON)
+  })
+
+  it('transmet l identifiant, le numéro et la langue', async () => {
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    await app.fetch(authenticated('/media/tmdb:tv/95396/season/2?lang=en-US'))
+
+    expect(tmdb.season).toHaveBeenCalledWith(95396, 2, 'en-US')
+  })
+
+  it('ne vole pas la route de détail', async () => {
+    // Le motif de détail `:ref{.+}` est glouton : si l'ordre d'enregistrement
+    // changeait, `/season/2` serait avalé dans la référence et répondrait 400.
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    const response = await app.fetch(authenticated('/media/tmdb:tv/95396'))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual(DETAIL)
+    expect(tmdb.season).not.toHaveBeenCalled()
+  })
+
+  it('rend 404 sur un film, sans appeler TMDB', async () => {
+    // Un film n'a pas de saisons. TMDB répondrait 404 de toute façon ;
+    // le dire ici épargne un appel de quota pour une question déjà tranchée.
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    const response = await app.fetch(authenticated('/media/tmdb:movie/438631/season/1'))
+
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({ error: 'not-found' })
+    expect(tmdb.season).not.toHaveBeenCalled()
+  })
+
+  it('rend 404 quand TMDB ne connaît pas la saison', async () => {
+    const tmdb = fakeTmdb({
+      season: vi.fn(async () => {
+        throw new UpstreamError(404, null)
+      }),
+    })
+    const app = createApp({ config: CONFIG, tmdb })
+
+    const response = await app.fetch(authenticated('/media/tmdb:tv/95396/season/99'))
+
+    expect(response.status).toBe(404)
+  })
+
+  it('refuse une référence mal formée', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/media/imdb:tt0111161/season/1'))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('refuse un numéro de saison qui n en est pas un', async () => {
+    // `/season/abc` ne matche pas le motif numérique : la requête tombe sur
+    // la route de détail, dont la référence est alors imprononçable.
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(authenticated('/media/tmdb:tv/95396/season/abc'))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('exige le jeton partagé', async () => {
+    const app = createApp({ config: CONFIG, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(
+      new Request('http://local/media/tmdb:tv/95396/season/2'),
+    )
+
+    expect(response.status).toBe(401)
+  })
+
+  it('ne rappelle pas TMDB pour la même saison', async () => {
+    const tmdb = fakeTmdb()
+    const app = createApp({ config: CONFIG, tmdb })
+
+    await app.fetch(authenticated('/media/tmdb:tv/95396/season/2'))
+    await app.fetch(authenticated('/media/tmdb:tv/95396/season/2'))
+
+    expect(tmdb.season).toHaveBeenCalledTimes(1)
+  })
+
+  it('sert la saison sous le préfixe de montage', async () => {
+    const prefixed: Config = { ...CONFIG, basePath: '/api' }
+    const app = createApp({ config: prefixed, tmdb: fakeTmdb() })
+
+    const response = await app.fetch(
+      new Request('http://local/api/media/tmdb:tv/95396/season/2', {
+        headers: { [SHARED_TOKEN_HEADER]: prefixed.sharedToken },
+      }),
+    )
+
+    expect(response.status).toBe(200)
   })
 })
 

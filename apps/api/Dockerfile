@@ -22,11 +22,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/web/package.json apps/web/
 COPY apps/api/package.json apps/api/
 COPY packages/contracts/package.json packages/contracts/
+COPY packages/domain/package.json packages/domain/
 
 # `--prod` : ni Vitest ni ESLint n'ont leur place dans une image qui tourne.
 RUN pnpm install --frozen-lockfile --prod --filter @owlog/api...
 
 COPY packages/contracts packages/contracts
+COPY packages/domain packages/domain
 COPY apps/api apps/api
 
 WORKDIR /repo/apps/api

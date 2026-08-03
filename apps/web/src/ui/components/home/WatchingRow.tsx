@@ -1,7 +1,7 @@
 import { posterUrl } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 
-import type { TapProjection } from '@/domain/rules/progression'
+import { episodesFromPercent, hasEpisodes, type TapProjection } from '@owlog/domain'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import { ProgressBar } from '@/ui/components/home/ProgressBar'
 
@@ -28,6 +28,11 @@ export interface WatchingRowProps {
  * Le pourcentage est arrondi **à l'affichage seulement**. La valeur exacte
  * reste dans l'événement : `100 / 8` vaut 12,5, et arrondir à la source
  * ferait atteindre 100 avant le dernier épisode.
+ *
+ * La numérotation d'épisode vient du label saisi (`S01E04`) quand il existe.
+ * Sans label, elle se **déduit** du pourcentage et du compte d'épisodes du
+ * cache (`ép. 3/10`) : pas de saison affirmée — personne ne l'a dite — mais
+ * un rang, que le pourcentage seul ne raconte pas.
  */
 export function WatchingRow({
   cache,
@@ -38,6 +43,16 @@ export function WatchingRow({
 }: WatchingRowProps) {
   const { t } = useTranslation()
   const poster = posterUrl(cache.posterPath, 'w185')
+
+  const deducedEpisodes =
+    projection.label === null && hasEpisodes(cache.ref)
+      ? episodesFromPercent(projection.percent, cache.numberOfEpisodes)
+      : null
+  const episodeText =
+    projection.label ??
+    (deducedEpisodes === null
+      ? null
+      : t('home.episodeCount', { seen: deducedEpisodes, total: cache.numberOfEpisodes }))
 
   return (
     <div className="flex items-center gap-3.5 rounded-card border border-border bg-surface-translucent p-3">
@@ -74,7 +89,7 @@ export function WatchingRow({
               labelStale ? 'text-subtle' : 'text-muted',
             ].join(' ')}
           >
-            {[projection.label, t('home.percent', { percent: Math.round(projection.percent) })]
+            {[episodeText, t('home.percent', { percent: Math.round(projection.percent) })]
               .filter(Boolean)
               .join(' · ')}
           </span>
@@ -85,7 +100,11 @@ export function WatchingRow({
       <button
         type="button"
         onClick={onPlay}
-        aria-label={t('home.play', { title: cache.title })}
+        // Le libellé accessible dit ce que le tap fait vraiment : avancer un
+        // média à épisodes, marquer vu un film. Même règle que le handler.
+        aria-label={t(hasEpisodes(cache.ref) ? 'home.play' : 'home.markSeen', {
+          title: cache.title,
+        })}
         className="flex size-11 flex-none items-center justify-center rounded-action bg-gradient-action shadow-glow-strong"
       >
         {/* Triangle dessiné en CSS, comme la loupe de la barre de recherche :

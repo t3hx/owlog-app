@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
-import type { MediaStatus, Status } from '@/domain/types'
+import type { MediaStatus, Status } from '@owlog/domain'
 import { STATUS_CHIP, STATUS_GLYPH, STATUSES } from '@/ui/components/status/statusStyle'
 
 export interface StatusMenuProps {

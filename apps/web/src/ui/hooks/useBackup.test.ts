@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { format } from '@/domain/export/format'
+import { format } from '@owlog/domain'
 import type { SettingKey, SettingsStore } from '@/ports/SettingsStore'
 import { BACKED_UP, readSettings } from '@/ui/hooks/useBackup'
 

@@ -1,19 +1,9 @@
 import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { completeCacheRow } from '@/ports/MediaCache'
+import { completeCacheRow, isCacheRowStale } from '@/ports/MediaCache'
 import { systemClock, uuidv7Generator } from '@/adapters/browser/clock'
-import {
-  addComment,
-  rate,
-  rewatch,
-  setStatus,
-  toggleFavorite,
-  undo,
-  type CommandContext,
-} from '@/domain/commands'
-import type { MediaStateRow } from '@/domain/reducers/mediaState'
-import type { EventId, MediaRef, Status, StoredEvent } from '@/domain/types'
+import { addComment, rate, rewatch, setStatus, toggleFavorite, undo, type CommandContext, type MediaStateRow, type EventId, type MediaRef, type Status, type StoredEvent } from '@owlog/domain'
 import { usePorts } from '@/ui/PortsProvider'
 
 /**
@@ -34,18 +24,24 @@ export function useMedia(ref: MediaRef) {
   const language = i18n.resolvedLanguage ?? 'fr'
 
   /**
-   * Complète `media_cache` à l'ouverture.
+   * Complète ou rafraîchit `media_cache` à l'ouverture.
    *
    * La ligne écrite à l'ajout vient d'un résultat de recherche : ni genres,
    * ni durée, ni nombre d'épisodes. C'est ici qu'on les obtient, et le
    * drapeau `complete` empêche les stats de compter une durée absente comme
    * une durée nulle.
+   *
+   * La fraîcheur est arbitrée par `isCacheRowStale` : une ligne complète et
+   * fraîche n'appelle pas le réseau, une ligne plus vieille que le TTL se
+   * rafraîchit silencieusement. Hors-ligne, l'appel échoue sans rien écrire
+   * et l'écran continue de rendre la ligne existante — le comportement
+   * hors-ligne ne dépend pas de cette règle.
    */
   useEffect(() => {
     // `cache` vaut `undefined` tant que la lecture réactive n'a pas rendu :
     // partir tout de suite déclencherait un appel réseau à chaque ouverture,
     // y compris quand la ligne complète est déjà là.
-    if (cache === undefined || cache.complete) return
+    if (cache === undefined || !isCacheRowStale(cache, systemClock.now())) return
 
     let cancelled = false
 
