@@ -49,7 +49,7 @@ export function Welcome() {
     // connecter : la réponse de l'onboarding vaut upsert, le serveur fait
     // autorité. Sans attendre ni bloquer : hors réseau, la prochaine
     // édition des Réglages retentera.
-    if (session.user !== null) void auth.updateProfile(firstName.trim())
+    if (session.user !== null) void auth.updateProfile({ firstName: firstName.trim() })
     // Pas de remise à zéro de `submitting` : l'écriture fait disparaître cet
     // écran. Le remettre à false ferait clignoter le bouton avant le
     // démontage du composant.

@@ -7,13 +7,13 @@ import {
   type PulledEvent,
   type PullResponse,
   type PushResponse,
-  type SerializedEvent,
 } from '@owlog/contracts'
 import { Hono, type Context } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import type { Pool } from 'pg'
 
 import { sessionUser } from '../auth/routes.ts'
+import { toSerializedEvent, type CacheRowRecord, type EventRow } from '../db/eventRows.ts'
 
 /**
  * Réplication : push/pull du journal d'événements et du cache média.
@@ -180,40 +180,10 @@ export function createSyncRoutes(deps: SyncDeps) {
   return sync
 }
 
-interface EventRow {
-  server_seq: string
-  id: string
-  device_id: string
-  type: string
-  media_ref: string
-  cycle_key: string | null
-  created_at: Date
-  occurred_at: Date | null
-  occurred_precision: string
-  payload: unknown
-}
-
-interface CacheRowRecord {
-  ref: string
-  payload: unknown
-  updated_seq: string
-}
-
 function pulledEvent(row: EventRow): PulledEvent {
-  const event: SerializedEvent = {
-    id: row.id,
-    device_id: row.device_id,
-    type: row.type,
-    media_ref: row.media_ref,
-    cycle_key: row.cycle_key,
-    created_at: row.created_at.toISOString(),
-    occurred_at: row.occurred_at === null ? null : row.occurred_at.toISOString(),
-    occurred_precision: row.occurred_precision,
-    ...(row.payload === null ? {} : { payload: row.payload }),
-  }
   // `server_seq` est un bigint, que node-pg rend en chaîne. Number() est
   // sûr jusqu'à 2^53 événements — pas une borne atteignable.
-  return { serverSeq: Number(row.server_seq), event }
+  return { serverSeq: Number(row.server_seq), event: toSerializedEvent(row) }
 }
 
 function pulledCacheRow(row: CacheRowRecord): PulledCacheRow {

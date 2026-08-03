@@ -88,6 +88,44 @@ describe.skipIf(!adminUrl)('runMigrations — schéma réel', () => {
     ])
   })
 
+  it('la base refuse elle-même un pseudo hors format', async () => {
+    const db = await scratch()
+    await runMigrations({ url: db.url, dir: MIGRATIONS_DIR })
+
+    // La contrainte double Zod plutôt que de s'y substituer : elle tient
+    // aussi pour une correction à la main en production ou un futur import,
+    // qui ne passent par aucune route.
+    const refused = ['ab', 'a'.repeat(21), 'Majuscule', 'avec-tiret', 'avec espace', 'emoji🦉']
+    for (const pseudo of refused) {
+      await expect(
+        query(db.url, `INSERT INTO users (id, email, pseudo) VALUES (gen_random_uuid(), $1, $2)`, [
+          `${pseudo}@example.test`,
+          pseudo,
+        ]),
+      ).rejects.toThrow(/users_pseudo_format/)
+    }
+  })
+
+  it('la base refuse deux fois le même pseudo, et autorise autant de comptes sans pseudo', async () => {
+    const db = await scratch()
+    await runMigrations({ url: db.url, dir: MIGRATIONS_DIR })
+
+    const insert = (email: string, pseudo: string | null) =>
+      query(db.url, `INSERT INTO users (id, email, pseudo) VALUES (gen_random_uuid(), $1, $2)`, [
+        email,
+        pseudo,
+      ])
+
+    await insert('a@example.test', 'nyx')
+    await expect(insert('b@example.test', 'nyx')).rejects.toThrow(/users_pseudo_key/)
+
+    // Le pseudo se crée au premier geste social : tant que personne n'en a
+    // posé, tous les comptes portent NULL — que l'index unique ne compare
+    // pas entre eux.
+    await insert('c@example.test', null)
+    await insert('d@example.test', null)
+  })
+
   it("ne réapplique rien au second passage — l'idempotence du boot", async () => {
     const db = await scratch()
 

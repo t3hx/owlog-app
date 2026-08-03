@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto'
 
-import type { ApiError, AuthUser, MeResponse, VerifyResponse } from '@owlog/contracts'
+import { isValidPseudo, type ApiError, type AuthUser, type MeResponse, type VerifyResponse } from '@owlog/contracts'
 import { Hono, type Context } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import type { Pool } from 'pg'
@@ -139,7 +139,7 @@ export function createAuthRoutes(deps: AuthDeps) {
     await openSession(c, pool, user.id)
     await audit(pool, 'verify-link', email, ip, 'ok')
 
-    const response: VerifyResponse = { user: { email: user.email, firstName: user.firstName } }
+    const response: VerifyResponse = { user: publicUser(user) }
     return c.json(response)
   })
 
@@ -209,7 +209,7 @@ export function createAuthRoutes(deps: AuthDeps) {
     await openSession(c, pool, user.id)
     await audit(pool, 'verify-code', email, ip, 'ok')
 
-    const response: VerifyResponse = { user: { email: user.email, firstName: user.firstName } }
+    const response: VerifyResponse = { user: publicUser(user) }
     return c.json(response)
   })
 
@@ -217,7 +217,7 @@ export function createAuthRoutes(deps: AuthDeps) {
     const pool = deps.pool()
     const user = await sessionUser(pool, c)
     const response: MeResponse = user
-      ? { user: { email: user.email, firstName: user.firstName } }
+      ? { user: publicUser(user) }
       : { user: null }
     return c.json(response)
   })
@@ -228,21 +228,64 @@ export function createAuthRoutes(deps: AuthDeps) {
     if (!user) return fail(c, 401, 'unauthorized')
 
     const body = await readJson(c)
-    const firstName = typeof body?.firstName === 'string' ? body.firstName.trim() : ''
-    if (firstName.length === 0 || firstName.length > 40) return fail(c, 400, 'bad-request')
 
-    // Le serveur fait autorité sur le prénom après connexion : l'écran
-    // Réglages pousse ici, et tout appareil relit par /me. La borne de 40
-    // est celle du champ de l'onboarding.
-    const updated = await pool.query<{ email: string; first_name: string | null }>(
-      `UPDATE users SET first_name = $1 WHERE id = $2 RETURNING email, first_name`,
-      [firstName, user.id],
-    )
+    /**
+     * **Les deux champs sont optionnels, et omettre laisse intact.**
+     *
+     * L'écran Réglages a deux rangées éditables indépendamment : celle du
+     * pseudo ne connaît pas le prénom, celle du prénom n'a pas à connaître
+     * l'identité sociale. Exiger les deux à chaque écriture obligerait
+     * chaque rangée à renvoyer une valeur qu'elle n'édite pas — et la
+     * première désynchronisation l'écraserait.
+     *
+     * Présent mais invalide reste un 400 : « je n'y touche pas » se dit en
+     * omettant la clé, jamais en envoyant une valeur vide.
+     */
+    const firstName = readOptionalString(body?.firstName, (value) => {
+      const trimmed = value.trim()
+      return trimmed.length > 0 && trimmed.length <= 40 ? trimmed : null
+    })
+    // Les minuscules sont forcées ici aussi, pas seulement à la saisie : le
+    // champ protège l'utilisateur, la route protège la donnée.
+    const pseudo = readOptionalString(body?.pseudo, (value) => {
+      const normalized = value.trim().toLowerCase()
+      return isValidPseudo(normalized) ? normalized : null
+    })
 
-    const row = updated.rows[0]!
-    const response: VerifyResponse = {
-      user: { email: row.email, firstName: row.first_name },
+    if (firstName.state === 'invalid' || pseudo.state === 'invalid') {
+      return fail(c, 400, 'bad-request')
     }
+    if (firstName.state === 'absent' && pseudo.state === 'absent') {
+      return fail(c, 400, 'bad-request')
+    }
+
+    // Le serveur fait autorité sur le profil après connexion : l'écran
+    // Réglages pousse ici, et tout appareil relit par /me. La borne de 40
+    // sur le prénom est celle du champ de l'onboarding.
+    //
+    // `COALESCE` : `null` en paramètre veut dire « ne touche pas », jamais
+    // « efface ». Un pseudo, en particulier, ne se retire pas — il circule
+    // déjà chez les amis, et le libérer laisserait un autre compte le
+    // reprendre en se faisant passer pour son propriétaire.
+    let updated
+    try {
+      updated = await pool.query<UserRow>(
+        `UPDATE users
+         SET first_name = COALESCE($1, first_name), pseudo = COALESCE($2, pseudo)
+         WHERE id = $3
+         RETURNING email, first_name, pseudo`,
+        [valueOrNull(firstName), valueOrNull(pseudo), user.id],
+      )
+    } catch (error) {
+      // L'unicité se CONSTATE. Un `SELECT ... WHERE pseudo = $1` avant
+      // l'écriture serait un time-of-check/time-of-use : deux comptes qui
+      // réservent le même pseudo dans la même seconde passeraient tous deux
+      // le contrôle, et le second échouerait quand même — en 500.
+      if (isUniqueViolation(error)) return fail(c, 409, 'pseudo-taken')
+      throw error
+    }
+
+    const response: VerifyResponse = { user: toAuthUser(updated.rows[0]!) }
     return c.json(response)
   })
 
@@ -286,8 +329,9 @@ export async function sessionUser(
     id: string
     email: string
     first_name: string | null
+    pseudo: string | null
   }>(
-    `SELECT s.id AS session_id, u.id, u.email, u.first_name
+    `SELECT s.id AS session_id, u.id, u.email, u.first_name, u.pseudo
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()`,
     [sha256(raw)],
@@ -302,22 +346,91 @@ export async function sessionUser(
     [row.session_id],
   )
 
-  return { id: row.id, email: row.email, firstName: row.first_name }
+  return { id: row.id, ...toAuthUser(row) }
 }
 
 /** Compte auto-créé à la première vérification réussie — jamais avant. */
-async function ensureUser(
-  pool: Pool,
-  email: string,
-): Promise<{ id: string; email: string; firstName: string | null }> {
-  const upserted = await pool.query<{ id: string; email: string; first_name: string | null }>(
+async function ensureUser(pool: Pool, email: string): Promise<AuthUser & { id: string }> {
+  const upserted = await pool.query<UserRow & { id: string }>(
     `INSERT INTO users (id, email) VALUES ($1, $2)
      ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-     RETURNING id, email, first_name`,
+     RETURNING id, email, first_name, pseudo`,
     [uuidv7(), email],
   )
   const row = upserted.rows[0]!
-  return { id: row.id, email: row.email, firstName: row.first_name }
+  return { id: row.id, ...toAuthUser(row) }
+}
+
+/** Les colonnes de `users` que le client a le droit de connaître. */
+interface UserRow {
+  email: string
+  first_name: string | null
+  pseudo: string | null
+}
+
+/**
+ * Traduction unique des colonnes vers le contrat.
+ *
+ * Quatre routes rendent un `AuthUser` — vérification du lien, du code, `/me`
+ * et la mise à jour du profil. Composer l'objet à la main dans chacune, c'est
+ * garantir qu'un champ ajouté plus tard en manquera une : l'écran verrait
+ * alors le pseudo disparaître selon le chemin par lequel il s'est connecté.
+ */
+function toAuthUser(row: UserRow): AuthUser {
+  return { email: row.email, firstName: row.first_name, pseudo: row.pseudo }
+}
+
+/**
+ * Retire l'identifiant interne avant de répondre.
+ *
+ * `sessionUser` rend `AuthUser & { id }` pour que les routes dérivent
+ * l'identité de la session. Rendre cet objet tel quel publierait l'`uuid`
+ * du compte — jamais nécessaire au client, et une clé de plus offerte à
+ * qui lit les réponses.
+ */
+/**
+ * Lit un champ de profil optionnel.
+ *
+ * Trois issues distinctes, et les confondre serait le bug : clé absente
+ * (ne pas toucher), clé présente mais refusée (400), ou la valeur
+ * normalisée. Rendre `undefined` sur une valeur invalide laisserait passer
+ * en silence une saisie refusée.
+ *
+ * **Le marqueur d'erreur ne peut pas être une chaîne.** Une première
+ * version rendait `'invalid'` — sept lettres minuscules, c'est-à-dire un
+ * pseudo parfaitement légal, que la route refusait alors en 400. Un
+ * sentinel pris dans le domaine des valeurs finit toujours par en croiser
+ * une ; l'union discriminée le rend inatteignable.
+ */
+type OptionalField =
+  | { readonly state: 'absent' }
+  | { readonly state: 'invalid' }
+  | { readonly state: 'set'; readonly value: string }
+
+function readOptionalString(
+  raw: unknown,
+  normalize: (value: string) => string | null,
+): OptionalField {
+  if (raw === undefined) return { state: 'absent' }
+  if (typeof raw !== 'string') return { state: 'invalid' }
+  const normalized = normalize(raw)
+  return normalized === null ? { state: 'invalid' } : { state: 'set', value: normalized }
+}
+
+/** `null` pour le `COALESCE` : « ne touche pas à cette colonne ». */
+function valueOrNull(field: OptionalField): string | null {
+  return field.state === 'set' ? field.value : null
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  // `23505` est le SQLSTATE de la violation d'unicité. Le code plutôt que le
+  // message : le texte de Postgres est localisable et change de version en
+  // version, le SQLSTATE est du contrat.
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505'
+}
+
+function publicUser(user: AuthUser): AuthUser {
+  return { email: user.email, firstName: user.firstName, pseudo: user.pseudo }
 }
 
 /**
@@ -424,7 +537,7 @@ function tooMany(c: Context) {
 
 function fail(
   c: Context,
-  status: 400 | 401 | 429 | 502,
+  status: 400 | 401 | 409 | 429 | 502,
   error: ApiError['error'],
   extra: Partial<Pick<ApiError, 'retryAfter' | 'attemptsLeft'>> = {},
 ) {

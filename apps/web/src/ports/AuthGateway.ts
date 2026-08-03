@@ -22,10 +22,22 @@ export type AuthFailure =
   | { readonly kind: 'locked' }
   | { readonly kind: 'rate-limited'; readonly retryAfter: number }
   | { readonly kind: 'unavailable' }
+  /**
+   * Pseudo déjà porté par un autre compte. Distinct de `invalid` : ce n'est
+   * pas un refus d'authentification mais un conflit d'identité, et l'écran
+   * le rend sous le champ plutôt qu'en tête de card.
+   */
+  | { readonly kind: 'pseudo-taken' }
 
 export type AuthResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly failure: AuthFailure }
+
+/** Ce qu'une rangée de Réglages édite. Au moins un champ. */
+export interface ProfilePatch {
+  readonly firstName?: string
+  readonly pseudo?: string
+}
 
 export interface AuthGateway {
   /** Demande l'e-mail de connexion. La réponse ne dit jamais si le compte existe. */
@@ -44,8 +56,16 @@ export interface AuthGateway {
   /** La session courante. `null` sans session — ce n'est pas une erreur. */
   me(): Promise<AuthResult<AuthUser | null>>
 
-  /** Écrit le prénom serveur — qui fait autorité après connexion. */
-  updateProfile(firstName: string): Promise<AuthResult<AuthUser>>
+  /**
+   * Écrit le profil serveur — qui fait autorité après connexion.
+   *
+   * **Un patch, pas un remplacement** : un champ omis reste intact. L'écran
+   * Réglages a deux rangées éditables indépendamment, et celle du pseudo ne
+   * connaît pas le prénom. Sans cette distinction, chaque rangée devrait
+   * renvoyer une valeur qu'elle n'édite pas — et l'écraserait à la première
+   * désynchronisation.
+   */
+  updateProfile(patch: ProfilePatch): Promise<AuthResult<AuthUser>>
 
   logout(): Promise<AuthResult<void>>
 }

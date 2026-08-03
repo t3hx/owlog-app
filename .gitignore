@@ -16,3 +16,7 @@ coverage/
 
 # Dump GDPR TVTime personnel (tokens, hashs, IP) — ne jamais commiter
 docs/tvtime-gdpr-data/
+
+# Artefacts de QA Playwright (captures, logs de console). Sortie d outil,
+# jamais du code — et un log de session peut contenir un jeton de connexion.
+.playwright-mcp/

@@ -110,12 +110,21 @@ export function fakePorts(overrides: {
   const auth: Ports['auth'] = {
     requestLink: () => Promise.resolve({ ok: true, value: undefined }),
     verifyCode: () =>
-      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null } }),
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null, pseudo: null } }),
     verifyLink: () =>
-      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null } }),
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null, pseudo: null } }),
     me: () => Promise.resolve({ ok: true, value: null }),
-    updateProfile: (firstName) =>
-      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName } }),
+    // Renvoie le pseudo reçu : la rangée de Réglages lit la réponse du
+    // serveur, jamais sa propre saisie — le serveur fait autorité.
+    updateProfile: (patch) =>
+      Promise.resolve({
+        ok: true,
+        value: {
+          email: 'a@b.c',
+          firstName: patch.firstName ?? null,
+          pseudo: patch.pseudo ?? null,
+        },
+      }),
     logout: () => Promise.resolve({ ok: true, value: undefined }),
   }
 

@@ -82,10 +82,13 @@ export function createAuthGateway(options: {
       return result.ok ? { ok: true, value: result.value.user } : result
     },
 
-    async updateProfile(firstName): Promise<AuthResult<AuthUser>> {
+    async updateProfile(patch): Promise<AuthResult<AuthUser>> {
+      // Le patch part tel quel : une clé absente du corps est ce qui dit
+      // « je n'y touche pas » au serveur. La poser à `null` voudrait dire
+      // « efface », ce qu'aucune rangée ne demande.
       const result = await call<VerifyResponse>('/auth/profile', {
         method: 'POST',
-        body: { firstName },
+        body: patch,
       })
       return result.ok ? { ok: true, value: result.value.user } : result
     },
@@ -110,6 +113,8 @@ async function toFailure(response: Response): Promise<AuthFailure> {
         : { kind: 'invalid', attemptsLeft: body.attemptsLeft }
     case 'auth-locked':
       return { kind: 'locked' }
+    case 'pseudo-taken':
+      return { kind: 'pseudo-taken' }
     case 'rate-limited':
       return { kind: 'rate-limited', retryAfter: retryAfterOf(response, body) }
     default:

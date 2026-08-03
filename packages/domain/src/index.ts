@@ -41,6 +41,23 @@
  *  │  Page média · Bibliothèque · Accueil · Stats     │
  *  └──────────────────────────────────────────────────┘
  *
+ *    social (temps 3) — SORTIE, la seule qui quitte le compte :
+ *
+ *      viewer ────────────────┐   (déterminé par friendships, JAMAIS ici)
+ *                             ▼
+ *      states ──▶ ┌────────────────────────┐ ──▶ { kind: 'minimal' }  non-ami
+ *      events ──▶ │  publicProfile(input)  │ ──▶ { kind: 'own' }      soi
+ *      cache  ──▶ └────────────┬───────────┘ ──▶ { kind: 'friend' }   ami
+ *                              │                        + compat
+ *                    compatibility(a, b)
+ *                    Jaccard sur les vus
+ *
+ *      Union discriminée et whitelist positive des types publiables : ce
+ *      qui ne sort pas ne peut pas sortir, y compris un type d'événement
+ *      écrit par une version ultérieure du client. Les `NOTE` ne
+ *      traversent par aucun chemin. C'est la seule projection dont la
+ *      sortie est lue par quelqu'un d'autre que son propriétaire.
+ *
  *    media_cache ────▶ titres, affiches, genres, durées (étape 3)
  *      (entrée latérale : jamais du domaine, jamais une source de statut)
  *
@@ -81,6 +98,8 @@ export * from './reducers/log.ts'
 export * from './reducers/metrics.ts'
 export * from './reducers/stats.ts'
 export * from './reducers/projections.ts'
+export * from './reducers/publicProfile.ts'
+export * from './rules/compatibility.ts'
 export * from './rules/cycles.ts'
 export * from './rules/history.ts'
 export * from './rules/progression.ts'
