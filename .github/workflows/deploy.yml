@@ -1,14 +1,14 @@
-# Déploiement — déclenché par les tags `v*` que produit release-please.
+# Déploiement continu — chaque fusion sur `main` met l'app en ligne.
 #
-# owlog n'est pas un mono-conteneur : il construit DEUX images distinctes
-# depuis le même dépôt — `owlog-web` (SPA + Caddy) et `owlog-api` (Hono).
-# Chacune a son Dockerfile et son service Dokploy. Le build est fait ici,
-# sur GitHub, jamais sur le VPS : le runner pousse sur GHCR, puis demande à
-# Dokploy de tirer et redémarrer.
+# `main` n'accepte que des PR squashées et sa CI est verte : tout ce qui y
+# arrive est réputé déployable. Cette PR fusionnée déclenche donc, sans autre
+# intervention : build des deux images → poussée sur GHCR → Dokploy tire et
+# redémarre → vérification de santé. Le build se fait ici, sur GitHub, jamais
+# sur le VPS.
 name: deploy
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -43,17 +43,18 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+          # `latest` est le tag que Dokploy tire ; le tag par SHA sert de trace
+          # et permet un rollback ciblé si besoin.
           tags: |
-            type=semver,pattern={{version}}
-            type=sha,format=long
             type=raw,value=latest
+            type=sha,format=long
 
       # Les build-args vivent ICI, pas dans le matrix : le contexte `secrets`
-      # n'est pas disponible à l'évaluation d'un `strategy.matrix` (il s'y
-      # évaluerait en chaîne vide, et le Dockerfile web refuserait de se
-      # construire). owlog-web les consomme — adresse d'API et jeton partagé,
-      # PUBLICS par nature ; la clé TMDB ne quitte jamais l'API. owlog-api ne
-      # déclare pas ces ARG : BuildKit les ignore avec un avertissement inoffensif.
+      # n'y est pas disponible (il s'évaluerait en chaîne vide, et le
+      # Dockerfile web refuserait de se construire). owlog-web les consomme —
+      # adresse d'API et jeton partagé, PUBLICS par nature ; la clé TMDB ne
+      # quitte jamais l'API. owlog-api ne déclare pas ces ARG : BuildKit les
+      # ignore avec un avertissement inoffensif.
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -64,8 +65,6 @@ jobs:
             VITE_SHARED_TOKEN=${{ secrets.OWLOG_SHARED_TOKEN }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Cache GHA cloisonné par image : sans scope distinct, les deux
-          # builds concurrents s'écraseraient l'un l'autre.
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
@@ -74,9 +73,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      # Le panneau Dokploy n'est joignable que par le tailnet (aucun port
-      # web ouvert en entrée sur le VPS). Le runner s'y raccorde le temps du
-      # job pour appeler l'API de déploiement.
+      # Le panneau Dokploy n'est joignable que par le tailnet (aucun port web
+      # ouvert en entrée sur le VPS). Le runner s'y raccorde le temps du job.
       - name: Connexion au tailnet
         uses: tailscale/github-action@v4
         with:
@@ -84,8 +82,8 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      # L'API d'abord, le web ensuite : le front ne doit jamais tourner
-      # contre une API plus ancienne que lui.
+      # L'API d'abord, le web ensuite : le front ne doit jamais tourner contre
+      # une API plus ancienne que lui.
       - name: Déployer owlog-api
         run: |
           curl --fail-with-body -sS -X POST \
@@ -105,8 +103,7 @@ jobs:
             -d '{"applicationId": "${{ secrets.DOKPLOY_APP_ID_FRONT }}"}'
 
       # `APP_HEALTH_URL` est une VARIABLE (pas un secret) : la sonde publique
-      # de l'app, `https://owlog.nspace.link/api/health`. On réutilise la
-      # route existante — pas de `/healthz` à créer.
+      # `https://owlog.nspace.link/api/health`. On réutilise la route existante.
       - name: Attendre et vérifier la santé
         run: |
           sleep 45

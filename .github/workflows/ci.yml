@@ -17,10 +17,7 @@ name: ci
 on:
   pull_request:
   push:
-    # `dev` est transitoire : le projet migre vers un tronc `main` unique
-    # (T3H-73). Le retirer d'ici est la dernière étape de cette migration —
-    # d'ici là, les poussées directes sur `dev` restent couvertes.
-    branches: [main, dev]
+    branches: [main]
 
 # Une nouvelle poussée sur la même réf annule le run précédent encore en vol.
 concurrency:

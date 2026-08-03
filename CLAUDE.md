@@ -50,9 +50,10 @@ Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune lan
   passage.
 - Tolérance : documentation et micro-corrections de configuration peuvent
   aller directement sur `main`.
-- **Tronc unique `main`.** Le projet a migré du couple `dev`/`main` vers un
-  seul tronc `main` (workflow solo v3, T3H-73) : c'est `main` que visent la
-  CI, release-please et le déploiement.
+- **Tronc unique `main`, déploiement continu.** Une seule mécanique : brancher
+  depuis `main` → PR → CI verte → squash-merge. **La fusion sur `main` déploie
+  automatiquement** (build des 2 images → GHCR → Dokploy). Pas de release ni de
+  tag à gérer. Le parcours complet est décrit dans [docs/deploiement.md](docs/deploiement.md).
 
 ### Développement piloté par les tests
 

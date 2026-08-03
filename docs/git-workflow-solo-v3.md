@@ -287,55 +287,21 @@ jobs:
           requireScope: false
 ```
 
-## B.6 `.github/workflows/release.yml`
+## B.6 Versioning & changelog — retiré du modèle par défaut
 
-```yaml
-name: release
-on:
-  push:
-    branches: [main]
+**Le modèle par défaut n'utilise PAS release-please.** Le déploiement est
+continu (§B.7) : fusionner une PR sur `main` met en ligne, sans tag ni « Release
+PR » intermédiaire. Une seule mécanique, rien à décider au moment de « release ».
 
-permissions:
-  contents: write
-  pull-requests: write
+Conséquences : pas de `release.yml`, pas de `release-please-config.json`, pas de
+`.release-please-manifest.json`, et un secret de moins (`RELEASE_PLEASE_TOKEN`
+inutile). Le champ `version` de `package.json` reste statique.
 
-jobs:
-  release-please:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: googleapis/release-please-action@v4
-        with:
-          release-type: node
-```
-
-À la racine du dépôt (au même niveau que `package.json`), deux fichiers de config (créés automatiquement au premier run, ou manuellement) :
-
-```json
-// release-please-config.json
-{
-  "packages": { ".": { "release-type": "node" } },
-  "changelog-sections": [
-    { "type": "feat", "section": "Features" },
-    { "type": "fix", "section": "Bug Fixes" },
-    { "type": "perf", "section": "Performance" },
-    { "type": "revert", "section": "Reverts" },
-    { "type": "refactor", "section": "Refactoring", "hidden": true },
-    { "type": "docs", "section": "Documentation", "hidden": true },
-    { "type": "style", "section": "Styles", "hidden": true },
-    { "type": "test", "section": "Tests", "hidden": true },
-    { "type": "build", "section": "Build", "hidden": true },
-    { "type": "ci", "section": "CI", "hidden": true },
-    { "type": "chore", "section": "Miscellaneous", "hidden": true }
-  ]
-}
-```
-
-> La liste couvre volontairement **tous** les types de la convention (§ Partie E / v2 §4), mais seuls `feat`/`fix`/`perf`/`revert` sont visibles dans le CHANGELOG — les autres sont déclarés avec `"hidden": true`. Raison : le changelog s'adresse à l'utilisateur de l'app ; un `chore(deps)` ou un `refactor` interne n'y apporte que du bruit. C'est aussi le comportement par défaut de release-please (types absents = masqués) — la version explicite ci-dessus rend le choix visible et te permet de basculer un type en une ligne (`"hidden": false`) si tu veux, par exemple, exposer les `docs` sur un projet de bibliothèque.
-
-```json
-// .release-please-manifest.json
-{ ".": "0.1.0" }
-```
+> **Exception — projet qui a besoin d'un CHANGELOG versionné** (bibliothèque
+> publiée, release notes pour des tiers) : ré-ajouter release-please en couche
+> **séparée**. Il maintient alors CHANGELOG + tags **sans** piloter le
+> déploiement, qui reste déclenché par le push sur `main`. À traiter comme une
+> exception, jamais comme le défaut.
 
 ## B.7 `.github/workflows/deploy.yml`
 
@@ -343,7 +309,7 @@ jobs:
 name: deploy
 on:
   push:
-    tags: ['v*']
+    branches: [main]     # déploiement continu : chaque fusion sur main met en ligne
   workflow_dispatch:
 
 concurrency:
@@ -387,9 +353,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=sha,format=long
             type=raw,value=latest
+            type=sha,format=long
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -723,6 +688,13 @@ Le **CLAUDE.md projet** (créé à l'étape 9 de la checklist) contient : archit
   EOF
   ```
 
+  > ⚠️ **Dépôt privé en plan gratuit** : cette commande renvoie `403 — Upgrade to
+  > GitHub Pro`. La protection de branche serveur (rulesets comme protection
+  > classique) exige **Pro/Team** pour un repo privé. Le reste de l'étape 5
+  > (branche par défaut, squash-only) passe sans Pro. Fallback gratuit : un hook
+  > local `pre-push` qui refuse `git push` sur `main`, à poser dans le clone —
+  > il attrape la distraction, pas le contournement volontaire.
+
 ### Phase 3 — Pilotage (Issues & Project)
 
 - [ ] **7.** Secrets & labels :
@@ -745,7 +717,7 @@ Le **CLAUDE.md projet** (créé à l'étape 9 de la checklist) contient : archit
 
 ### Phase 5 — Livraison
 
-- [ ] **12.** Adapter `Dockerfile` (profil SPA ou Node, §B.1/B.2), vérifier `/healthz`, ajuster `release-please-config.json` et `.release-please-manifest.json` (`0.1.0`)
+- [ ] **12.** Adapter `Dockerfile` (profil SPA ou Node, §B.1/B.2), vérifier la route de santé (`/healthz` ou celle déjà exposée par l'app)
 - [ ] **13.** Dokploy : créer l'application → provider **Docker registry** → image `ghcr.io/tx/mon-app:latest` → credentials GHCR (PAT `read:packages`) → domaine `mon-app.nspace.link` → healthcheck sur `/healthz` → rollback activé
 - [ ] **14.** Secrets & variable de déploiement :
   ```bash
@@ -771,7 +743,7 @@ Le **CLAUDE.md projet** (créé à l'étape 9 de la checklist) contient : archit
   gh pr create --fill
   gh pr merge --squash --auto
   ```
-- [ ] **17.** Vérifier la chaîne : CI verte → carte #1 en Done → Release PR release-please apparue → la merger → tag `v0.1.0` → workflow deploy vert (image sur GHCR + health 200) → `https://mon-app.nspace.link` répond
+- [ ] **17.** Vérifier la chaîne : CI verte → carte #1 en Done → **la fusion de la PR déclenche `deploy`** → images sur GHCR → Dokploy tire et redémarre → health 200 → `https://mon-app.nspace.link` répond
 - [ ] **18.** `/keep-brain-current` + noter dans gbrain les décisions de bootstrap. Projet opérationnel.
 
 > **Test du succès** : si l'étape 17 passe, tu ne toucheras plus jamais à l'infra de ce repo — tout le reste du cycle de vie est : issue → jj → PR → merge Release PR.
