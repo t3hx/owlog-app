@@ -27,7 +27,7 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-[216px] flex-none flex-col border-r border-border bg-sidebar px-4 py-[26px]">
-      <Logo className="h-16 px-2.5" />
+      <Logo className="ml-2.5 h-28" />
 
       <nav aria-label={t('nav.ariaLabel')} className="mt-[34px]">
         <ul className="flex flex-col gap-1">
