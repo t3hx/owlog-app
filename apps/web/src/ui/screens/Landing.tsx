@@ -36,12 +36,12 @@ export function Landing() {
         </Link>
       </nav>
 
-      <div className="mx-auto flex w-full max-w-[1100px] flex-1 items-center px-6 py-6 md:gap-14">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-1 items-center px-6 py-6 lg:gap-14">
         <section className="flex max-w-[640px] flex-1 flex-col justify-center">
           <p className="font-mono text-[11px] tracking-[1px] text-accent">
             {t('landing.eyebrow')}
           </p>
-          <h1 className="mt-4 font-display text-[34px] font-bold leading-[1.1] text-text md:text-[44px]">
+          <h1 className="mt-4 font-display text-[34px] font-bold leading-[1.1] text-text lg:text-[44px]">
             <Trans
               i18nKey="landing.title"
               components={[<br key="br" />, <span key="log" className="text-gradient-action" />]}
@@ -84,10 +84,14 @@ export function Landing() {
         </section>
 
         {/* Colonne desktop : la capture, hachurée en attendant la vraie.
+            Palier `lg` (1024px) et non `md` (768px) : le handoff ne définit
+            qu'une bascule, et 640-1023px reste la colonne mobile centrée —
+            décision assumée (design F9). Un palier tablette créerait un
+            troisième layout que personne n'a dessiné.
             `mx-auto` : la colonne fait la moitié du conteneur mais la capture
             est plafonnée à 300px — sans centrage, tout le reliquat s'accumule
             à droite et déséquilibre le hero sur écran large. */}
-        <div className="hidden flex-1 md:block">
+        <div className="hidden flex-1 lg:block">
           <div
             aria-hidden
             className="mx-auto aspect-[9/16] max-h-[540px] w-full max-w-[300px] rounded-card border border-border bg-poster-placeholder"
