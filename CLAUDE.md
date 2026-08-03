@@ -29,11 +29,13 @@ Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune lan
 
 - **Jamais de co-auteur.** Aucun `Co-Authored-By`, aucune mention d'outil ou d'assistant dans un message de commit.
 - Messages en français, à l'impératif, préfixés par un type (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`).
-- **Le français des messages ne heurte pas le lint de titre de PR** (`pr-title`
-  dans `ci.yml`) : seul le **type** est contraint, et il est déjà en anglais.
-  `feat(web) : ajouter le journal` passe. Comme la fusion est un squash, c'est
-  le **titre de la PR** qui devient le commit du tronc — c'est lui qui doit
-  être un commit conventionnel valide, pas les commits intermédiaires.
+- **Titre de PR : deux-points collés au type**, `feat(web): ajouter le journal`
+  — PAS `feat(web) :`. L'espace fine française avant `:` **casse** le lint
+  `pr-title` (`ci.yml`), qui suit la spec Conventional Commits (le `:` colle au
+  type/scope). Le français reste libre dans la **description** qui suit. Comme
+  la fusion est un squash, c'est le **titre de PR** qui devient le commit du
+  tronc — lui seul doit être un commit conventionnel valide, pas les commits
+  intermédiaires de la branche.
 
 ### Branches et validation
 
