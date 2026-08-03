@@ -80,3 +80,5 @@ Plus de 450 tests (Vitest), CI GitHub Actions sur chaque poussée — lint, buil
 `git log --first-parent --oneline dev` donne l'avancement étape par étape.
 
 `main` n'est pas la branche de travail : elle porte l'état exact de ce qui est déployé, et ne reçoit `dev` qu'au moment d'une mise en ligne. Voir [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+
+<!-- test pipeline -->
