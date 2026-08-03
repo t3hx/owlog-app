@@ -295,8 +295,14 @@ function FirstNameRow() {
  * - **l'erreur vit sous le champ**, en sémantique d'erreur système, et non
  *   en bandeau : c'est le champ qui est en cause.
  *
- * Hors session, la rangée n'est pas rendue : réserver un pseudo suppose un
- * compte, et une rangée morte serait pire qu'une rangée absente.
+ * **Hors session, la rangée explique — elle ne disparaît pas.** Une première
+ * version la masquait, au motif qu'une rangée morte vaut moins qu'une rangée
+ * absente. C'était l'inverse de la doctrine du projet, que `social.md` pose
+ * pour ce cas exact : « le social exige un compte, mais l'onglet n'est jamais
+ * mort — il explique ». La card COMPTE juste au-dessus applique déjà ce
+ * principe, et le masquage produisait précisément la confusion qu'il
+ * prétendait éviter — on cherche un réglage annoncé, on ne le trouve pas, et
+ * rien ne dit pourquoi.
  *
  * **Le lien `voir mon profil ›` n'est pas ici**, et c'est délibéré : il
  * ouvre l'écran 9, que T3H-64 recrée au pixel. La projection qui
@@ -313,9 +319,30 @@ function PseudoRow() {
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<'taken' | 'invalid' | 'offline' | null>(null)
   const [saving, setSaving] = useState(false)
+  const [needsAccount, setNeedsAccount] = useState(false)
 
   const pseudo = session.user?.pseudo ?? null
-  if (session.user === null) return null
+
+  // `loading` distingue « pas encore su » de « pas de session ». Sans cette
+  // garde, la rangée annoncerait « demande un compte » à quelqu'un qui en a
+  // un — le temps que `/auth/me` réponde. Même soin que la card COMPTE.
+  if (session.loading) {
+    return <Row label={t('settings.pseudo')} value="…" />
+  }
+
+  if (session.user === null) {
+    return (
+      <div className="flex flex-col">
+        <Row label={t('settings.pseudo')} value="—" onActivate={() => setNeedsAccount(true)} />
+        {needsAccount && (
+          <p className="px-4 pb-2 font-mono text-[10px] text-muted">
+            <span aria-hidden>! </span>
+            {t('settings.pseudoNeedsAccount')}
+          </p>
+        )}
+      </div>
+    )
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()

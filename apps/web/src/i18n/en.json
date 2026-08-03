@@ -339,6 +339,7 @@
     "firstName": "first name",
     "pseudo": "handle",
     "pseudoHint": "public identity — visible to your friends",
+    "pseudoNeedsAccount": "a handle requires an account",
     "pseudoTaken": "this handle is already taken",
     "pseudoInvalid": "3 to 20 characters: letters, digits and _",
     "pseudoOffline": "could not reach the server",

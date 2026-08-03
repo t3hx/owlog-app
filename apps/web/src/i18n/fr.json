@@ -339,6 +339,7 @@
     "firstName": "prénom",
     "pseudo": "pseudo",
     "pseudoHint": "identité publique — visible de tes amis",
+    "pseudoNeedsAccount": "le pseudo demande un compte",
     "pseudoTaken": "ce pseudo est déjà pris",
     "pseudoInvalid": "3 à 20 caractères : lettres, chiffres et _",
     "pseudoOffline": "impossible de joindre le serveur",

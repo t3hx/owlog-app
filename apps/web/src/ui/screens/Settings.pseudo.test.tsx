@@ -59,18 +59,40 @@ async function openPseudoField(): Promise<HTMLElement> {
 }
 
 describe('rangée pseudo', () => {
-  it('n est pas rendue sans session', async () => {
+  it('explique sans session au lieu de disparaitre', async () => {
+    // Doctrine du projet (`social.md`) : le social exige un compte, mais la
+    // surface n est jamais morte — elle explique. Masquer la rangee produit
+    // la confusion qu on cherche a eviter : on cherche un reglage annonce,
+    // on ne le trouve pas, et rien ne dit pourquoi.
     renderSettings({ user: null })
 
-    // La section PROFIL existe, mais réserver un pseudo suppose un compte.
-    await screen.findByText('prénom')
-    expect(screen.queryByText('pseudo')).toBeNull()
+    const row = await screen.findByRole('button', { name: /pseudo/i })
+    expect(screen.queryByText(/demande un compte/)).toBeNull()
+
+    fireEvent.click(row)
+
+    expect(await screen.findByText(/demande un compte/)).toBeTruthy()
+    // Et le champ ne s ouvre pas : il n y a rien a reserver sans serveur.
+    expect(screen.queryByRole('textbox', { name: 'pseudo' })).toBeNull()
   })
 
   it('affiche un tiret tant qu aucun pseudo n est pose', async () => {
     renderSettings({})
 
-    expect(await screen.findByText('—')).toBeTruthy()
+    // Portee a la rangee : `prenom` rend lui aussi un tiret quand il est vide.
+    const row = await screen.findByRole('button', { name: /pseudo/i })
+    expect(row.textContent).toContain('—')
+  })
+
+  it('n annonce pas « demande un compte » avant de savoir', async () => {
+    // Pendant que /auth/me repond, `session.user` vaut null sans que cela
+    // signifie « pas de compte ». Annoncer l absence de session a ce
+    // moment-la la ferait clignoter chez tout utilisateur connecte.
+    renderSettings({})
+
+    expect(screen.queryByText(/demande un compte/)).toBeNull()
+    await screen.findByRole('button', { name: /pseudo/i })
+    expect(screen.queryByText(/demande un compte/)).toBeNull()
   })
 
   it('force les minuscules a la frappe', async () => {
