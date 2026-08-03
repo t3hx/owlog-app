@@ -29,19 +29,28 @@ Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune lan
 
 - **Jamais de co-auteur.** Aucun `Co-Authored-By`, aucune mention d'outil ou d'assistant dans un message de commit.
 - Messages en français, à l'impératif, préfixés par un type (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`).
+- **Le français des messages ne heurte pas le lint de titre de PR** (`pr-title`
+  dans `ci.yml`) : seul le **type** est contraint, et il est déjà en anglais.
+  `feat(web) : ajouter le journal` passe. Comme la fusion est un squash, c'est
+  le **titre de la PR** qui devient le commit du tronc — c'est lui qui doit
+  être un commit conventionnel valide, pas les commits intermédiaires.
 
 ### Branches et validation
 
 - **Tout travail de feature se fait sur une branche** `feat/...` ou `fix/...`
-  tirée de `dev` (noms en anglais, US only), jamais directement sur `dev`.
-- La branche est **squashée sur `dev`** — un commit propre par feature.
+  tirée de `main` (noms en anglais, US only), jamais directement sur `main`.
+- La branche rejoint `main` par une **PR en squash-merge** — un commit propre
+  par feature, dont le titre (conventionnel) devient le message sur le tronc.
 - **Aucune feature n'est clôturée sans validation manuelle de l'utilisateur.**
-  Avant tout squash sur `dev` et toute fermeture de ticket : présenter la
+  Avant toute fusion sur `main` et toute fermeture de ticket : présenter la
   branche à tester (commande de lancement, points précis à vérifier) et
   attendre son retour. Les tests automatisés verts ne remplacent pas ce
   passage.
 - Tolérance : documentation et micro-corrections de configuration peuvent
-  aller directement sur `dev`.
+  aller directement sur `main`.
+- **Tronc unique `main`.** Le projet a migré du couple `dev`/`main` vers un
+  seul tronc `main` (workflow solo v3, T3H-73) : c'est `main` que visent la
+  CI, release-please et le déploiement.
 
 ### Développement piloté par les tests
 
