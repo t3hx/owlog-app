@@ -642,6 +642,20 @@ describe.skipIf(!adminUrl)('session', () => {
     })
   })
 
+  it('accepte les pseudos qui ressemblent a un marqueur interne', async () => {
+    // `invalid` est sept lettres minuscules : un pseudo parfaitement legal.
+    // Un marqueur d erreur pris dans le domaine des valeurs finit toujours
+    // par en croiser une — c est le `-1` d indexOf.
+    const mailer = captureMailer()
+    const app = makeApp(mailer)
+    const cookie = await connectedCookie(app, mailer)
+
+    const response = await setPseudo(app, cookie, 'invalid')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ user: { pseudo: 'invalid' } })
+  })
+
   it('refuse un corps qui n edite rien', async () => {
     const mailer = captureMailer()
     const app = makeApp(mailer)

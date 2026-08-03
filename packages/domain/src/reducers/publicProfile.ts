@@ -66,6 +66,16 @@ const PUBLIC_ACTIVITY_TYPES: ReadonlySet<string> = new Set([
  */
 export const DEFAULT_ACTIVITY_LIMIT = 20
 
+/**
+ * Nombre d'affiches de `▸ SES COUPS DE CŒUR`.
+ *
+ * Bornée pour la même raison que l'activité, et il faut le dire : la
+ * section ne l'était pas dans la première version, ce qui aurait renvoyé
+ * plusieurs milliers d'affiches sur un compte issu de l'import TVTime —
+ * chacune avec sa lecture de cache. L'écran 9 en montre une rangée.
+ */
+export const DEFAULT_FAVORITES_LIMIT = 24
+
 export interface PublicProfileInput {
   readonly pseudo: string
   /**
@@ -82,6 +92,7 @@ export interface PublicProfileInput {
   /** Bibliothèque du lecteur, pour la compat. Absente : `compat` vaut `null`. */
   readonly viewerStates?: readonly MediaStateRow[]
   readonly activityLimit?: number
+  readonly favoritesLimit?: number
 }
 
 /** Une affiche de la section `▸ SES COUPS DE CŒUR`. */
@@ -172,8 +183,13 @@ export function publicProfile(input: PublicProfileInput): PublicProfileView {
     // l'écran de stats : une seule définition de « vu » et de « coup de
     // cœur » pour toutes les surfaces qui les comptent.
     seenCount: filterLibrary(input.states, 'seen').length,
+    // Le compteur porte le TOTAL, la liste est tronquée : la tuile `♥ N`
+    // doit dire combien il y en a, pas combien on en montre.
     favoriteCount: favorites.length,
-    favorites: favorites.map((row) => ({ ref: row.ref, ...readMedia(input.cache, row.ref) })),
+    favorites: [...favorites]
+      .sort(byRecency)
+      .slice(0, input.favoritesLimit ?? DEFAULT_FAVORITES_LIMIT)
+      .map((row) => ({ ref: row.ref, ...readMedia(input.cache, row.ref) })),
     activity: activityOf(input),
   }
 
@@ -187,6 +203,20 @@ export function publicProfile(input: PublicProfileInput): PublicProfileView {
         ? null
         : compatibility(input.states, input.viewerStates),
   }
+}
+
+/**
+ * Ordre des affiches : le plus récemment touché d'abord.
+ *
+ * Tronquer sans ordonner rendrait une sélection arbitraire et instable
+ * d'un appel à l'autre — la même bibliothèque montrerait des affiches
+ * différentes selon l'ordre de lecture de la base.
+ */
+function byRecency(a: MediaStateRow, b: MediaStateRow): number {
+  if (a.updatedAt === b.updatedAt) return a.ref < b.ref ? -1 : a.ref > b.ref ? 1 : 0
+  if (a.updatedAt === null) return 1
+  if (b.updatedAt === null) return -1
+  return a.updatedAt < b.updatedAt ? 1 : -1
 }
 
 /**

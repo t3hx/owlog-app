@@ -204,6 +204,41 @@ describe('profil complet', () => {
     ])
   })
 
+  it('borne les affiches sans mentir sur le compteur', () => {
+    // La tuile `♥ N` dit combien il y en a, la section montre ce qui tient.
+    // Confondre les deux ferait dire au profil qu on a 24 coups de coeur.
+    const entries = Array.from({ length: 30 }, (unused, index) => {
+      const ref = `tmdb:movie/${100 + index}` as MediaRef
+      const f = createFactory(ref)
+      return { ref, events: [f.watch(), f.fav()], media: FILM }
+    })
+
+    const view = build(entries, 'friend')
+
+    if (view.kind !== 'friend') throw new Error('expected a friend view')
+    expect(view.favoriteCount).toBe(30)
+    expect(view.favorites).toHaveLength(24)
+  })
+
+  it('rend les memes affiches d un appel a l autre', () => {
+    // Tronquer sans ordonner rendrait une selection instable : la meme
+    // bibliotheque montrerait des affiches differentes selon l ordre de
+    // lecture de la base.
+    const entries = Array.from({ length: 30 }, (unused, index) => {
+      const ref = `tmdb:movie/${200 + index}` as MediaRef
+      const f = createFactory(ref)
+      return { ref, events: [f.watch(), f.fav()], media: FILM }
+    })
+
+    const first = build(entries, 'friend')
+    const shuffled = build([...entries].reverse(), 'friend')
+
+    if (first.kind !== 'friend' || shuffled.kind !== 'friend') {
+      throw new Error('expected friend views')
+    }
+    expect(shuffled.favorites.map((f) => f.ref)).toEqual(first.favorites.map((f) => f.ref))
+  })
+
   it('ordonne l activite du plus recent au plus ancien', () => {
     const f = createFactory(A)
     const view = build(

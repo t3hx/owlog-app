@@ -252,8 +252,12 @@ export function createAuthRoutes(deps: AuthDeps) {
       return isValidPseudo(normalized) ? normalized : null
     })
 
-    if (firstName === 'invalid' || pseudo === 'invalid') return fail(c, 400, 'bad-request')
-    if (firstName === undefined && pseudo === undefined) return fail(c, 400, 'bad-request')
+    if (firstName.state === 'invalid' || pseudo.state === 'invalid') {
+      return fail(c, 400, 'bad-request')
+    }
+    if (firstName.state === 'absent' && pseudo.state === 'absent') {
+      return fail(c, 400, 'bad-request')
+    }
 
     // Le serveur fait autorité sur le profil après connexion : l'écran
     // Réglages pousse ici, et tout appareil relit par /me. La borne de 40
@@ -270,7 +274,7 @@ export function createAuthRoutes(deps: AuthDeps) {
          SET first_name = COALESCE($1, first_name), pseudo = COALESCE($2, pseudo)
          WHERE id = $3
          RETURNING email, first_name, pseudo`,
-        [firstName ?? null, pseudo ?? null, user.id],
+        [valueOrNull(firstName), valueOrNull(pseudo), user.id],
       )
     } catch (error) {
       // L'unicité se CONSTATE. Un `SELECT ... WHERE pseudo = $1` avant
@@ -387,18 +391,35 @@ function toAuthUser(row: UserRow): AuthUser {
 /**
  * Lit un champ de profil optionnel.
  *
- * Trois issues distinctes, et les confondre serait le bug : `undefined`
- * (clé absente — ne pas toucher), `'invalid'` (clé présente, valeur
- * refusée — 400), ou la valeur normalisée. Rendre `undefined` sur une
- * valeur invalide laisserait passer en silence une saisie refusée.
+ * Trois issues distinctes, et les confondre serait le bug : clé absente
+ * (ne pas toucher), clé présente mais refusée (400), ou la valeur
+ * normalisée. Rendre `undefined` sur une valeur invalide laisserait passer
+ * en silence une saisie refusée.
+ *
+ * **Le marqueur d'erreur ne peut pas être une chaîne.** Une première
+ * version rendait `'invalid'` — sept lettres minuscules, c'est-à-dire un
+ * pseudo parfaitement légal, que la route refusait alors en 400. Un
+ * sentinel pris dans le domaine des valeurs finit toujours par en croiser
+ * une ; l'union discriminée le rend inatteignable.
  */
+type OptionalField =
+  | { readonly state: 'absent' }
+  | { readonly state: 'invalid' }
+  | { readonly state: 'set'; readonly value: string }
+
 function readOptionalString(
   raw: unknown,
   normalize: (value: string) => string | null,
-): string | undefined | 'invalid' {
-  if (raw === undefined) return undefined
-  if (typeof raw !== 'string') return 'invalid'
-  return normalize(raw) ?? 'invalid'
+): OptionalField {
+  if (raw === undefined) return { state: 'absent' }
+  if (typeof raw !== 'string') return { state: 'invalid' }
+  const normalized = normalize(raw)
+  return normalized === null ? { state: 'invalid' } : { state: 'set', value: normalized }
+}
+
+/** `null` pour le `COALESCE` : « ne touche pas à cette colonne ». */
+function valueOrNull(field: OptionalField): string | null {
+  return field.state === 'set' ? field.value : null
 }
 
 function isUniqueViolation(error: unknown): boolean {

@@ -3,7 +3,9 @@ import { Link, useRoute } from 'wouter'
 
 import { Logo } from '@/ui/components/Logo'
 import { useSetting } from '@/ui/hooks/useSetting'
+import { avatarInitial } from '@/ui/identity'
 import { TABS, type Tab } from '@/ui/navigation'
+import { useSession } from '@/ui/session/SessionProvider'
 
 /**
  * Navigation desktop — ce que devient la tab bar au-dela de 1024px.
@@ -86,13 +88,20 @@ function SidebarLink({ tab }: { tab: Tab }) {
  * Pastille utilisateur, en bas — l'entree des Reglages en desktop, la ou le
  * mobile passe par l'engrenage du header.
  *
- * Le mock affiche un `@pseudo` sous le prenom. Il n'est pas rendu : le
- * pseudo n'existe pas encore (T3H-63), et afficher une adresse inventee
- * serait mentir sur une identite. La ligne reviendra avec le champ.
+ * Le mock affiche un `@pseudo` sous le prenom, et il est rendu depuis
+ * T3H-63 — quand il existe. Sans pseudo, la ligne est absente plutot que
+ * remplie d'une adresse inventee : mentir sur une identite serait pire que
+ * de ne rien dire.
+ *
+ * **L'initiale sort du pseudo, jamais du prenom** (`social.md` §3, un seul
+ * systeme d'avatar). Le repli sur le prenom ne vaut que pour sa propre
+ * pastille avant qu'un pseudo n'existe — voir `avatarInitial`.
  */
 function UserChip() {
   const { t } = useTranslation()
   const { value: firstName } = useSetting('firstName')
+  const session = useSession()
+  const pseudo = session.user?.pseudo ?? null
 
   return (
     <Link
@@ -104,18 +113,14 @@ function UserChip() {
         aria-hidden
         className="flex size-[30px] flex-none items-center justify-center rounded-full border border-border-accent bg-surface-raised text-[11px] font-semibold text-accent"
       >
-        {initial(firstName)}
+        {avatarInitial(pseudo, firstName)}
       </span>
-      <span className="truncate text-[12px] font-semibold">{firstName}</span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-[12px] font-semibold">{firstName}</span>
+        {pseudo !== null && (
+          <span className="truncate font-mono text-[10px] text-muted">@{pseudo}</span>
+        )}
+      </span>
     </Link>
   )
-}
-
-/**
- * L'initiale n'est pas `firstName[0]` : sur un prenom compose d'emoji ou de
- * caracteres hors du plan de base, l'indexation par unite UTF-16 coupe au
- * milieu d'une paire et rend un losange noir.
- */
-function initial(firstName: string | undefined): string {
-  return [...(firstName ?? '')][0]?.toUpperCase() ?? ''
 }
