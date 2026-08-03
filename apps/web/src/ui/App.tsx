@@ -4,7 +4,9 @@ import { Redirect, Route, Switch, useRoute } from 'wouter'
 import { UnderConstruction } from '@/ui/components/UnderConstruction'
 import { Banners } from '@/ui/components/Banners'
 import { Header } from '@/ui/components/Header'
+import { Sidebar } from '@/ui/components/Sidebar'
 import { TabBar } from '@/ui/components/TabBar'
+import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { Home } from '@/ui/screens/Home'
 import { Landing } from '@/ui/screens/Landing'
@@ -39,9 +41,22 @@ import { Debug } from '@/ui/screens/Debug'
  * aval, toutes deux en place : un rewrite SPA dans le Caddyfile pour que
  * `/library` serve `index.html`, et `navigateFallback` côté Workbox pour
  * que la même règle vaille hors-ligne.
+ *
+ * Le palier desktop ne change que le chrome :
+ *
+ * ```
+ * < 1024px   Header en haut  ·  TabBar en bas   (colonne, centrée dès 640px)
+ * ≥ 1024px   Sidebar à gauche ·  ni Header ni TabBar
+ * ```
+ *
+ * Le `Switch` occupe la même place dans l'arbre des deux côtés du palier, et
+ * son conteneur existe toujours. C'est délibéré : le remonter à la traversée
+ * viderait la recherche en cours et remettrait le scroll à zéro sur un simple
+ * redimensionnement de fenêtre.
  */
 export function App() {
   const { t } = useTranslation()
+  const desktop = useDesktop()
   const { value: firstName, loading } = useSetting('firstName')
   const [onDebug] = useRoute('/debug')
   const [onLogin] = useRoute('/login')
@@ -72,39 +87,47 @@ export function App() {
   if (firstName === undefined) return <Landing />
 
   return (
-    <div className="min-h-dvh pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
-      <Header />
+    <div
+      className={
+        desktop ? 'flex min-h-dvh' : 'min-h-dvh pb-[calc(3.5rem+env(safe-area-inset-bottom))]'
+      }
+    >
+      {desktop && <Sidebar />}
 
-      <Switch>
-        <Route path="/">
-          <Home firstName={firstName} />
-        </Route>
-        <Route path="/media/:kind/:id">
-          {(params) => <Media ref={`tmdb:${params.kind === 'tv' ? 'tv' : 'movie'}/${Number(params.id)}`} />}
-        </Route>
-        <Route path="/library">
-          <Library />
-        </Route>
-        <Route path="/log">
-          <Log />
-        </Route>
-        <Route path="/stats">
-          <Stats />
-        </Route>
-        <Route path="/settings">
-          <Settings />
-        </Route>
-        <Route>
-          <UnderConstruction
-            title={t('notFound.title')}
-            step={1}
-            what={t('notFound.what')}
-          />
-        </Route>
-      </Switch>
+      <div className={desktop ? 'min-w-0 flex-1 px-10 py-7' : undefined}>
+        {!desktop && <Header />}
+
+        <Switch>
+          <Route path="/">
+            <Home firstName={firstName} />
+          </Route>
+          <Route path="/media/:kind/:id">
+            {(params) => <Media ref={`tmdb:${params.kind === 'tv' ? 'tv' : 'movie'}/${Number(params.id)}`} />}
+          </Route>
+          <Route path="/library">
+            <Library />
+          </Route>
+          <Route path="/log">
+            <Log />
+          </Route>
+          <Route path="/stats">
+            <Stats />
+          </Route>
+          <Route path="/settings">
+            <Settings />
+          </Route>
+          <Route>
+            <UnderConstruction
+              title={t('notFound.title')}
+              step={1}
+              what={t('notFound.what')}
+            />
+          </Route>
+        </Switch>
+      </div>
 
       <Banners />
-      <TabBar />
+      {!desktop && <TabBar />}
     </div>
   )
 }
