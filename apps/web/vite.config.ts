@@ -112,6 +112,27 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
+  /**
+   * Le serveur de dev sert l'API sous `/api`, comme Caddy en production.
+   *
+   * Sans ce proxy, le web vit sur `:5173` et l'API sur `:8787` — deux
+   * origines, donc CORS, donc `Access-Control-Allow-Credentials`, donc une
+   * liste d'origines autorisees a tenir. Rien de tout cela n'existe en
+   * production, ou une seule origine sert les deux : le developpement
+   * inventait un probleme que la cible n'a pas, et le faisait echouer sur
+   * une classe d'erreurs qu'aucun deploiement ne rencontrera jamais.
+   *
+   * Aucune reecriture de chemin : `owlog-api` se monte lui-meme sous `/api`
+   * (`OWLOG_BASE_PATH`), exactement comme en production.
+   */
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

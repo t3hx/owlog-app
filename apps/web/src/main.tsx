@@ -49,6 +49,15 @@ const root: HTMLElement = container
  * Les valeurs de repli servent au développement local, où Vite ne reçoit
  * aucune variable : `local-token` doit être la valeur passée en
  * `OWLOG_SHARED_TOKEN` au service, sans quoi chaque recherche répond 401.
+ * `scripts/dev.sh` s'en charge.
+ *
+ * Le repli d'adresse est `/api` et non `http://localhost:8787` : le serveur
+ * de dév relaie `/api` vers le service (voir `server.proxy` dans
+ * `vite.config.ts`). Le développement a ainsi **la topologie de la
+ * production** — une seule origine, aucun CORS. L'adresse absolue plaçait
+ * le web et l'API sur deux origines, ce que le déploiement ne fait jamais,
+ * et faisait échouer le développement sur des erreurs qui n'existent pas
+ * en production.
  *
  * Une chaîne vide compte comme absente. `??` ne rattrape que `null` et
  * `undefined`, or un `ARG` Docker non fourni vaut la chaîne vide : le repli
@@ -57,7 +66,7 @@ const root: HTMLElement = container
  * désormais de construire sans ces arguments ; ceci reste la seconde
  * barrière, pour toute autre voie qui produirait la même valeur vide.
  */
-const baseUrl = orFallback(import.meta.env.VITE_API_URL, 'http://localhost:8787')
+const baseUrl = orFallback(import.meta.env.VITE_API_URL, '/api')
 const sharedToken = orFallback(import.meta.env.VITE_SHARED_TOKEN, 'local-token')
 
 const catalog = createMediaCatalog({ baseUrl, sharedToken })

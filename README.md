@@ -24,7 +24,9 @@ pnpm install
 pnpm dev
 ```
 
-Node 22 ou plus. L'application se sert sur `http://localhost:5173`.
+Node 22 ou plus, et le CLI Doppler — les secrets du projet y vivent, `pnpm dev` l'appelle lui-même. La commande démarre l'API **et** le web : l'application se sert sur `http://localhost:5173`, l'API est relayée sous `/api` par le serveur de dév, comme en production.
+
+Sans base de données locale, `/auth` et `/sync` répondent 503 : la synchronisation multi-appareils ne se teste pas en local, tout le reste fonctionne — l'application est locale d'abord.
 
 ```bash
 pnpm build     # construction de production
