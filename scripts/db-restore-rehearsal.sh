@@ -23,9 +23,14 @@ cleanup() {
 trap cleanup EXIT
 cleanup
 
+# La majeure de la production, et c'est ici que l'écart coûterait le plus
+# cher : `pg_dump` refuse un serveur plus récent que lui, et un dump ne se
+# restaure pas dans une majeure antérieure. Sur une autre version, cette
+# répétition passerait au vert sans rien exercer de ce qui se produira le
+# jour d'une vraie restauration.
 docker network create "$NET" >/dev/null
-docker run -d --rm --name "$SRC" --network "$NET" -e POSTGRES_PASSWORD=src postgres:17-alpine >/dev/null
-docker run -d --rm --name "$DST" --network "$NET" -e POSTGRES_PASSWORD=dst postgres:17-alpine >/dev/null
+docker run -d --rm --name "$SRC" --network "$NET" -e POSTGRES_PASSWORD=src postgres:18-alpine >/dev/null
+docker run -d --rm --name "$DST" --network "$NET" -e POSTGRES_PASSWORD=dst postgres:18-alpine >/dev/null
 
 wait_pg() {
   for _ in $(seq 1 60); do
@@ -65,7 +70,7 @@ SQL
 echo "--- 2. sauvegarde chiffrée depuis un conteneur outillé (pg_dump + age)"
 docker run --rm --network "$NET" \
   -v "$ROOT/scripts:/scripts:ro" -v "$WORK:/work" \
-  postgres:17-alpine bash -euo pipefail -c '
+  postgres:18-alpine bash -euo pipefail -c '
     apk add --no-cache age >/dev/null 2>&1
     age-keygen -o /work/identity.txt 2>/dev/null
     RECIPIENT=$(grep -o "age1.*" /work/identity.txt | head -1)

@@ -22,7 +22,16 @@ const execFile = promisify(execFileCb)
  * passage, mais un saut silencieux ferait croire à une couverture qui
  * n'existe pas.
  */
-const IMAGE = 'postgres:17-alpine'
+/**
+ * Version majeure de la production, jamais « la dernière ».
+ *
+ * Ces tests rejouent les migrations depuis zéro : ils ne prouvent quelque
+ * chose que s'ils les rejouent sur le moteur qui les recevra. Un écart de
+ * majeure ici rendrait vertes des migrations que le VPS refuserait.
+ *
+ * **À changer en même temps que la production, jamais avant ni après.**
+ */
+const IMAGE = 'postgres:18-alpine'
 const PASSWORD = 'owlog-test'
 const READY_TIMEOUT_MS = 30_000
 

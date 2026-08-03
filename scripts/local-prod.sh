@@ -35,7 +35,9 @@ readonly EDGE_NAME=owlog-edge
 # Postgres local, comme en production : sans lui, /auth et /sync répondent
 # 503 et le check ne peut pas rejouer leurs pièges. Le mot de passe est
 # local et jetable — la base meurt avec la pile.
-readonly PG_IMAGE=postgres:17-alpine
+# La majeure de la production. Ce script existe pour reproduire la mise en
+# ligne : sur une autre majeure, il simulerait une prod qui n'existe pas.
+readonly PG_IMAGE=postgres:18-alpine
 readonly PG_NAME=owlog-pg-local
 readonly PG_PASSWORD=owlog-local
 
