@@ -3,8 +3,13 @@
 # `main` n'accepte que des PR squashées et sa CI est verte : tout ce qui y
 # arrive est réputé déployable. Cette PR fusionnée déclenche donc, sans autre
 # intervention : build des deux images → poussée sur GHCR → Dokploy tire et
-# redémarre → vérification de santé. Le build se fait ici, sur GitHub, jamais
-# sur le VPS.
+# redémarre. Le build se fait ici, sur GitHub, jamais sur le VPS.
+#
+# La santé de l'app est vérifiée PAR DOKPLOY (HEALTHCHECK des conteneurs +
+# rollback automatique), pas par ce workflow : une sonde depuis le runner
+# passerait par Cloudflare, qui répond 403 aux IP de datacenter — un faux
+# négatif qui ne dit rien de l'app. Le `--fail-with-body` des appels de
+# déploiement reste le garde-fou : Dokploy qui refuse = workflow rouge.
 name: deploy
 on:
   push:
@@ -101,15 +106,3 @@ jobs:
             -H 'Content-Type: application/json' \
             -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
             -d '{"applicationId": "${{ secrets.DOKPLOY_APP_ID_FRONT }}"}'
-
-      # `APP_HEALTH_URL` est une VARIABLE (pas un secret) : la sonde publique
-      # `https://owlog.nspace.link/api/health`. On réutilise la route existante.
-      - name: Attendre et vérifier la santé
-        run: |
-          sleep 45
-          for i in $(seq 1 10); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_HEALTH_URL }}")
-            [ "$code" = "200" ] && echo "healthy" && exit 0
-            echo "tentative $i : $code — nouvel essai dans 15 s"; sleep 15
-          done
-          echo "le déploiement n'est pas devenu sain" && exit 1
