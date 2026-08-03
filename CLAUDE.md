@@ -39,21 +39,44 @@ Les chaînes affichées à l'utilisateur ne sont écrites en dur dans aucune lan
 
 ### Branches et validation
 
+**Deux branches, et une seule déploie.**
+
+```
+feat/xxx ──squash──▶ dev ──merge commit──▶ main ──▶ CI ──▶ build ──▶ Dokploy
+             CI            CI, jamais de           en ligne
+                           déploiement
+```
+
 - **Tout travail de feature se fait sur une branche** `feat/...` ou `fix/...`
-  tirée de `main` (noms en anglais, US only), jamais directement sur `main`.
-- La branche rejoint `main` par une **PR en squash-merge** — un commit propre
-  par feature, dont le titre (conventionnel) devient le message sur le tronc.
+  tirée de **`dev`** (noms en anglais, US only), jamais directement sur un tronc.
+- La branche rejoint `dev` par une **PR en squash-merge** — un commit propre par
+  feature, dont le titre (conventionnel) devient le message sur `dev`. Les
+  commits de la branche restent libres, aussi nombreux qu'on veut : seul le
+  titre de PR est linté.
+- `dev` est le tronc d'intégration : la CI y tourne à chaque fusion, **rien n'y
+  est construit ni déployé**. C'est là qu'on teste en local et via
+  `./scripts/local-prod.sh`.
+- `dev` rejoint `main` par une **PR en merge commit — JAMAIS en squash.** Un
+  squash réécrirait tout `dev` en un commit que `dev` ne contient pas : les deux
+  troncs divergeraient définitivement, et la livraison suivante rejouerait tout
+  l'historique déjà en ligne.
+- **`main` est l'état déployé.** La fusion y déclenche CI → build des 2 images →
+  GHCR → Dokploy. La CI est un **job de `deploy.yml`**, pas un workflow voisin :
+  sur une CI rouge, rien n'est construit et rien ne part en ligne.
 - **Aucune feature n'est clôturée sans validation manuelle de l'utilisateur.**
-  Avant toute fusion sur `main` et toute fermeture de ticket : présenter la
+  Avant toute fusion vers `main` et toute fermeture de ticket : présenter la
   branche à tester (commande de lancement, points précis à vérifier) et
-  attendre son retour. Les tests automatisés verts ne remplacent pas ce
-  passage.
-- Tolérance : documentation et micro-corrections de configuration peuvent
-  aller directement sur `main`.
-- **Tronc unique `main`, déploiement continu.** Une seule mécanique : brancher
-  depuis `main` → PR → CI verte → squash-merge. **La fusion sur `main` déploie
-  automatiquement** (build des 2 images → GHCR → Dokploy). Pas de release ni de
-  tag à gérer. Le parcours complet est décrit dans [docs/deploiement.md](docs/deploiement.md).
+  attendre son retour. Les tests automatisés verts ne remplacent pas ce passage.
+  C'est `dev` qui rend cette règle tenable : on y intègre sans mettre en ligne.
+- Tolérance : documentation et micro-corrections de configuration peuvent aller
+  directement sur `dev`.
+- Pas de release ni de tag à gérer. Le parcours complet est décrit dans
+  [docs/deploiement.md](docs/deploiement.md).
+
+**Note : `main` n'est pas protégée par GitHub.** Les *branch protection rules*
+et les *rulesets* exigent un plan payant sur un dépôt privé. Rien n'empêche
+techniquement un push direct ni une fusion sur CI rouge — la règle tient par
+discipline, pas par le serveur.
 
 ### Développement piloté par les tests
 

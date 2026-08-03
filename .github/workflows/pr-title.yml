@@ -1,0 +1,47 @@
+# Lint du titre de PR.
+#
+# La fusion est un squash : le titre de la PR devient le message du commit sur
+# la branche cible. C'est donc LUI qu'on lint, pas les commits de la branche —
+# eux restent libres, aussi nombreux et aussi bruts qu'on veut.
+#
+# Les messages français passent : seul le type (feat, fix…) est contraint, et
+# il est en anglais. Attention aux deux-points : ils collent au type
+# (`feat(web): …`), l'espace fine française avant `:` fait échouer ce lint.
+#
+# Ce workflow vit à part de `ci.yml` pour une raison de lisibilité : il n'a de
+# sens que sur une PR, et tant qu'il y cohabitait, chaque poussée sur le tronc
+# affichait un job « Skipped » qui donnait l'impression d'une vérification
+# perdue en route.
+name: pr-title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            style
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false

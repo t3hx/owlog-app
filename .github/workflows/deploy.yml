@@ -1,9 +1,17 @@
-# Déploiement continu — chaque fusion sur `main` met l'app en ligne.
+# Déploiement — chaque fusion sur `main` met l'app en ligne.
 #
-# `main` n'accepte que des PR squashées et sa CI est verte : tout ce qui y
-# arrive est réputé déployable. Cette PR fusionnée déclenche donc, sans autre
-# intervention : build des deux images → poussée sur GHCR → Dokploy tire et
-# redémarre. Le build se fait ici, sur GitHub, jamais sur le VPS.
+# `main` est la branche déployée : on n'y arrive que par une PR depuis `dev`,
+# fusionnée en **merge commit** (jamais en squash, qui ferait diverger les
+# deux troncs définitivement). La fusion déclenche, sans autre intervention :
+# CI → build des deux images → poussée sur GHCR → Dokploy tire et redémarre.
+# Le build se fait ici, sur GitHub, jamais sur le VPS.
+#
+# **La CI est un job de ce workflow, pas un voisin.** Elle l'était : `ci.yml`
+# et `deploy.yml` se déclenchaient tous deux sur `push: main` et couraient en
+# parallèle — une image pouvait partir en ligne pendant que les tests
+# tournaient encore, et rien ne l'arrêtait s'ils échouaient. `build-and-push`
+# dépend désormais de `verify` : sur une CI rouge, rien n'est construit et
+# rien n'est déployé.
 #
 # La santé de l'app est vérifiée PAR DOKPLOY (HEALTHCHECK des conteneurs +
 # rollback automatique), pas par ce workflow : une sonde depuis le runner
@@ -24,7 +32,14 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Lint, typecheck, build et tests — le workflow `ci`, appelé et non
+  # dupliqué : une seule définition des vérifications, jouée à l'identique
+  # sur les PR, sur `dev` et ici avant la mise en ligne.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
   build-and-push:
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
