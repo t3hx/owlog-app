@@ -24,7 +24,7 @@ squash-merge sur main
    → build des 2 images (owlog-web + owlog-api) sur GitHub
    → poussée sur GHCR (ghcr.io/t3hx/owlog-web · owlog-api, tag `latest`)
    → appel à Dokploy : tire les nouvelles images et redémarre
-   → vérifie que https://owlog.nspace.link/api/health répond 200
+      (Dokploy vérifie la santé des conteneurs et rollback tout seul si besoin)
 ```
 
 Je n'ai **rien** d'autre à faire. Pas de tag, pas de « Release PR », pas de

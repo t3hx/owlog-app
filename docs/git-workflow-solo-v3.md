@@ -396,16 +396,18 @@ jobs:
             -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
             -d '{"applicationId": "${{ secrets.DOKPLOY_APP_ID_FRONT }}"}'
 
-      - name: Wait & verify health
-        run: |
-          sleep 45
-          for i in $(seq 1 10); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_HEALTH_URL }}")
-            [ "$code" = "200" ] && echo "healthy" && exit 0
-            echo "attempt $i: $code — retrying in 15s"; sleep 15
-          done
-          echo "deployment did not become healthy" && exit 1
+      # Pas de sonde de santé depuis le runner — voir la note ⚠️ ci-dessous.
 ```
+
+> ⚠️ **Pas de vérification de santé depuis le runner (leçon de terrain).** Une
+> sonde `curl` vers l'URL **publique** de l'app depuis un runner GitHub traverse
+> Cloudflare, qui répond **403** aux IP de datacenter — un faux négatif qui fait
+> échouer le déploiement alors que l'app est parfaitement saine (un vrai client
+> reçoit 200). La santé est donc **déléguée à Dokploy** : `HEALTHCHECK` des
+> conteneurs + rollback automatique, sur le VPS, là où c'est mesurable. Le
+> `--fail-with-body` des appels de déploiement reste le garde-fou côté workflow
+> (Dokploy refuse → rouge). Les mentions d'`APP_HEALTH_URL` plus bas deviennent
+> de ce fait optionnelles.
 
 ### B.7.b — Dokploy derrière Tailscale (panel non exposé publiquement)
 
