@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { StatsPeriod, StatsRatings, StatsView } from '@owlog/domain'
+import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useStats } from '@/ui/hooks/useStats'
 
 const PERIODS: readonly StatsPeriod[] = ['month', 'year', 'all']
@@ -26,12 +27,22 @@ export function Stats() {
   const { t } = useTranslation()
   const [period, setPeriod] = useState<StatsPeriod>('year')
   const { view, loading } = useStats(period)
+  const desktop = useDesktop()
 
   return (
-    <div className="mx-auto flex max-w-md flex-col px-5 pb-8 pt-8">
-      <h1 className="font-display text-[25px] font-semibold text-text">{t('stats.title')}</h1>
+    <div className={desktop ? 'flex flex-col' : 'mx-auto flex max-w-md flex-col px-5 pb-8 pt-8'}>
+      <div className={desktop ? 'flex items-baseline justify-between' : undefined}>
+        <h1
+          className={
+            desktop
+              ? 'font-display text-[28px] font-semibold text-text'
+              : 'font-display text-[25px] font-semibold text-text'
+          }
+        >
+          {t('stats.title')}
+        </h1>
 
-      <div className="mt-3.5 flex gap-2">
+        <div className={desktop ? 'flex gap-1.5' : 'mt-3.5 flex gap-2'}>
         {PERIODS.map((option) => (
           <button
             key={option}
@@ -48,6 +59,7 @@ export function Stats() {
             {t(`stats.period.${option}` as 'stats.period.all')}
           </button>
         ))}
+        </div>
       </div>
 
       {loading || view === null ? (
@@ -58,7 +70,9 @@ export function Stats() {
           <p className="text-sm text-muted">{t('stats.emptyHint')}</p>
         </div>
       ) : (
-        <Body view={view} period={period} />
+        <div className={desktop ? 'mt-6 grid grid-cols-2 items-start gap-4' : undefined}>
+          <Body view={view} period={period} />
+        </div>
       )}
     </div>
   )
@@ -117,6 +131,7 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
         )}
       </section>
 
+      <div>
       <SectionTitle>{t('stats.split')}</SectionTitle>
       <Split view={view} />
 
@@ -129,7 +144,9 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
           tone="text-gradient-action"
         />
       </div>
+      </div>
 
+      <div>
       <SectionTitle>{t('stats.ratingsTitle')}</SectionTitle>
       <section className="flex items-center gap-[18px] rounded-card border border-border bg-surface-translucent p-3.5">
         <Donut ratings={view.ratings} />
@@ -148,7 +165,9 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
           episodes: view.episodesSeen,
         })}
       </p>
+      </div>
 
+      <div>
       <SectionTitle>{t('stats.genresTitle')}</SectionTitle>
       {view.genres.length === 0 ? (
         <p className="font-mono text-[10px] text-subtle">{t('stats.noGenres')}</p>
@@ -178,6 +197,7 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
           {t('stats.excludedGenres', { count: view.mediaWithoutGenres })}
         </p>
       )}
+      </div>
     </>
   )
 }
