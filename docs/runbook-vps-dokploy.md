@@ -301,12 +301,39 @@ Dokploy → **Settings → Server → Docker Cleanup** : active le nettoyage pé
 
 Dashboard Cloudflare → **Zero Trust → Networks → Connectors → Create a tunnel** → type **Cloudflared** → nom `nspace-tunnel` → **copier le Tunnel Token**.
 
-### 5.2 SSL/TLS de la zone
+### 5.2 Réglages de zone : SSL/TLS et cache
 
 **SSL/TLS → Overview** → mode **Full**.
 
 ⚠️ Jamais **Flexible** : ça crée des boucles de redirection avec Traefik.
 Active aussi **Edge Certificates → Always Use HTTPS**.
+
+**Caching → Configuration → Browser Cache TTL** → **Respect Existing Headers**.
+
+> ⚠️ **Le piège du Browser Cache TTL.** Les zones anciennes ont pour défaut
+> **4 heures**, et ce réglage **écrase** le `Cache-Control` renvoyé au
+> navigateur — un `no-cache` de l'origine compte comme zéro et perd
+> systématiquement. Le piège est sélectif, donc trompeur : Cloudflare ne
+> cache en edge que certaines extensions (`.js`, `.css`, images…), et seuls
+> ces fichiers sont réécrits. Constaté sur owlog : `index.html` et
+> `manifest.webmanifest` gardaient leur `no-cache`, mais `sw.js` — le seul
+> fichier dont la fraîcheur porte les mises à jour PWA — sortait en
+> `max-age=14400`.
+>
+> **Indétectable en local** : `local-prod.sh check` interroge le Caddy
+> frontal, jamais l'edge Cloudflare. Un déploiement peut donc passer tous
+> les contrôles locaux et servir des en-têtes faux en production. Après
+> tout changement d'en-têtes, vérifier **à travers** Cloudflare :
+>
+> ```bash
+> curl -sD - -o /dev/null https://owlog.nspace.link/sw.js | grep -i cache-control
+> # attendu : no-cache — un max-age=14400 signale le réglage de zone resté à 4 h
+> ```
+>
+> Pas de purge nécessaire après correction : Cloudflare rafraîchit les
+> en-têtes stockés à la revalidation suivante. Et si un service de la zone
+> comptait sur le TTL implicite, la bonne réponse est de déclarer ses
+> en-têtes à *son* origine, pas de revenir au TTL global.
 
 ### 5.3 Déployer cloudflared dans Dokploy — méthode Compose
 
@@ -678,6 +705,8 @@ Depuis une machine **hors tailnet** :
 nmap -Pn -p- <IP_PUBLIQUE>          # tout filtered
 curl -I https://app.nspace.link     # 200, cert Cloudflare
 curl -I https://beszel.nspace.link  # timeout / injoignable
+curl -sD - -o /dev/null https://owlog.nspace.link/sw.js | grep -i cache-control
+                                    # no-cache — sinon, Browser Cache TTL (§5.2)
 ```
 
 Depuis le tailnet :
