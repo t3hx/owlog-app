@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { StatsPeriod, StatsRatings, StatsView } from '@owlog/domain'
+import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useStats } from '@/ui/hooks/useStats'
 
 const PERIODS: readonly StatsPeriod[] = ['month', 'year', 'all']
@@ -26,12 +27,22 @@ export function Stats() {
   const { t } = useTranslation()
   const [period, setPeriod] = useState<StatsPeriod>('year')
   const { view, loading } = useStats(period)
+  const desktop = useDesktop()
 
   return (
-    <div className="mx-auto flex max-w-md flex-col px-5 pb-8 pt-8">
-      <h1 className="font-display text-[25px] font-semibold text-text">{t('stats.title')}</h1>
+    <div className={desktop ? 'flex flex-col' : 'mx-auto flex max-w-md flex-col px-5 pb-8 pt-8'}>
+      <div className={desktop ? 'flex items-baseline justify-between' : undefined}>
+        <h1
+          className={
+            desktop
+              ? 'font-display text-[28px] font-semibold text-text'
+              : 'font-display text-[25px] font-semibold text-text'
+          }
+        >
+          {t('stats.title')}
+        </h1>
 
-      <div className="mt-3.5 flex gap-2">
+        <div className={desktop ? 'flex gap-1.5' : 'mt-3.5 flex gap-2'}>
         {PERIODS.map((option) => (
           <button
             key={option}
@@ -48,6 +59,7 @@ export function Stats() {
             {t(`stats.period.${option}` as 'stats.period.all')}
           </button>
         ))}
+        </div>
       </div>
 
       {loading || view === null ? (
@@ -58,7 +70,11 @@ export function Stats() {
           <p className="text-sm text-muted">{t('stats.emptyHint')}</p>
         </div>
       ) : (
-        <Body view={view} period={period} />
+        desktop ? (
+          <DesktopBody view={view} period={period} />
+        ) : (
+          <Body view={view} period={period} />
+        )
       )}
     </div>
   )
@@ -117,6 +133,7 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
         )}
       </section>
 
+      <div>
       <SectionTitle>{t('stats.split')}</SectionTitle>
       <Split view={view} />
 
@@ -129,7 +146,9 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
           tone="text-gradient-action"
         />
       </div>
+      </div>
 
+      <div>
       <SectionTitle>{t('stats.ratingsTitle')}</SectionTitle>
       <section className="flex items-center gap-[18px] rounded-card border border-border bg-surface-translucent p-3.5">
         <Donut ratings={view.ratings} />
@@ -148,7 +167,9 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
           episodes: view.episodesSeen,
         })}
       </p>
+      </div>
 
+      <div>
       <SectionTitle>{t('stats.genresTitle')}</SectionTitle>
       {view.genres.length === 0 ? (
         <p className="font-mono text-[10px] text-subtle">{t('stats.noGenres')}</p>
@@ -178,7 +199,182 @@ function Body({ view, period }: { view: StatsView; period: StatsPeriod }) {
           {t('stats.excludedGenres', { count: view.mediaWithoutGenres })}
         </p>
       )}
+      </div>
     </>
+  )
+}
+
+/**
+ * Stats desktop — le tableau de bord du mock 10d.
+ *
+ * ```
+ * ┌── TEMPS TOTAL ────────────┐ ┌── notes (donut) ──┐
+ * │ 142h  ▲+18h · legendes    │ │  ◕  bonnes 68%    │
+ * │ [====repartition====]     │ │     moyennes 18%  │
+ * └───────────────────────────┘ └───────────────────┘
+ * ┌── GENRES FAVORIS ─────────┐ ┌─ 11 ─┐┌─ 3 ─┐┌─ 8 ─┐
+ * │ science-fiction ===== 32% │ ├── AUTRES INDICATEURS ┤
+ * │ thriller       ===   22%  │ │ completion · revis.  │
+ * └───────────────────────────┘ └──────────────────────┘
+ * ```
+ *
+ * Ce n'est pas la composition mobile dans une grille, et c'est la difference
+ * qui compte : la repartition vit **dans** la card du temps total, le donut
+ * est une card sans titre, et les trois indicateurs que le mobile tasse en
+ * une phrase grise deviennent une card a part. Empiler les sections mobiles
+ * dans deux colonnes donnait des titres flottant hors des cards — la forme
+ * du handoff est le tableau de bord, pas la colonne coupee en deux.
+ */
+function DesktopBody({ view, period }: { view: StatsView; period: StatsPeriod }) {
+  const { t } = useTranslation()
+  const periodLabel = t(`stats.period.${period}` as 'stats.period.all')
+
+  const total = hours(view.totalMinutes)
+  const delta = view.previousMinutes === null ? null : total - hours(view.previousMinutes)
+
+  return (
+    <div className="mt-6 flex flex-col gap-4">
+      <div className="grid grid-cols-[1.4fr_1fr] gap-4">
+        <Card>
+          <p className="font-mono text-[10px] tracking-wide text-subtle">
+            {t('stats.totalLabel', { period: periodLabel.toUpperCase() })}
+          </p>
+
+          <div className="mt-2 flex items-baseline gap-3">
+            <span className="font-display text-[54px] font-bold leading-none text-gradient-action">
+              {t('stats.hours', { hours: total })}
+            </span>
+            {delta !== null && delta !== 0 && (
+              <span
+                className={`font-mono text-[11px] ${delta > 0 ? 'text-accent' : 'text-status-dropped'}`}
+              >
+                {t(delta > 0 ? 'stats.deltaUp' : 'stats.deltaDown', { hours: Math.abs(delta) })}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-[18px] flex gap-5">
+            <Legend
+              tone="text-status-seen"
+              label={t('stats.legendMovies', { hours: hours(view.movieMinutes) })}
+            />
+            <Legend
+              tone="text-accent"
+              label={t('stats.legendSeries', { hours: hours(view.seriesMinutes) })}
+            />
+          </div>
+
+          {/* La repartition est dans la card, pas en section separee : c'est
+              une lecture du meme total, pas un second sujet. */}
+          <div className="mt-5">
+            <Split view={view} />
+          </div>
+
+          {view.seriesWithoutRuntime > 0 && (
+            <p className="mt-2.5 font-mono text-[9.5px] text-subtle">
+              {t('stats.excludedRuntime', { count: view.seriesWithoutRuntime })}
+            </p>
+          )}
+          {view.progressExcludedByPeriod > 0 && (
+            <p className="mt-1.5 font-mono text-[9.5px] text-subtle">
+              {t('stats.excludedProgress', { count: view.progressExcludedByPeriod })}
+            </p>
+          )}
+        </Card>
+
+        {/* Card sans titre : le donut et sa legende se nomment eux-memes. */}
+        <Card>
+          <div className="flex h-full items-center gap-[18px]">
+            <Donut ratings={view.ratings} />
+            <div className="flex flex-col gap-2">
+              <Legend
+                tone="text-accent"
+                label={t('stats.good', { percent: share(view.ratings, 'good') })}
+              />
+              <Legend
+                tone="text-status-watch"
+                label={t('stats.mid', { percent: share(view.ratings, 'mid') })}
+              />
+              <Legend
+                tone="text-status-dropped"
+                label={t('stats.bad', { percent: share(view.ratings, 'bad') })}
+              />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-[1.4fr_1fr] items-start gap-4">
+        <Card>
+          <h2 className="mb-3.5 font-display text-[13px] font-semibold tracking-wide text-muted">
+            {t('stats.genresTitle')}
+          </h2>
+          {view.genres.length === 0 ? (
+            <p className="font-mono text-[10px] text-subtle">{t('stats.noGenres')}</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {view.genres.map((genre) => (
+                <div key={genre.name} className="flex items-center gap-2.5">
+                  <span className="w-[130px] flex-none truncate font-mono text-[10.5px] text-text">
+                    {genre.name}
+                  </span>
+                  <span className="h-1 flex-1 rounded-[2px] bg-border">
+                    <span
+                      className="block h-full rounded-[2px] bg-gradient-progress"
+                      style={{ width: `${genre.percent}%` }}
+                    />
+                  </span>
+                  <span className="w-9 flex-none text-right font-mono text-[10px] text-muted">
+                    {genre.percent}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {view.mediaWithoutGenres > 0 && (
+            <p className="mt-3 font-mono text-[9.5px] text-subtle">
+              {t('stats.excludedGenres', { count: view.mediaWithoutGenres })}
+            </p>
+          )}
+        </Card>
+
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-4">
+            <Tile value={view.counts.seen} label={t('stats.tileSeen')} tone="text-status-seen" />
+            <Tile value={view.counts.watching} label={t('stats.tileWatching')} tone="text-accent" />
+            <Tile
+              value={view.counts.favorites}
+              label={t('stats.tileFavorites')}
+              tone="text-gradient-action"
+            />
+          </div>
+
+          {/* Trois lignes nommees, la ou le mobile tasse tout en une phrase :
+              en desktop la place existe, et un chiffre sans son libelle ne se
+              relit pas. */}
+          <Card>
+            <p className="font-mono text-[10px] tracking-wide text-subtle">
+              {t('stats.otherTitle')}
+            </p>
+            <div className="mt-3 flex flex-col gap-2 font-mono text-[10.5px] text-muted">
+              <span>{t('stats.completionLine', { percent: view.completion ?? 0 })}</span>
+              <span>{t('stats.rewatchesLine', { count: view.rewatches })}</span>
+              <span>{t('stats.episodesLine', { count: view.episodesSeen })}</span>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** La card du systeme : surface translucide, bordure, rayon 14, padding 24. */
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="rounded-card border border-border bg-surface-translucent p-6">
+      {children}
+    </section>
   )
 }
 

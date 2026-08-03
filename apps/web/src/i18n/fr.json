@@ -1,7 +1,8 @@
 {
   "app": {
     "tagline": "Tout ce que tu regardes. Un seul log.",
-    "logoAlt": "Owlog"
+    "logoAlt": "Owlog",
+    "locale": "fr-FR"
   },
   "nav": {
     "home": "accueil",
@@ -46,7 +47,15 @@
     "empty": "Ta bibliothèque est vide",
     "emptyHint": "Cherche un titre ci-dessus : un tap sur + l'ajoute en « à voir ».",
     "emptyFilter": "Rien sous ce filtre",
-    "emptyFilterHint": "Aucun titre n'a ce statut pour l'instant."
+    "emptyFilterHint": "Aucun titre n'a ce statut pour l'instant.",
+    "colTitle": "TITRE",
+    "colType": "TYPE",
+    "colProgress": "PROGRESSION",
+    "colRating": "NOTE",
+    "colStatus": "STATUT",
+    "runtime": "{{hours}}h{{minutes}}",
+    "hintDesktop": "clic sur la pastille = statut suivant · clic droit = choisir · clic sur la ligne = page média",
+    "sortRecent": "› tri : activité récente"
   },
   "log": {
     "title": "LOG",
@@ -94,7 +103,11 @@
     "splitSeries_other": "séries {{percent}}% · {{count}} titres",
     "splitMovies_other": "films {{percent}}% · {{count}} titres",
     "excludedProgress": "{{count}} titre en cours hors du total : son avancement n'est daté que sur « tout »",
-    "excludedProgress_other": "{{count}} titres en cours hors du total : leur avancement n'est daté que sur « tout »"
+    "excludedProgress_other": "{{count}} titres en cours hors du total : leur avancement n'est daté que sur « tout »",
+    "otherTitle": "AUTRES INDICATEURS",
+    "completionLine": "complétion {{percent}}% · vus vs abandonnés",
+    "rewatchesLine": "revisionnages ×{{count}}",
+    "episodesLine": "épisodes vus {{count}}"
   },
   "notFound": {
     "title": "Page introuvable",

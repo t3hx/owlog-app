@@ -1,7 +1,8 @@
 {
   "app": {
     "tagline": "Everything you watch. One single log.",
-    "logoAlt": "Owlog"
+    "logoAlt": "Owlog",
+    "locale": "en-GB"
   },
   "nav": {
     "home": "home",
@@ -46,7 +47,15 @@
     "empty": "Your library is empty",
     "emptyHint": "Search for a title above: one tap on + adds it to « to watch ».",
     "emptyFilter": "Nothing under this filter",
-    "emptyFilterHint": "No title has this status yet."
+    "emptyFilterHint": "No title has this status yet.",
+    "colTitle": "TITLE",
+    "colType": "TYPE",
+    "colProgress": "PROGRESS",
+    "colRating": "RATING",
+    "colStatus": "STATUS",
+    "runtime": "{{hours}}h{{minutes}}",
+    "hintDesktop": "click the pill = next status · right-click = choose · click the row = media page",
+    "sortRecent": "› sort: recent activity"
   },
   "log": {
     "title": "LOG",
@@ -94,7 +103,11 @@
     "splitSeries_other": "series {{percent}}% · {{count}} titles",
     "splitMovies_other": "movies {{percent}}% · {{count}} titles",
     "excludedProgress": "{{count}} title in progress left out: its progress is only dated under « all »",
-    "excludedProgress_other": "{{count}} titles in progress left out: their progress is only dated under « all »"
+    "excludedProgress_other": "{{count}} titles in progress left out: their progress is only dated under « all »",
+    "otherTitle": "OTHER INDICATORS",
+    "completionLine": "completion {{percent}}% · seen vs dropped",
+    "rewatchesLine": "rewatches ×{{count}}",
+    "episodesLine": "episodes seen {{count}}"
   },
   "notFound": {
     "title": "Page not found",

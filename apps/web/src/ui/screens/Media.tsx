@@ -19,6 +19,7 @@ import { ProgressBar } from '@/ui/components/home/ProgressBar'
 import { EventText } from '@/ui/components/journal/EventText'
 import { StatusMenu } from '@/ui/components/library/StatusMenu'
 import { STATUS_CHIP, STATUSES } from '@/ui/components/status/statusStyle'
+import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useEpisodeTitle } from '@/ui/hooks/useEpisodeTitle'
 import { useLongPress } from '@/ui/hooks/useLongPress'
 import { useMedia } from '@/ui/hooks/useMedia'
@@ -44,6 +45,7 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
 
   const { state, cache, journal } = media
+  const desktop = useDesktop()
   const status = state?.status ?? 'absent'
   const poster = posterUrl(cache?.posterPath ?? null, 'w342')
   const backdrop = backdropUrl(cache?.backdropPath ?? null, 'w780')
@@ -79,11 +81,99 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
       : null
   const nextEpisodeTitle = useEpisodeTitle(mediaRef, nextRank)
 
+  /**
+   * Le CTA plein, unique et exclusif par statut — jamais deux à la fois.
+   *
+   * « vu » propose REVOIR ; « en cours » propose le geste du play adaptatif,
+   * épisode suivant sur un média à épisodes, marquer vu sur un film. Les
+   * autres statuts n'en ont aucun.
+   *
+   * Comme le journal, c'est un seul nœud monté à deux endroits : dans la
+   * rangée des notes en desktop (le mock 10c y aligne étoiles, ♥, CTA et note
+   * externe), sous elle en mobile où la ligne est déjà pleine.
+   */
+  const cta =
+    status === 'seen' ? (
+      <ActionCta
+        icon="↻"
+        label={t('media.rewatch')}
+        onTap={() => void media.watchAgain()}
+        desktop={desktop}
+      />
+    ) : status === 'watching' ? (
+      hasEpisodes(mediaRef) ? (
+        <ActionCta
+          icon="▸"
+          // Trois niveaux de précision, du plus dit au plus déduit : le label
+          // saisi (`S02E06`), le rang déduit du pourcentage (`ÉP. 4`), puis
+          // rien quand on ne sait rien.
+          label={
+            nextLabel !== null
+              ? t('media.nextEpisode', { label: nextLabel })
+              : nextNumber !== null
+                ? t('media.nextEpisodeNumber', { number: nextNumber })
+                : t('media.nextEpisodeUnknown')
+          }
+          onTap={() => tap(mediaRef, increment)}
+          desktop={desktop}
+        />
+      ) : (
+        <ActionCta
+          icon="✓"
+          label={t('media.markSeen')}
+          onTap={() => void markSeen(mediaRef)}
+          desktop={desktop}
+        />
+      )
+    ) : null
+
+  /**
+   * Le journal, monté à deux endroits selon le format.
+   *
+   * En mobile il ferme la colonne, sous les genres. Au-delà de 1024px il
+   * devient le panneau latéral de 330px du mock 10c : la fiche et son
+   * histoire se lisent alors ensemble, sans défilement de l'une pour
+   * atteindre l'autre. C'est le même nœud, jamais deux rendus à maintenir.
+   */
+  const journalBlock = (
+    <>
+      <h2
+        className={
+          desktop
+            ? 'mb-3 font-display text-[13px] font-semibold tracking-wide text-muted'
+            : 'mb-2.5 mt-6 font-display text-[13px] font-semibold tracking-wide text-muted'
+        }
+      >
+        {t('media.journal')}
+      </h2>
+
+      {/* Ligne synthétique du cycle en cours — arbitrage utilisateur du
+          2026-08-01 (option A) : les PROG restent exclus du journal (le
+          journal raconte les cycles), mais le dernier épisode vu se lit
+          ici, dérivé de la projection — une ligne, pas cinquante. */}
+      {status === 'watching' && lastEpisodeSeen !== null && (
+        <p className="mb-2 border-l border-border pl-2.5 font-mono text-[10.5px] text-muted">
+          {t('media.journalLastEpisode', { label: lastEpisodeSeen })}
+        </p>
+      )}
+
+      <Journal entries={journalOf(journal)} onCancel={(id) => void media.cancel(id)} />
+    </>
+  )
+
   return (
-    <div className="mx-auto max-w-md px-4 pb-8">
+    <div className={desktop ? '-mx-10 -mt-7 pb-8' : 'mx-auto max-w-md px-4 pb-8'}>
       {/* Coins arrondis dès le mobile : le prototype cadre le backdrop en
-          carte (rayon 14, léger retrait du haut), pas en pleine largeur. */}
-      <div className="relative mt-1.5 h-[190px] overflow-hidden rounded-card">
+          carte (rayon 14, léger retrait du haut), pas en pleine largeur.
+          En desktop le mock 10c le veut pleine largeur sur 250px — d'où la
+          sortie des marges du shell, qui n'a pas à connaître cet écran. */}
+      <div
+        className={
+          desktop
+            ? 'relative h-[250px] overflow-hidden'
+            : 'relative mt-1.5 h-[190px] overflow-hidden rounded-card'
+        }
+      >
         {backdrop ? (
           <img src={backdrop} alt="" crossOrigin="anonymous" className="size-full object-cover" />
         ) : (
@@ -116,11 +206,26 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
         </button>
       </div>
 
-      <div className="relative -mt-14 flex items-end gap-4 px-1.5">
-        <Poster src={poster} favorite={state?.favorite ?? false} />
+      <div className={desktop ? 'flex gap-10 px-10' : undefined}>
+      <div className={desktop ? 'min-w-0 flex-1' : undefined}>
+
+      <div
+        className={
+          desktop
+            ? 'relative -mt-[72px] flex items-end gap-6'
+            : 'relative -mt-14 flex items-end gap-4 px-1.5'
+        }
+      >
+        <Poster src={poster} favorite={state?.favorite ?? false} desktop={desktop} />
 
         <div className="flex min-w-0 flex-1 flex-col gap-1.5 pb-1">
-          <h1 className="font-display text-[21px] font-semibold leading-[1.15] text-text">
+          <h1
+            className={
+              desktop
+                ? 'font-display text-[30px] font-semibold leading-[1.1] text-text'
+                : 'font-display text-[21px] font-semibold leading-[1.15] text-text'
+            }
+          >
             {cache?.title ?? mediaRef}
           </h1>
           <p className="font-mono text-[10.5px] text-muted">{meta(cache, state, t)}</p>
@@ -186,6 +291,8 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
           )}
         </button>
 
+        {desktop && cta}
+
         {cache?.externalRatings.tmdb != null && (
           <span className="ml-auto font-mono text-[10px] text-subtle">
             {t('media.tmdb', { rating: cache.externalRatings.tmdb.toFixed(1) })}
@@ -202,48 +309,25 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
         </div>
       )}
 
-      {/* CTA plein unique, exclusif par statut — jamais deux à la fois.
-          « vu » propose REVOIR, « en cours » propose le geste du play
-          adaptatif : épisode suivant sur un média à épisodes, marquer vu
-          sur un film. Les autres statuts n'ont aucun CTA plein. */}
+      {/* En desktop le CTA est déjà monté dans la rangée des notes. Ne reste
+          ici que ce qui le commente — le rang du prochain visionnage, le
+          titre de l'épisode visé. */}
+      {!desktop && cta}
+
       {status === 'seen' && (
-        <>
-          <ActionCta icon="↻" label={t('media.rewatch')} onTap={() => void media.watchAgain()} />
-          <p className="mt-2 font-mono text-[9.5px] text-subtle">
-            {t('media.rewatchHint', { number: (state?.seenCount ?? 0) + 1 })}
-          </p>
-        </>
+        <p className="mt-2 font-mono text-[9.5px] text-subtle">
+          {t('media.rewatchHint', { number: (state?.seenCount ?? 0) + 1 })}
+        </p>
       )}
 
-      {status === 'watching' &&
-        (hasEpisodes(mediaRef) ? (
-          <>
-            <ActionCta
-              icon="▸"
-              // Trois niveaux de précision, du plus dit au plus déduit : le
-              // label saisi (`S02E06`), le rang déduit du pourcentage
-              // (`ÉP. 4`), puis rien quand on ne sait rien.
-              label={
-                nextLabel !== null
-                  ? t('media.nextEpisode', { label: nextLabel })
-                  : nextNumber !== null
-                    ? t('media.nextEpisodeNumber', { number: nextNumber })
-                    : t('media.nextEpisodeUnknown')
-              }
-              onTap={() => tap(mediaRef, increment)}
-            />
-            {/* Le titre de l'épisode que le CTA désigne — « Le retour » —
-                quand la saison est sue et le réseau d'accord. Absent sinon,
-                sans placeholder : rien n'est dû ici. */}
-            {nextEpisodeTitle !== null && (
-              <p className="mt-2 font-mono text-[10px] text-muted">
-                {t('media.nextEpisodeTitle', { title: nextEpisodeTitle })}
-              </p>
-            )}
-          </>
-        ) : (
-          <ActionCta icon="✓" label={t('media.markSeen')} onTap={() => void markSeen(mediaRef)} />
-        ))}
+      {/* Le titre de l'épisode que le CTA désigne — « Le retour » — quand la
+          saison est sue et le réseau d'accord. Absent sinon, sans
+          placeholder : rien n'est dû ici. */}
+      {status === 'watching' && hasEpisodes(mediaRef) && nextEpisodeTitle !== null && (
+        <p className="mt-2 font-mono text-[10px] text-muted">
+          {t('media.nextEpisodeTitle', { title: nextEpisodeTitle })}
+        </p>
+      )}
 
       {cache?.overview && (
         <p className="mt-[18px] max-w-[620px] text-[13.5px] leading-[1.55] text-muted">
@@ -264,21 +348,18 @@ export function Media({ ref: mediaRef }: { ref: MediaRef }) {
         </div>
       )}
 
-      <h2 className="mb-2.5 mt-6 font-display text-[13px] font-semibold tracking-wide text-muted">
-        {t('media.journal')}
-      </h2>
+      {!desktop && journalBlock}
 
-      {/* Ligne synthétique du cycle en cours — arbitrage utilisateur du
-          2026-08-01 (option A) : les PROG restent exclus du journal (le
-          journal raconte les cycles), mais le dernier épisode vu se lit
-          ici, dérivé de la projection — une ligne, pas cinquante. */}
-      {status === 'watching' && lastEpisodeSeen !== null && (
-        <p className="mb-2 border-l border-border pl-2.5 font-mono text-[10.5px] text-muted">
-          {t('media.journalLastEpisode', { label: lastEpisodeSeen })}
-        </p>
+      </div>
+
+      {desktop && (
+        <aside className="w-[330px] flex-none pt-6">
+          <div className="rounded-card border border-border bg-surface-translucent p-5">
+            {journalBlock}
+          </div>
+        </aside>
       )}
-
-      <Journal entries={journalOf(journal)} onCancel={(id) => void media.cancel(id)} />
+      </div>
     </div>
   )
 }
@@ -295,16 +376,25 @@ function ActionCta({
   icon,
   label,
   onTap,
+  desktop,
 }: {
   icon: string
   label: string
   onTap: () => void
+  desktop: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onTap}
-      className="mt-4 flex h-11 w-full max-w-[420px] items-center justify-center gap-2.5 rounded-action bg-gradient-action shadow-glow-strong"
+      // Pleine largeur en mobile, ou le pouce vise une bande ; ajuste au
+      // contenu en desktop (mock 10c : `padding: 0 26px`), ou une barre de
+      // 420px au milieu d'une colonne large ne se lit plus comme un bouton.
+      className={
+        desktop
+          ? 'mt-4 flex h-11 w-fit items-center justify-center gap-2.5 rounded-action bg-gradient-action px-[26px] shadow-glow-strong'
+          : 'mt-4 flex h-11 w-full max-w-[420px] items-center justify-center gap-2.5 rounded-action bg-gradient-action shadow-glow-strong'
+      }
     >
       <span className="text-base text-bg">{icon}</span>
       <span className="font-display text-[13px] font-semibold tracking-wide text-bg">{label}</span>
@@ -357,8 +447,19 @@ function SeasonsTile({ seasons, episodes }: { seasons: number | null; episodes: 
  * pas porter de dégradé directement. C'est la technique du handoff, et le
  * seul endroit non-action autorisé à utiliser le dégradé.
  */
-function Poster({ src, favorite }: { src: string | null; favorite: boolean }) {
-  const shape = 'h-36 w-24 flex-none rounded-poster object-cover shadow-poster'
+function Poster({
+  src,
+  favorite,
+  desktop,
+}: {
+  src: string | null
+  favorite: boolean
+  desktop: boolean
+}) {
+  // 150x225 et rayon 12 en desktop (mock 10c), 96x144 et rayon 10 en mobile.
+  const shape = desktop
+    ? 'h-[225px] w-[150px] flex-none rounded-[12px] object-cover shadow-poster'
+    : 'h-36 w-24 flex-none rounded-poster object-cover shadow-poster' 
 
   if (!favorite) {
     return src ? (

@@ -1,9 +1,10 @@
 import { posterUrl } from '@owlog/contracts'
 import { useTranslation } from 'react-i18next'
 
-import { episodesFromPercent, hasEpisodes, type MediaStateRow, type Status } from '@owlog/domain'
+import { episodesFromPercent, hasEpisodes, type MediaStateRow } from '@owlog/domain'
 import { ProgressBar } from '@/ui/components/home/ProgressBar'
-import { STATUS_CHIP, STATUS_GLYPH } from '@/ui/components/status/statusStyle'
+import { displayStatus, RowPoster, Stars, statusLabel } from '@/ui/components/library/rowParts'
+import { STATUS_CHIP } from '@/ui/components/status/statusStyle'
 import type { MediaCacheRow } from '@/ports/MediaCache'
 import { useLongPress } from '@/ui/hooks/useLongPress'
 
@@ -32,7 +33,7 @@ export interface LibraryRowProps {
 export function LibraryRow({ row, cache, onOpen, onCycle, onMenu }: LibraryRowProps) {
   const { t } = useTranslation()
   const poster = posterUrl(cache.posterPath, 'w185')
-  const status = row.status === 'absent' ? 'to-watch' : row.status
+  const status = displayStatus(row)
   const pillGestures = useLongPress(onMenu, onCycle)
 
   return (
@@ -42,7 +43,14 @@ export function LibraryRow({ row, cache, onOpen, onCycle, onMenu }: LibraryRowPr
         onClick={onOpen}
         className="flex min-w-0 flex-1 items-center gap-3 text-left"
       >
-        <RowPoster src={poster} favorite={row.favorite} />
+        <RowPoster
+          src={poster}
+          favorite={row.favorite}
+          shape="h-[72px] w-12 flex-none rounded-poster-sm"
+          innerRadius="rounded-[5px]"
+          width={48}
+          height={72}
+        />
 
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">
           <span className="w-full truncate text-sm font-semibold text-text">{cache.title}</span>
@@ -77,23 +85,10 @@ export function LibraryRow({ row, cache, onOpen, onCycle, onMenu }: LibraryRowPr
           STATUS_CHIP[status].on,
         ].join(' ')}
       >
-        {pill(row, status, t)}
+        {statusLabel(row, status, t)}
       </button>
     </div>
   )
-}
-
-/** `✓ vu ×3` plutôt que `✓ vu` : le compteur de visionnages est la thèse. */
-function pill(
-  row: MediaStateRow,
-  status: Status,
-  t: ReturnType<typeof useTranslation>['t'],
-): string {
-  if (status === 'seen' && row.seenCount > 0) {
-    return t('media.seenCount', { count: row.seenCount })
-  }
-
-  return `${STATUS_GLYPH[status]} ${t(`status.${status}` as 'status.to-watch')}`
 }
 
 function meta(
@@ -120,64 +115,4 @@ function meta(
   }
 
   return parts.join(' · ')
-}
-
-/**
- * Affiche de la rangée.
- *
- * Coup de cœur : liseré dégradé 1px + glow **sur l'affiche**, jamais sur la
- * card — la règle ♥ du handoff, identique à celle de la fiche média.
- */
-function RowPoster({ src, favorite }: { src: string | null; favorite: boolean }) {
-  const shape = 'h-[72px] w-12 flex-none rounded-poster-sm'
-
-  if (!favorite) {
-    return src ? (
-      <img
-        src={src}
-        alt=""
-        width={48}
-        height={72}
-        loading="lazy"
-        crossOrigin="anonymous"
-        className={`${shape} object-cover`}
-      />
-    ) : (
-      <span className={`${shape} bg-poster-placeholder`} />
-    )
-  }
-
-  return (
-    <span className={`${shape} border-gradient shadow-glow`}>
-      {src ? (
-        <img
-          src={src}
-          alt=""
-          width={48}
-          height={72}
-          loading="lazy"
-          crossOrigin="anonymous"
-          className="size-full rounded-[5px] object-cover"
-        />
-      ) : (
-        <span className="block size-full rounded-[5px] bg-poster-placeholder" />
-      )}
-    </span>
-  )
-}
-
-/**
- * Étoiles en lecture seule.
- *
- * Pleines en menthe, vides en `border-active` : c'est le rendu du handoff,
- * et le tapable reste sur la fiche. Une note qui se change depuis la liste
- * serait un geste à un tap d'erreur d'un statut.
- */
-function Stars({ value }: { value: number }) {
-  return (
-    <span className="text-[11px] tracking-[1.5px] text-accent">
-      {'★'.repeat(value)}
-      <span className="text-border-active">{'★'.repeat(5 - value)}</span>
-    </span>
-  )
 }
