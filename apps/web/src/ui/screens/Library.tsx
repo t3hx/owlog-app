@@ -5,8 +5,10 @@ import { useLocation } from 'wouter'
 import { filterLibrary, library, type LibraryFilter, type MediaStateRow, type MediaRef } from '@owlog/domain'
 import { FilterChips } from '@/ui/components/library/FilterChips'
 import { LibraryRow } from '@/ui/components/library/LibraryRow'
+import { LibraryTable } from '@/ui/components/library/LibraryTable'
 import { StatusMenu } from '@/ui/components/library/StatusMenu'
 import { Search } from '@/ui/components/search/Search'
+import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useStatusActions } from '@/ui/hooks/useStatusActions'
 import { usePorts } from '@/ui/PortsProvider'
 import { placeholderCacheRow, type MediaCacheRow } from '@/ports/MediaCache'
@@ -33,6 +35,7 @@ export function Library() {
   const [, navigate] = useLocation()
   const { live } = usePorts()
   const actions = useStatusActions()
+  const desktop = useDesktop()
 
   const [filter, setFilter] = useState<LibraryFilter>('all')
   const [menu, setMenu] = useState<MediaStateRow | null>(null)
@@ -50,16 +53,32 @@ export function Library() {
   const open = (ref: MediaRef) => navigate(`/media/${ref.replace('tmdb:', '')}`)
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-1 pt-6">
-      <Search context="filter">
-        <div className="px-5 pt-2">
-          <div className="flex items-baseline justify-between">
-            <h1 className="font-display text-[25px] font-semibold text-text">
+    <div className={desktop ? 'flex flex-col gap-1' : 'mx-auto flex max-w-md flex-col gap-1 pt-6'}>
+      <Search
+        context="filter"
+        aside={
+          <span className="pb-3 font-mono text-[11px] text-muted">
+            {t('library.count', { count: counts.all })} · {t('library.sortRecent')}
+          </span>
+        }
+      >
+        <div className={desktop ? undefined : 'px-5 pt-2'}>
+          {/* En desktop le titre est porté par la sidebar, qui marque l'onglet
+              actif : le répéter en tête de contenu ferait un doublon que le
+              mock 10b n'a pas. Il reste lisible aux lecteurs d'écran. */}
+          <div className={desktop ? undefined : 'flex items-baseline justify-between'}>
+            <h1
+              className={
+                desktop ? 'sr-only' : 'font-display text-[25px] font-semibold text-text'
+              }
+            >
               {t('library.title')}
             </h1>
-            <span className="font-mono text-[11px] text-muted">
-              {t('library.count', { count: counts.all })}
-            </span>
+            {!desktop && (
+              <span className="font-mono text-[11px] text-muted">
+                {t('library.count', { count: counts.all })}
+              </span>
+            )}
           </div>
 
           <FilterChips counts={counts} active={filter} onPick={setFilter} />
@@ -73,6 +92,14 @@ export function Library() {
                 {t(counts.all === 0 ? 'library.emptyHint' : 'library.emptyFilterHint')}
               </p>
             </div>
+          ) : desktop ? (
+            <LibraryTable
+              rows={rows}
+              cacheFor={cacheFor}
+              onOpen={open}
+              onCycle={(ref) => void actions.cycle(ref)}
+              onMenu={setMenu}
+            />
           ) : (
             <div className="mt-4 flex flex-col gap-2">
               {rows.map((row) => (

@@ -46,7 +46,15 @@
     "empty": "Your library is empty",
     "emptyHint": "Search for a title above: one tap on + adds it to « to watch ».",
     "emptyFilter": "Nothing under this filter",
-    "emptyFilterHint": "No title has this status yet."
+    "emptyFilterHint": "No title has this status yet.",
+    "colTitle": "TITLE",
+    "colType": "TYPE",
+    "colProgress": "PROGRESS",
+    "colRating": "RATING",
+    "colStatus": "STATUS",
+    "runtime": "{{hours}}h{{minutes}}",
+    "hintDesktop": "click the pill = next status · right-click = choose · click the row = media page",
+    "sortRecent": "› sort: recent activity"
   },
   "log": {
     "title": "LOG",

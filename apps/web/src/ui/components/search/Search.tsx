@@ -5,6 +5,7 @@ import { BackdateSheet } from '@/ui/components/search/BackdateSheet'
 import { PendingQueue } from '@/ui/components/search/PendingQueue'
 import { SearchBar } from '@/ui/components/search/SearchBar'
 import { SearchResults } from '@/ui/components/search/SearchResults'
+import { useDesktop } from '@/ui/hooks/useDesktop'
 import { usePorts } from '@/ui/PortsProvider'
 import type { PendingAdd } from '@/ports/PendingAdds'
 import { useBackdate } from '@/ui/hooks/useBackdate'
@@ -25,9 +26,19 @@ export type SearchMode = 'add' | 'log'
 
 export function Search({
   context,
+  aside,
   children,
 }: {
   context: 'add' | 'filter'
+  /**
+   * Ligne d'information posée à droite de la barre, en desktop seulement.
+   *
+   * Les mocks 10a et 10b la montrent tous deux : la barre tient 520px à
+   * gauche, et l'écran pose à sa droite ce qu'il a à dire — la date et les
+   * compteurs pour l'accueil, le nombre de titres pour la bibliothèque. En
+   * mobile elle n'a pas de place et n'est pas rendue.
+   */
+  aside?: React.ReactNode
   /** Contenu de l'écran, masqué pendant une recherche. */
   children: React.ReactNode
 }) {
@@ -43,6 +54,7 @@ export function Search({
   // été résolue, et il faudrait l'abandonner à la main.
   const [resolving, setResolving] = useState<PendingAdd | null>(null)
   const { state, retry } = useSearch(query, scope)
+  const desktop = useDesktop()
 
   const searching = query.trim().length > 0
 
@@ -55,13 +67,28 @@ export function Search({
 
   return (
     <>
-      <SearchBar
-        value={query}
-        onChange={changeQuery}
-        scope={scope}
-        onScopeChange={setScope}
-        context={context}
-      />
+      {desktop ? (
+        <div className="flex items-end justify-between gap-6">
+          <div className="w-[520px] flex-none">
+            <SearchBar
+              value={query}
+              onChange={changeQuery}
+              scope={scope}
+              onScopeChange={setScope}
+              context={context}
+            />
+          </div>
+          {aside}
+        </div>
+      ) : (
+        <SearchBar
+          value={query}
+          onChange={changeQuery}
+          scope={scope}
+          onScopeChange={setScope}
+          context={context}
+        />
+      )}
 
       {context === 'add' && <ModeSwitch mode={mode} onChange={setMode} />}
 
