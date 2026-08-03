@@ -207,7 +207,7 @@ describe('profil complet', () => {
   it('borne les affiches sans mentir sur le compteur', () => {
     // La tuile `♥ N` dit combien il y en a, la section montre ce qui tient.
     // Confondre les deux ferait dire au profil qu on a 24 coups de coeur.
-    const entries = Array.from({ length: 30 }, (unused, index) => {
+    const entries = Array.from({ length: 30 }, (_, index) => {
       const ref = `tmdb:movie/${100 + index}` as MediaRef
       const f = createFactory(ref)
       return { ref, events: [f.watch(), f.fav()], media: FILM }
@@ -224,7 +224,7 @@ describe('profil complet', () => {
     // Tronquer sans ordonner rendrait une selection instable : la meme
     // bibliotheque montrerait des affiches differentes selon l ordre de
     // lecture de la base.
-    const entries = Array.from({ length: 30 }, (unused, index) => {
+    const entries = Array.from({ length: 30 }, (_, index) => {
       const ref = `tmdb:movie/${200 + index}` as MediaRef
       const f = createFactory(ref)
       return { ref, events: [f.watch(), f.fav()], media: FILM }
