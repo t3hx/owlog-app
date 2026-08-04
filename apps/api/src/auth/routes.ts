@@ -10,6 +10,7 @@ import { clientIp } from '../clientIp.ts'
 import type { Config } from '../config.ts'
 import type { Mailer } from '../mail/mailer.ts'
 import { loginEmail } from './emailTemplates.ts'
+import { createOAuthRoutes } from './oauth.ts'
 
 /**
  * Authentification par lien magique + code court.
@@ -37,6 +38,11 @@ export interface AuthDeps {
   readonly pool: () => Pool
   readonly mailer: Mailer
   readonly config: Config
+  /**
+   * `fetch` des appels sortants vers les fournisseurs OAuth. Injectable :
+   * les tests ne doivent joindre ni Google ni GitHub.
+   */
+  readonly oauthFetch?: typeof fetch
 }
 
 export const SESSION_COOKIE = 'owlog_session'
@@ -288,6 +294,33 @@ export function createAuthRoutes(deps: AuthDeps) {
     const response: VerifyResponse = { user: toAuthUser(updated.rows[0]!) }
     return c.json(response)
   })
+
+  /**
+   * Connexion par fournisseur tiers.
+   *
+   * Montée sous `/auth` et non à côté : elle hérite ainsi du jeton partagé
+   * et de la garde de base de données du groupe. Le point d'entrée de
+   * l'identité reste unique — `signIn` passe par le même `ensureUser` et le
+   * même `openSession` que le code à six chiffres, si bien qu'un compte
+   * créé par Google est un compte ordinaire, sans branche à part.
+   */
+  auth.route(
+    '/oauth',
+    createOAuthRoutes({
+      pool: deps.pool,
+      config,
+      ...(deps.oauthFetch ? { fetchImpl: deps.oauthFetch } : {}),
+      signIn: async (c, email) => {
+        const pool = deps.pool()
+        const user = await ensureUser(pool, email)
+        await openSession(c, pool, user.id)
+        const response: VerifyResponse = { user: publicUser(user) }
+        return c.json(response)
+      },
+      audit,
+      requestIp: (c) => requestIp(c, config),
+    }),
+  )
 
   auth.post('/logout', async (c) => {
     const pool = deps.pool()

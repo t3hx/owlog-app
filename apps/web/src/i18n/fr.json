@@ -304,7 +304,12 @@
     "errorLocked": "trop d'essais : ce code est verrouillé. Redemande un e-mail.",
     "errorRateLimited": "trop de demandes — patiente un peu avant de réessayer.",
     "errorOffline": "hors-ligne — reconnecte-toi au réseau et réessaie.",
-    "errorUnavailable": "le service ne répond pas. Réessaie dans un instant."
+    "errorUnavailable": "le service ne répond pas. Réessaie dans un instant.",
+    "continueWith": {
+      "google": "continuer avec Google",
+      "github": "continuer avec GitHub"
+    },
+    "or": "ou"
   },
   "loginLink": {
     "eyebrow": "// CONNEXION",
@@ -408,5 +413,12 @@
     "activityEmpty": "rien à raconter pour l'instant",
     "unknown": "utilisateur introuvable",
     "backToFriends": "retour aux amis"
+  },
+  "loginOauth": {
+    "pending": "connexion en cours…",
+    "failedTitle": "connexion impossible",
+    "failedBody": "le fournisseur a refusé la connexion. Réessaie, ou passe par ton e-mail.",
+    "unverified": "ton adresse n'est pas vérifiée chez ce fournisseur. Vérifie-la chez lui, puis réessaie — ou connecte-toi par e-mail.",
+    "back": "retour à la connexion"
   }
 }

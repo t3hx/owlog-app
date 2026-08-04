@@ -304,7 +304,12 @@
     "errorLocked": "too many attempts: this code is locked. Request a new email.",
     "errorRateLimited": "too many requests — wait a moment before retrying.",
     "errorOffline": "offline — get back on the network and retry.",
-    "errorUnavailable": "the service is not responding. Try again shortly."
+    "errorUnavailable": "the service is not responding. Try again shortly.",
+    "continueWith": {
+      "google": "continue with Google",
+      "github": "continue with GitHub"
+    },
+    "or": "or"
   },
   "loginLink": {
     "eyebrow": "// SIGN IN",
@@ -408,5 +413,12 @@
     "activityEmpty": "nothing to tell yet",
     "unknown": "user not found",
     "backToFriends": "back to friends"
+  },
+  "loginOauth": {
+    "pending": "signing in…",
+    "failedTitle": "sign-in failed",
+    "failedBody": "the provider refused the sign-in. Try again, or use your e-mail.",
+    "unverified": "your address isn't verified with that provider. Verify it there and try again — or sign in by e-mail.",
+    "back": "back to sign-in"
   }
 }

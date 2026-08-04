@@ -5,6 +5,7 @@ import { useLocation } from 'wouter'
 import type { Language } from '@/i18n'
 import type { AuthFailure } from '@/ports/AuthGateway'
 import { Logo } from '@/ui/components/Logo'
+import { OAuthButtons } from '@/ui/components/OAuthButtons'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { usePorts } from '@/ui/PortsProvider'
 import { useSession } from '@/ui/session/SessionProvider'
@@ -12,9 +13,12 @@ import { useSession } from '@/ui/session/SessionProvider'
 /**
  * Connexion — écran 2 du handoff, deux phases d'une même card.
  *
- * Les boutons OAuth du prototype sont MASQUÉS (différés, décision D2) : la
- * card se re-centre sur l'e-mail, et la section providers est exclue du
- * critère de conformité.
+ * Les fournisseurs sont Google et GitHub (gate D1.4) — ni Apple ni Discord,
+ * que montrait le prototype. Ils vivent AU-DESSUS du champ e-mail, séparés
+ * par un `ou` : l'OAuth est le chemin court, l'e-mail le chemin universel.
+ * Sans secrets côté serveur, aucun bouton n'est rendu et la card se
+ * re-centre sur l'e-mail — l'état de tout déploiement qui n'a pas encore
+ * posé ses identifiants.
  *
  * Même card, deuxième état — pas une navigation : une route dédiée au code
  * perdrait l'adresse saisie, et l'utilisateur doit voir OÙ le code est
@@ -141,6 +145,10 @@ export function Login() {
             <Logo className="h-56" />
             <p className="mt-2 font-mono text-[11px] text-muted">{t('login.tagline')}</p>
           </div>
+
+          {phase === 'email' && (
+            <OAuthButtons onFailed={() => setFailure({ kind: 'unavailable' })} />
+          )}
 
           {phase === 'email' ? (
             <form onSubmit={submitEmail} className="mt-7 flex flex-col gap-3">

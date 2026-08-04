@@ -11,6 +11,7 @@
  * recherche et de détail chez TMDB.
  */
 
+export * from './oauth.ts'
 export * from './pseudo.ts'
 export * from './social.ts'
 export * from './sync.ts'
@@ -161,6 +162,16 @@ export type ApiErrorCode =
    * (`social.md` §3). Un 400 générique n'aurait pas su où conduire.
    */
   | 'pseudo-required'
+  /**
+   * Connexion par fournisseur refusee : e-mail non verifie chez le
+   * fournisseur, ou fournisseur qui refuse la liaison.
+   *
+   * Distinct d'`auth-invalid` : ce n'est pas un secret faux mais une
+   * condition non remplie, et l'ecran doit dire QUOI FAIRE — « verifie ton
+   * e-mail chez GitHub puis reessaie » — la ou `auth-invalid` ne dit que
+   * « recommence ».
+   */
+  | 'oauth-unverified-email'
 
 /** Ce que le serveur sait d'un compte connecté. */
 export interface AuthUser {

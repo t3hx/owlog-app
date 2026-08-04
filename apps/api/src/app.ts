@@ -37,6 +37,8 @@ export interface AppOptions {
   readonly db?: Pick<Db, 'status' | 'refresh' | 'pool'>
   /** Injectable pour les tests. Sans fournisseur configuré : la console. */
   readonly mailer?: Mailer
+  /** Injectable pour les tests : les appels sortants vers Google et GitHub. */
+  readonly oauthFetch?: typeof fetch
 }
 
 /** Langue par défaut si le client n'en demande pas. */
@@ -152,6 +154,7 @@ export function createApp(options: AppOptions) {
       pool: () => options.db!.pool,
       mailer: options.mailer ?? createConsoleMailer(),
       config,
+      ...(options.oauthFetch ? { oauthFetch: options.oauthFetch } : {}),
     }),
   )
 
