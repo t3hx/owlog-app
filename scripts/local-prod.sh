@@ -87,11 +87,48 @@ tmdb_token_from_doppler() {
   doppler secrets get TMDB_API_TOKEN --plain
 }
 
+# Les couples OAuth, s'ils existent dans la config `dev`.
+#
+# **Optionnels, et par couple** — même règle qu'au démarrage du service : un
+# identifiant sans son secret ferait échouer le boot, ce qui est voulu en
+# production mais transformerait ici un réglage incomplet en pile qui ne
+# démarre pas. Absents des deux côtés, aucun bouton n'est offert, et c'est
+# l'état nominal de ce script.
+#
+# Sans ce passage, la connexion par fournisseur n'était **pas testable
+# ailleurs qu'en production** : le conteneur reçoit une liste explicite de
+# variables, et poser les secrets dans Doppler ne suffisait pas à les lui
+# faire voir. Redémarrer l'API ne changeait rien — le symptôme ressemblait à
+# un défaut de code alors que la cause était dans ce fichier.
+#
+# La config lue est `dev`, jamais `prd` (voir le commentaire ci-dessus) :
+# l'URI de redirection locale est `http://localhost:8080/login/oauth/…`, elle
+# doit être déclarée dans la console à côté de celle de production, et rien
+# n'oblige à partager le même client entre les deux.
+OAUTH_ARGS=()
+
+collect_oauth_from_doppler() {
+  local provider id_name secret_name id secret
+
+  for provider in GOOGLE GITHUB; do
+    id_name="${provider}_OAUTH_CLIENT_ID"
+    secret_name="${provider}_OAUTH_CLIENT_SECRET"
+    id="$(doppler secrets get "$id_name" --plain 2>/dev/null || true)"
+    secret="$(doppler secrets get "$secret_name" --plain 2>/dev/null || true)"
+
+    if [ -n "$id" ] && [ -n "$secret" ]; then
+      OAUTH_ARGS+=(-e "$id_name=$id" -e "$secret_name=$secret")
+      echo "  fournisseur OAuth configuré : $(echo "$provider" | tr '[:upper:]' '[:lower:]')"
+    fi
+  done
+}
+
 # --- Commandes --------------------------------------------------------------
 
 up() {
   local tmdb_token
   tmdb_token="$(tmdb_token_from_doppler)"
+  collect_oauth_from_doppler
 
   echo "▸ construction des images"
   docker build -q -f "$ROOT/apps/api/Dockerfile" -t "$API_IMAGE" "$ROOT" >/dev/null
@@ -136,6 +173,7 @@ up() {
     -e OWLOG_TRUSTED_PROXIES="$subnet" \
     -e DATABASE_URL="postgresql://postgres:$PG_PASSWORD@$PG_NAME:5432/owlog" \
     -e OWLOG_PUBLIC_ORIGIN="http://localhost:$PORT" \
+    ${OAUTH_ARGS[@]+"${OAUTH_ARGS[@]}"} \
     "$API_IMAGE" >/dev/null
 
   docker run -d --name "$WEB_NAME" --network "$NETWORK" "$WEB_IMAGE" >/dev/null
@@ -186,6 +224,7 @@ refresh() {
 
   local tmdb_token
   tmdb_token="$(tmdb_token_from_doppler)"
+  collect_oauth_from_doppler
 
   echo "▸ reconstruction des images (la base est préservée)"
   docker build -q -f "$ROOT/apps/api/Dockerfile" -t "$API_IMAGE" "$ROOT" >/dev/null
@@ -208,6 +247,7 @@ refresh() {
     -e OWLOG_TRUSTED_PROXIES="$subnet" \
     -e DATABASE_URL="postgresql://postgres:$PG_PASSWORD@$PG_NAME:5432/owlog" \
     -e OWLOG_PUBLIC_ORIGIN="http://localhost:$PORT" \
+    ${OAUTH_ARGS[@]+"${OAUTH_ARGS[@]}"} \
     "$API_IMAGE" >/dev/null
 
   docker run -d --name "$WEB_NAME" --network "$NETWORK" "$WEB_IMAGE" >/dev/null
