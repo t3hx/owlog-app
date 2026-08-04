@@ -236,6 +236,22 @@ Ajoutés au temps 2 (tous optionnels : sans eux, l'API reste le proxy TMDB du te
 | `OWLOG_EMAIL_API_URL` | `owlog-api` | Endpoint du fournisseur (défaut : Resend) |
 | `OWLOG_EMAIL_FROM` | `owlog-api` | Expéditeur, `Owlog <no-reply@…>` |
 
+Ajoutés au temps 3 pour la connexion par fournisseur (optionnels, **par
+couple** : un identifiant sans son secret fait échouer le démarrage plutôt
+que de désactiver le fournisseur en silence — la moitié d'une configuration
+est une faute de frappe, jamais une intention) :
+
+| Nom | Où | Rôle |
+|---|---|---|
+| `GOOGLE_OAUTH_CLIENT_ID` | `owlog-api` | Identifiant client Google. Absent : le bouton Google n'est pas rendu |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | `owlog-api` | Secret client Google. Ne quitte jamais le serveur |
+| `GITHUB_OAUTH_CLIENT_ID` | `owlog-api` | Identifiant client GitHub. Absent : le bouton GitHub n'est pas rendu |
+| `GITHUB_OAUTH_CLIENT_SECRET` | `owlog-api` | Secret client GitHub. Ne quitte jamais le serveur |
+
+`OWLOG_PUBLIC_ORIGIN` devient **obligatoire dès qu'un fournisseur est
+configuré** : elle compose l'URI de redirection déclarée dans les consoles,
+et un écart d'un caractère fait échouer l'autorisation avant que le service
+soit appelé.
 
 `OWLOG_TRUSTED_PROXIES` n'est pas optionnel en production : sans cette liste, le service refuse de croire les en-têtes d'IP et limite tout le monde sur l'adresse du proxy. Le premier utilisateur qui dépasse coupe alors le service pour tous.
 
@@ -263,7 +279,9 @@ Pièges connus : `Cache-Control: no-cache` sur `index.html` et `immutable` sur l
 
 `**pnpm dev` ne prouve rien de ce qui casse en production.** Il sert des modules non groupés, sans service worker, sans Caddy, sans préfixe de montage — c'est-à-dire sans aucune des pièces qui ont produit les pannes de déploiement de ce projet. Le script construit les vraies images depuis les vrais `Dockerfile` et les fait tourner dans la vraie topologie : une seule origine, `owlog-web` à la racine, `owlog-api` sous `/api`, derrière un Caddy frontal qui tient le rôle du tunnel.
 
-`check` vérifie huit choses invisibles en développement, dont chacune a déjà coûté un cycle de déploiement : le rewrite SPA sur une route interne, `no-cache` sur `index.html` et sur le service worker, `immutable` sur les assets hachés, la sonde de l'API sous son préfixe, le fait qu'une navigation vers `/api` rende du JSON et non l'application, et l'absence de jeton TMDB dans le bundle.
+`check` vérifie quatorze choses invisibles en développement, dont chacune a déjà coûté — ou aurait coûté — un cycle de déploiement : le rewrite SPA sur une route interne **et sur le retour d'un fournisseur OAuth**, qui est une entrée externe atteinte à froid ; `no-cache` sur `index.html` et sur le service worker ; `immutable` sur les assets hachés ; la sonde de l'API sous son préfixe ; le fait qu'une navigation vers `/api` rende du JSON et non l'application ; l'absence de jeton TMDB et de secret e-mail dans le bundle ; la migration de la base au démarrage ; et le refus des routes de session sans session.
+
+Le compte est donné ici parce qu'il se vérifie : `check` imprime une ligne par contrôle. Un écart entre ce paragraphe et la sortie du script est un défaut de revue, pas un détail.
 
 **À lancer avant tout déploiement, et après toute modification touchant au routage, aux en-têtes, au service worker ou aux arguments de build.**
 

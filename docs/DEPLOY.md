@@ -351,6 +351,43 @@ dépannage :
 | `OWLOG_EMAIL_API_URL` | endpoint du fournisseur (défaut : Resend) |
 | `OWLOG_EMAIL_FROM` | expéditeur, `Owlog <no-reply@…>` |
 
+## Connexion par fournisseur (Google, GitHub)
+
+Optionnelle : sans secrets, l'écran de connexion ne rend aucun bouton et la
+card se re-centre sur l'e-mail. Rien à faire pour mettre en ligne sans elle.
+
+**Ce qui se fait dans les consoles, une fois.** L'URI de redirection vise le
+**web**, jamais l'API : le callback est une navigation, il ne peut pas
+porter le jeton partagé qu'exige `/api/auth/*`.
+
+| Console | À créer | URI de redirection à déclarer |
+|---|---|---|
+| [Google Cloud](https://console.cloud.google.com/apis/credentials) → *Identifiants* → *ID client OAuth* → **Application Web** | un client OAuth | `https://owlog.nspace.link/login/oauth/google` |
+| [GitHub](https://github.com/settings/developers) → *OAuth Apps* → **New OAuth App** | une app OAuth | `https://owlog.nspace.link/login/oauth/github` |
+
+Chez Google, l'écran de consentement demande les portées `openid` et
+`email` — rien de plus : le produit ne lit que l'adresse, et une portée
+supplémentaire serait une permission demandée pour rien. Chez GitHub, les
+portées sont `read:user` et `user:email` ; la seconde est indispensable,
+c'est elle qui donne accès à `/user/emails`, **le seul endroit où GitHub
+atteste qu'une adresse est vérifiée** (le champ `email` du profil est
+public, modifiable et non vérifié).
+
+Les quatre valeurs vont ensuite dans Doppler, config `prd` :
+
+```bash
+doppler secrets set GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET \
+  GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET --config prd
+```
+
+Puis **redémarrer le conteneur** `owlog-api` — les secrets sont lus au
+démarrage. Aucune reconstruction d'image : rien de tout cela n'entre dans
+le bundle web, qui ne connaît que `/api/auth/oauth/*`.
+
+Vérification : `GET /api/auth/oauth/providers` doit lister les fournisseurs
+posés. Une liste vide après redémarrage veut dire que Doppler n'a pas servi
+les valeurs, pas que le code les ignore.
+
 ### Rotation du jeton
 
 À faire **au moindre doute** (jeton aperçu dans un log, un écran partagé,

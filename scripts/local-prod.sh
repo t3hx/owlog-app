@@ -263,6 +263,20 @@ check() {
   expect "une route interne sert index.html" 200 \
     "$(curl -s -o /dev/null -w '%{http_code}' "$base/library")"
 
+  # Le retour d'un fournisseur OAuth est une entrée EXTERNE dans la SPA : le
+  # navigateur y arrive par une redirection, à froid, sans passer par
+  # l'application. Si la réécriture ne couvre pas ce chemin, la connexion par
+  # Google casse en production et nulle part ailleurs — `pnpm dev` sert
+  # toutes les routes, il ne peut pas révéler ce trou.
+  expect "le retour d'un fournisseur sert l'app" 200 \
+    "$(curl -s -o /dev/null -w '%{http_code}' "$base/login/oauth/google?code=x&state=y")"
+
+  # Sans secrets de fournisseur, aucun bouton n'est offert. Ce n'est pas
+  # qu'une préférence d'écran : la liste est servie par l'API, et une liste
+  # non vide sans secrets signifierait qu'un bouton mène à une impasse.
+  expect "les fournisseurs offerts sont ceux qui sont configurés" '"providers"' \
+    "$(curl -s -H "x-owlog-token: $SHARED_TOKEN" "$base/api/auth/oauth/providers" | grep -o '"providers"')"
+
   # Sans `no-cache`, le navigateur garde l'ancien document, qui référence
   # l'ancien bundle : le déploiement n'atteint jamais les clients existants.
   expect "index.html n'est pas mis en cache" "no-cache" \

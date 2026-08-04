@@ -37,6 +37,8 @@ export function fakePorts(overrides: {
   onAppend?: (produced: readonly StoredEvent[]) => void
   /** Remplace `catalog.detail`, pour affirmer qu'un rafraîchissement part — ou pas. */
   detail?: MediaCatalog['detail']
+  /** Remplace des appels d'authentification, pour les ecrans de connexion. */
+  auth?: Partial<Ports['auth']>
   /**
    * Ce que les surfaces sociales rendent. Partiel : un test ne fournit que
    * les appels que son écran fait, le reste reste hors-ligne — le défaut le
@@ -133,6 +135,13 @@ export function fakePorts(overrides: {
         },
       }),
     logout: () => Promise.resolve({ ok: true, value: undefined }),
+    // Aucun fournisseur par defaut : l'ecran de connexion se rend alors
+    // sans bouton, ce qui est l'etat d'un deploiement sans secrets OAuth.
+    oauthProviders: () => Promise.resolve({ ok: true, value: [] }),
+    oauthBegin: () => Promise.resolve({ ok: false, failure: { kind: 'unavailable' } }),
+    oauthComplete: () =>
+      Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null, pseudo: null } }),
+    ...overrides.auth,
   }
 
   const social: Ports['social'] = {

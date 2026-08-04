@@ -42,6 +42,7 @@ const CONFIG: Config = {
   databaseUrl: undefined,
   publicOrigin: 'https://owlog.test',
   email: undefined,
+  oauth: {},
 }
 
 const IP = '203.0.113.7'

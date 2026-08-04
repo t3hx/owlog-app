@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'wouter'
+import { useLocation, useSearchParams } from 'wouter'
 
 import type { Language } from '@/i18n'
 import type { AuthFailure } from '@/ports/AuthGateway'
 import { Logo } from '@/ui/components/Logo'
+import { OAuthButtons } from '@/ui/components/OAuthButtons'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { usePorts } from '@/ui/PortsProvider'
 import { useSession } from '@/ui/session/SessionProvider'
@@ -12,9 +13,12 @@ import { useSession } from '@/ui/session/SessionProvider'
 /**
  * Connexion — écran 2 du handoff, deux phases d'une même card.
  *
- * Les boutons OAuth du prototype sont MASQUÉS (différés, décision D2) : la
- * card se re-centre sur l'e-mail, et la section providers est exclue du
- * critère de conformité.
+ * Les fournisseurs sont Google et GitHub (gate D1.4) — ni Apple ni Discord,
+ * que montrait le prototype. Ils vivent AU-DESSUS du champ e-mail, séparés
+ * par un `ou` : l'OAuth est le chemin court, l'e-mail le chemin universel.
+ * Sans secrets côté serveur, aucun bouton n'est rendu et la card se
+ * re-centre sur l'e-mail — l'état de tout déploiement qui n'a pas encore
+ * posé ses identifiants.
  *
  * Même card, deuxième état — pas une navigation : une route dédiée au code
  * perdrait l'adresse saisie, et l'utilisateur doit voir OÙ le code est
@@ -37,11 +41,19 @@ export function Login() {
   const session = useSession()
   const [, navigate] = useLocation()
 
+  const [params] = useSearchParams()
   const [phase, setPhase] = useState<'email' | 'code'>('email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
-  const [failure, setFailure] = useState<AuthFailure | null>(null)
+  const [failure, setFailure] = useState<AuthFailure | null>(
+    // Un retour de fournisseur refusé revient ICI, en phase e-mail, avec son
+    // encart — `social.md` §5. Le motif est porté par l'URL parce que
+    // `wouter` n'a pas d'état de route : c'est une navigation complète, et
+    // rien de sensible ne transite (le code d'autorisation, lui, n'a jamais
+    // quitté l'écran de retour).
+    oauthFailureOf(new URLSearchParams(window.location.search).get('oauth')),
+  )
   const [resendIn, setResendIn] = useState(0)
 
   // La microcopie « union assumée » ne s'affiche que si des données
@@ -50,6 +62,13 @@ export function Login() {
   const hasLocalData = firstName !== undefined
 
   const codeField = useRef<HTMLInputElement>(null)
+
+  // Le motif quitte l'URL une fois lu : recharger la page ne doit pas
+  // rejouer une erreur déjà comprise, et l'adresse doit rester partageable.
+  useEffect(() => {
+    if (params.get('oauth') === null) return
+    navigate('/login', { replace: true })
+  }, [navigate, params])
 
   useEffect(() => {
     if (resendIn <= 0) return
@@ -141,6 +160,10 @@ export function Login() {
             <Logo className="h-56" />
             <p className="mt-2 font-mono text-[11px] text-muted">{t('login.tagline')}</p>
           </div>
+
+          {phase === 'email' && (
+            <OAuthButtons onFailed={() => setFailure({ kind: 'unavailable' })} />
+          )}
 
           {phase === 'email' ? (
             <form onSubmit={submitEmail} className="mt-7 flex flex-col gap-3">
@@ -253,6 +276,20 @@ export function Login() {
  * Jamais de rouge — c'est la couleur du statut « abandonné », une couleur
  * de donnée, pas d'alarme.
  */
+/**
+ * Traduit le motif porté par l'URL en échec d'écran.
+ *
+ * Deux motifs seulement, et ils suffisent : l'adresse non vérifiée, qui a
+ * son message d'action, et tout le reste — refus du fournisseur, état
+ * anti-CSRF qui ne correspond pas, service muet. Détailler davantage
+ * apprendrait au visiteur ce qui a échoué côté serveur sans rien lui
+ * permettre de réparer.
+ */
+function oauthFailureOf(reason: string | null): AuthFailure | null {
+  if (reason === null) return null
+  return reason === 'unverified' ? { kind: 'oauth-unverified-email' } : { kind: 'unavailable' }
+}
+
 function FailureNote({ failure }: { failure: AuthFailure | null }) {
   const { t } = useTranslation()
   if (failure === null) return null
@@ -270,6 +307,13 @@ function FailureNote({ failure }: { failure: AuthFailure | null }) {
       case 'offline':
         return t('login.errorOffline')
       case 'unavailable':
+        return t('login.errorUnavailable')
+      case 'oauth-unverified-email':
+        // Le seul message de cet écran qui dit QUOI FAIRE plutôt que
+        // « recommence » : la condition manquante se répare chez le
+        // fournisseur, et personne ne le devine.
+        return t('loginOauth.unverified')
+      default:
         return t('login.errorUnavailable')
     }
   })()

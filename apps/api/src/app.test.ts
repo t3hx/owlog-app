@@ -27,6 +27,7 @@ const CONFIG: Config = {
   databaseUrl: undefined,
   publicOrigin: undefined,
   email: undefined,
+  oauth: {},
 }
 
 const HIT: SearchResponse = {
