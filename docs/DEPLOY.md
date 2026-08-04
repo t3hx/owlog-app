@@ -402,18 +402,27 @@ plus — chacune a déjà fait croire à une panne :
      GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET --config dev
    ```
 
-2. **L'URI de redirection locale doit être déclarée dans les consoles**, à
-   côté de celle de production — l'origine change, donc l'URI change :
+2. **L'URI de redirection locale doit exister côté fournisseur**, et les
+   deux consoles ne s'y prennent pas de la même façon — l'origine change,
+   donc l'URI change :
 
-   | Console | À ajouter |
+   | Console | Comment |
    |---|---|
-   | Google Cloud | `http://localhost:8080/login/oauth/google` |
-   | GitHub | `http://localhost:8080/login/oauth/github` |
+   | Google Cloud | **ajouter** `http://localhost:8080/login/oauth/google` aux *URI de redirection autorisés* du client existant |
+   | GitHub | **créer une seconde OAuth App**, callback `http://localhost:8080/login/oauth/github` |
 
-   Google accepte plusieurs URI de redirection par client ; GitHub en accepte
-   [jusqu'à dix par app](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/about-the-user-authorization-callback-url).
-   Aucun second client à créer, sauf si vous préférez séparer les
-   environnements — ce que rien n'impose ici.
+   La dissymétrie n'est pas un oubli. Un client Google porte une liste d'URI
+   de redirection ; une **OAuth App GitHub n'a qu'un seul champ**, et le
+   `redirect_uri` d'une requête doit partager
+   [le même hôte ET le même port](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
+   que lui — `localhost:8080` ne peut donc jamais correspondre au domaine de
+   production. (Les *GitHub Apps*, elles, acceptent dix URL ; ce n'est pas ce
+   qu'on utilise ici, et confondre les deux fait chercher un champ qui
+   n'existe pas.)
+
+   Deux apps GitHub, c'est aussi ce que la séparation des configs Doppler
+   suppose déjà : `dev` porte les identifiants de l'app locale, `prd` ceux de
+   l'app en ligne. Rien à intervertir au moment de mettre en ligne.
 
 `./scripts/local-prod.sh up` annonce alors les fournisseurs qu'il a trouvés,
 et `GET http://localhost:8080/api/auth/oauth/providers` doit les lister.
