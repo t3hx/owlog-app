@@ -87,19 +87,49 @@ seule source de ce qui sort. Le handler n'assemble pas, ne filtre pas.
 inconnu produisent la même réponse 404 et le même écran. Distinguer les
 deux offrirait une sonde d'énumération.
 
+**La carte minimale n'est pas servie par la route de profil** (précision
+T3H-63, 2026-08-04). La première rédaction de ce tableau se contredisait :
+la ligne « carte minimale » et la ligne « introuvable » décrivaient la même
+personne — un non-ami — avec deux réponses opposées. La lecture retenue est
+que les deux lignes ne parlent pas de la même surface :
+
+| Surface | Non-ami | Pourquoi |
+|---|---|---|
+| réponse de recherche par pseudo | pseudo, date d'inscription, relation | la recherche révèle déjà l'existence d'un compte (§1) et porte le rate-limit anti-énumération ; c'est le seul endroit où ce coût est assumé |
+| `GET` profil `/friends/:pseudo` | **404**, identique à un pseudo inconnu | sinon la route devient un oracle : n'importe quel pseudo deviné se voit confirmer |
+
+La carte minimale se rend donc **depuis les données déjà en main** — celles
+de la recherche qui a produit la rangée — sans second appel réseau. Un
+`/friends/:pseudo` atteint au clavier par un non-ami tombe sur l'état
+« introuvable », et c'est le comportement voulu : on n'accède à un profil
+que par un chemin qui a déjà payé son rate-limit.
+
 ### Composition et états
 
 | État | Qui | Contenu | Règle |
 |---|---|---|---|
 | profil complet | ami, ou soi-même | avatar 76px liseré dégradé, `@pseudo` Chakra Petch, `membre depuis … · N titres loggés` mono, tuiles `✓ vus / ♥ / compat %`, `▸ SES COUPS DE CŒUR` (affiches liserées dégradé), `▸ ACTIVITÉ` (journal mono) | conforme écran 9 ; sur son propre profil, pas de tuile compat (compat avec soi-même n'a pas de sens) et pas de bouton d'action |
-| carte minimale | non-ami dont on connaît le pseudo (résultat de recherche) | avatar-initiale, `@pseudo`, `membre depuis …` mono, bouton `+ AJOUTER` plein dégradé 44px — rien d'autre | aucune tuile, aucune activité : rien n'est visible avant l'amitié (D2.4) |
+| carte minimale | non-ami, **atteint depuis un résultat de recherche** | avatar-initiale, `@pseudo`, `membre depuis …` mono, bouton `+ AJOUTER` plein dégradé 44px — rien d'autre | rendue depuis la réponse de recherche, jamais par un appel au profil ; aucune tuile, aucune activité : rien n'est visible avant l'amitié (D2.4) |
 | demande envoyée | non-ami, demande en cours | carte minimale, bouton devenu `demande envoyée` mono muted inactif | pas de relance possible tant que la demande vit |
-| introuvable | pseudo inconnu **ou** compte sans relation | page dans les codes de `Welcome` : eyebrow `// COMMUNAUTÉ`, « utilisateur introuvable », CTA outline `retour aux amis` | strictement identique dans les deux cas ; jamais un cul-de-sac |
+| introuvable | pseudo inconnu, **ou** non-ami atteint autrement que par la recherche (URL, lien) | page dans les codes de `Welcome` : eyebrow `// COMMUNAUTÉ`, « utilisateur introuvable », CTA outline `retour aux amis` | strictement identique dans les deux cas ; jamais un cul-de-sac |
 | activité vide | ami tout neuf | tuiles à zéro (les zéros sont des données), `▸ ACTIVITÉ` remplacé par une phrase mono subtle | pas de section fantôme |
 
 **Compat.** `compat N%` n'est calculée qu'entre amis. Sans recouvrement de
 bibliothèques : `compat —` mono subtle — un 0 % serait un mensonge. Jamais
 de compat sur la carte minimale.
+
+**Formule : indice de Jaccard sur les titres vus** (décision T3H-63,
+2026-08-04 ; aucune formule n'était définie jusque-là). Soient `A` et `B`
+les ensembles de références vues par chacun : `compat = |A ∩ B| / |A ∪ B|`,
+arrondi au point de pourcentage. Symétrique — la compat que je lis chez toi
+est celle que tu lis chez moi, et c'est la moindre des choses pour une
+mesure de relation. Intersection vide : pas de `0 %`, mais `—`.
+
+Défaut connu et assumé : deux bibliothèques de tailles très inégales
+plafonnent bas même quand la petite est entièrement incluse dans la grande.
+Les variantes qui corrigent ce biais (recouvrement sur `min`) affichent
+`100 %` dans ce même cas, ce qui ment davantage. La formule vit dans
+`packages/domain/src/rules/compatibility.ts` et nulle part ailleurs.
 
 ---
 

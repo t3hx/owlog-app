@@ -134,6 +134,19 @@
 }
 
 /*
+ * Meme lisere, sur la surface d'un cran au-dessus du fond : avatar de
+ * l'ecran 9. La technique est identique, seul le `padding-box` change —
+ * poser `border-gradient` sur un cercle `bg-surface-raised` laisserait le
+ * fond de l'utilitaire gagner et le cercle virerait au bleu-gris.
+ */
+@utility border-gradient-raised {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-surface-raised), var(--color-surface-raised)) padding-box,
+    linear-gradient(90deg, var(--color-accent), var(--color-blue)) border-box;
+}
+
+/*
  * Fondu du backdrop vers le fond, page media.
  * Sans lui l'affiche en surimpression aurait besoin d'une bordure, et le
  * handoff a tranche pour le fondu.

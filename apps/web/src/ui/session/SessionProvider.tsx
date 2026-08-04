@@ -26,6 +26,10 @@ import { usePorts } from '@/ui/PortsProvider'
  * - `establish(user)` — après une vérification réussie (code ou lien) :
  *   adopte le prénom serveur s'il existe (« le serveur fait autorité après
  *   connexion »), ré-arme le moteur de sync ;
+ * - `adopt(user)` — le serveur a renvoyé un profil mis à jour (pseudo posé,
+ *   prénom corrigé) : le reflet suit, sans rien d'autre. Distinct
+ *   d'`establish` à dessein — celui-ci ré-arme le moteur de sync, ce qu'une
+ *   simple édition de profil n'a aucune raison de faire ;
  * - `clear()` — déconnexion : révoque la session serveur, efface les
  *   curseurs (leur existence est le bit « a déjà synchronisé » — un
  *   appareil déconnecté doit redevenir silencieux, pas se plaindre en 401),
@@ -35,6 +39,7 @@ export interface Session {
   readonly user: AuthUser | null
   readonly loading: boolean
   establish(user: AuthUser): Promise<void>
+  adopt(user: AuthUser): void
   clear(): Promise<void>
 }
 
@@ -70,6 +75,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [settings, sync],
   )
 
+  const adopt = useCallback((updated: AuthUser) => {
+    setUser(updated)
+  }, [])
+
   const clear = useCallback(async () => {
     await auth.logout()
     await settings.remove('syncCursor')
@@ -79,8 +88,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [auth, settings, sync])
 
   const session = useMemo<Session>(
-    () => ({ user, loading, establish, clear }),
-    [user, loading, establish, clear],
+    () => ({ user, loading, establish, adopt, clear }),
+    [user, loading, establish, adopt, clear],
   )
 
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>

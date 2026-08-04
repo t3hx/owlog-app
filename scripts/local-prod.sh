@@ -87,11 +87,48 @@ tmdb_token_from_doppler() {
   doppler secrets get TMDB_API_TOKEN --plain
 }
 
+# Les couples OAuth, s'ils existent dans la config `dev`.
+#
+# **Optionnels, et par couple** — même règle qu'au démarrage du service : un
+# identifiant sans son secret ferait échouer le boot, ce qui est voulu en
+# production mais transformerait ici un réglage incomplet en pile qui ne
+# démarre pas. Absents des deux côtés, aucun bouton n'est offert, et c'est
+# l'état nominal de ce script.
+#
+# Sans ce passage, la connexion par fournisseur n'était **pas testable
+# ailleurs qu'en production** : le conteneur reçoit une liste explicite de
+# variables, et poser les secrets dans Doppler ne suffisait pas à les lui
+# faire voir. Redémarrer l'API ne changeait rien — le symptôme ressemblait à
+# un défaut de code alors que la cause était dans ce fichier.
+#
+# La config lue est `dev`, jamais `prd` (voir le commentaire ci-dessus) :
+# l'URI de redirection locale est `http://localhost:8080/login/oauth/…`, elle
+# doit être déclarée dans la console à côté de celle de production, et rien
+# n'oblige à partager le même client entre les deux.
+OAUTH_ARGS=()
+
+collect_oauth_from_doppler() {
+  local provider id_name secret_name id secret
+
+  for provider in GOOGLE GITHUB; do
+    id_name="${provider}_OAUTH_CLIENT_ID"
+    secret_name="${provider}_OAUTH_CLIENT_SECRET"
+    id="$(doppler secrets get "$id_name" --plain 2>/dev/null || true)"
+    secret="$(doppler secrets get "$secret_name" --plain 2>/dev/null || true)"
+
+    if [ -n "$id" ] && [ -n "$secret" ]; then
+      OAUTH_ARGS+=(-e "$id_name=$id" -e "$secret_name=$secret")
+      echo "  fournisseur OAuth configuré : $(echo "$provider" | tr '[:upper:]' '[:lower:]')"
+    fi
+  done
+}
+
 # --- Commandes --------------------------------------------------------------
 
 up() {
   local tmdb_token
   tmdb_token="$(tmdb_token_from_doppler)"
+  collect_oauth_from_doppler
 
   echo "▸ construction des images"
   docker build -q -f "$ROOT/apps/api/Dockerfile" -t "$API_IMAGE" "$ROOT" >/dev/null
@@ -136,6 +173,7 @@ up() {
     -e OWLOG_TRUSTED_PROXIES="$subnet" \
     -e DATABASE_URL="postgresql://postgres:$PG_PASSWORD@$PG_NAME:5432/owlog" \
     -e OWLOG_PUBLIC_ORIGIN="http://localhost:$PORT" \
+    ${OAUTH_ARGS[@]+"${OAUTH_ARGS[@]}"} \
     "$API_IMAGE" >/dev/null
 
   docker run -d --name "$WEB_NAME" --network "$NETWORK" "$WEB_IMAGE" >/dev/null
@@ -146,6 +184,12 @@ up() {
   wait_healthy
   echo
   echo "  http://localhost:$PORT"
+  # Le service worker survit au conteneur : un onglet deja ouvert continue de
+  # servir le bundle precedent jusqu'a ce qu'on accepte la banniere de mise a
+  # jour. C'est la strategie `prompt` voulue, et c'est aussi le piege qui fait
+  # croire qu'une fonctionnalite fraichement construite n'est pas la — le
+  # symptome est un ecran a jour cote reseau et perime a l'ecran.
+  echo "  (onglet deja ouvert : accepter la banniere de mise a jour, sinon l'ancien bundle reste servi)"
   echo
   docker ps --filter "name=owlog-" --format '  {{.Names}}\t{{.Status}}'
 }
@@ -186,6 +230,7 @@ refresh() {
 
   local tmdb_token
   tmdb_token="$(tmdb_token_from_doppler)"
+  collect_oauth_from_doppler
 
   echo "▸ reconstruction des images (la base est préservée)"
   docker build -q -f "$ROOT/apps/api/Dockerfile" -t "$API_IMAGE" "$ROOT" >/dev/null
@@ -208,6 +253,7 @@ refresh() {
     -e OWLOG_TRUSTED_PROXIES="$subnet" \
     -e DATABASE_URL="postgresql://postgres:$PG_PASSWORD@$PG_NAME:5432/owlog" \
     -e OWLOG_PUBLIC_ORIGIN="http://localhost:$PORT" \
+    ${OAUTH_ARGS[@]+"${OAUTH_ARGS[@]}"} \
     "$API_IMAGE" >/dev/null
 
   docker run -d --name "$WEB_NAME" --network "$NETWORK" "$WEB_IMAGE" >/dev/null
@@ -262,6 +308,20 @@ check() {
   # Le rewrite SPA : une route interne n'existe pas sur le disque.
   expect "une route interne sert index.html" 200 \
     "$(curl -s -o /dev/null -w '%{http_code}' "$base/library")"
+
+  # Le retour d'un fournisseur OAuth est une entrée EXTERNE dans la SPA : le
+  # navigateur y arrive par une redirection, à froid, sans passer par
+  # l'application. Si la réécriture ne couvre pas ce chemin, la connexion par
+  # Google casse en production et nulle part ailleurs — `pnpm dev` sert
+  # toutes les routes, il ne peut pas révéler ce trou.
+  expect "le retour d'un fournisseur sert l'app" 200 \
+    "$(curl -s -o /dev/null -w '%{http_code}' "$base/login/oauth/google?code=x&state=y")"
+
+  # Sans secrets de fournisseur, aucun bouton n'est offert. Ce n'est pas
+  # qu'une préférence d'écran : la liste est servie par l'API, et une liste
+  # non vide sans secrets signifierait qu'un bouton mène à une impasse.
+  expect "les fournisseurs offerts sont ceux qui sont configurés" '"providers"' \
+    "$(curl -s -H "x-owlog-token: $SHARED_TOKEN" "$base/api/auth/oauth/providers" | grep -o '"providers"')"
 
   # Sans `no-cache`, le navigateur garde l'ancien document, qui référence
   # l'ancien bundle : le déploiement n'atteint jamais les clients existants.

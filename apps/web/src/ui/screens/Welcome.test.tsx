@@ -74,12 +74,12 @@ describe('Welcome', () => {
       auth: {
         ...base.auth,
         me: () =>
-          Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null } }),
-        updateProfile: (firstName) => {
-          upserted.push(firstName)
+          Promise.resolve({ ok: true, value: { email: 'a@b.c', firstName: null, pseudo: null } }),
+        updateProfile: (patch) => {
+          upserted.push(patch.firstName ?? '')
           return Promise.resolve({
             ok: true,
-            value: { email: 'a@b.c', firstName },
+            value: { email: 'a@b.c', firstName: patch.firstName ?? null, pseudo: null },
           })
         },
       },

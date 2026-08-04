@@ -1,3 +1,4 @@
+import { isValidPseudo } from '@owlog/contracts'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'wouter'
@@ -218,6 +219,7 @@ function ProfileSection() {
       <SectionTitle>{t('settings.profileTitle')}</SectionTitle>
       <Card>
         <FirstNameRow />
+        <PseudoRow />
         <LanguageRow />
       </Card>
     </section>
@@ -241,7 +243,7 @@ function FirstNameRow() {
     // Le serveur fait autorité après connexion : l'édition pousse l'upsert,
     // l'écran ne garde aucune copie divergente. Hors session ou hors
     // réseau, la valeur locale vit sa vie — la prochaine session tranchera.
-    if (session.user !== null) void auth.updateProfile(cleaned)
+    if (session.user !== null) void auth.updateProfile({ firstName: cleaned })
     setEditing(false)
   }
 
@@ -273,6 +275,159 @@ function FirstNameRow() {
       value={firstName ?? '—'}
       onActivate={() => {
         setDraft(firstName ?? '')
+        setEditing(true)
+      }}
+    />
+  )
+}
+
+/**
+ * Le pseudo — identité sociale, et la seule donnée de cette card qui
+ * quitte le compte.
+ *
+ * Trois traits qui le distinguent de la rangée prénom, tous délibérés :
+ *
+ * - **il n'existe qu'en ligne.** Aucune écriture dans `settings` : un
+ *   pseudo n'a de sens que si le serveur l'a accordé, et une copie locale
+ *   « en attente » afficherait une identité que personne d'autre ne voit ;
+ * - **le serveur fait autorité sur ce qui s'affiche.** La rangée rend
+ *   `session.user.pseudo`, jamais la saisie — même après un succès ;
+ * - **l'erreur vit sous le champ**, en sémantique d'erreur système, et non
+ *   en bandeau : c'est le champ qui est en cause.
+ *
+ * **Hors session, la rangée explique — elle ne disparaît pas.** Une première
+ * version la masquait, au motif qu'une rangée morte vaut moins qu'une rangée
+ * absente. C'était l'inverse de la doctrine du projet, que `social.md` pose
+ * pour ce cas exact : « le social exige un compte, mais l'onglet n'est jamais
+ * mort — il explique ». La card COMPTE juste au-dessus applique déjà ce
+ * principe, et le masquage produisait précisément la confusion qu'il
+ * prétendait éviter — on cherche un réglage annoncé, on ne le trouve pas, et
+ * rien ne dit pourquoi.
+ *
+ * **Le lien `voir mon profil ›` n'est pas ici**, et c'est délibéré : il
+ * ouvre l'écran 9, que T3H-64 recrée au pixel. La projection qui
+ * l'alimente existe et est testée (`publicProfile`, `/social/profile/:pseudo`
+ * rend déjà son propre profil) ; seul le rendu manque. Le poser maintenant
+ * sur un écran provisoire reviendrait à livrer deux fois la même surface —
+ * et la seconde effacerait la première.
+ */
+function PseudoRow() {
+  const { t } = useTranslation()
+  const { auth } = usePorts()
+  const session = useSession()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [error, setError] = useState<'taken' | 'invalid' | 'offline' | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [needsAccount, setNeedsAccount] = useState(false)
+
+  const pseudo = session.user?.pseudo ?? null
+
+  // `loading` distingue « pas encore su » de « pas de session ». Sans cette
+  // garde, la rangée annoncerait « demande un compte » à quelqu'un qui en a
+  // un — le temps que `/auth/me` réponde. Même soin que la card COMPTE.
+  if (session.loading) {
+    return <Row label={t('settings.pseudo')} value="…" />
+  }
+
+  if (session.user === null) {
+    return (
+      <div className="flex flex-col">
+        <Row label={t('settings.pseudo')} value="—" onActivate={() => setNeedsAccount(true)} />
+        {needsAccount && (
+          <p className="px-4 pb-2 font-mono text-[10px] text-muted">
+            <span aria-hidden>! </span>
+            {t('settings.pseudoNeedsAccount')}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    const cleaned = draft.trim().toLowerCase()
+    if (!isValidPseudo(cleaned)) {
+      setError('invalid')
+      return
+    }
+
+    setSaving(true)
+    const result = await auth.updateProfile({ pseudo: cleaned })
+    setSaving(false)
+
+    if (!result.ok) {
+      setError(result.failure.kind === 'pseudo-taken' ? 'taken' : 'offline')
+      return
+    }
+
+    // Le reflet suit la réponse du serveur, pas la saisie : c'est lui qui a
+    // tranché la casse et l'unicité.
+    session.adopt(result.value)
+    setError(null)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <form onSubmit={submit} className="flex flex-col gap-1 px-4 py-2">
+        <div className="flex min-h-11 items-center gap-2.5">
+          <span aria-hidden className="font-mono text-[13px] text-accent">
+            @
+          </span>
+          <input
+            value={draft}
+            // Les minuscules sont forcées à la frappe, pas corrigées à
+            // l'envoi : voir son texte changer après coup se lit comme un
+            // bug, alors que la contrainte est connue d'avance.
+            onChange={(event) => {
+              setDraft(event.target.value.toLowerCase())
+              setError(null)
+            }}
+            maxLength={20}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="done"
+            aria-label={t('settings.pseudo')}
+            className="h-9 w-full rounded-action border border-border-accent bg-surface px-2 text-[13.5px] text-text outline-none"
+          />
+          <button
+            type="submit"
+            disabled={saving}
+            className="min-h-0 font-mono text-[10.5px] text-accent disabled:text-muted"
+          >
+            {t('settings.save')}
+          </button>
+        </div>
+        <p className="font-mono text-[10px] text-subtle">
+          {error === null ? (
+            t('settings.pseudoHint')
+          ) : (
+            <span className="text-muted">
+              <span aria-hidden>! </span>
+              {t(
+                error === 'taken'
+                  ? 'settings.pseudoTaken'
+                  : error === 'invalid'
+                    ? 'settings.pseudoInvalid'
+                    : 'settings.pseudoOffline',
+              )}
+            </span>
+          )}
+        </p>
+      </form>
+    )
+  }
+
+  return (
+    <Row
+      label={t('settings.pseudo')}
+      value={pseudo === null ? '—' : `@${pseudo}`}
+      onActivate={() => {
+        setDraft(pseudo ?? '')
+        setError(null)
         setEditing(true)
       }}
     />

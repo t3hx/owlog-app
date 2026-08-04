@@ -8,12 +8,14 @@ import { Sidebar } from '@/ui/components/Sidebar'
 import { TabBar } from '@/ui/components/TabBar'
 import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useSetting } from '@/ui/hooks/useSetting'
+import { Friends, FriendsWithProfile } from '@/ui/screens/Friends'
 import { Home } from '@/ui/screens/Home'
 import { Landing } from '@/ui/screens/Landing'
 import { Library } from '@/ui/screens/Library'
 import { Log } from '@/ui/screens/Log'
 import { Login } from '@/ui/screens/Login'
 import { LoginLink } from '@/ui/screens/LoginLink'
+import { LoginOAuth } from '@/ui/screens/LoginOAuth'
 import { FirstPull } from '@/ui/screens/FirstPull'
 import { Settings } from '@/ui/screens/Settings'
 import { Stats } from '@/ui/screens/Stats'
@@ -61,6 +63,7 @@ export function App() {
   const [onDebug] = useRoute('/debug')
   const [onLogin] = useRoute('/login')
   const [onLoginLink] = useRoute('/login/link')
+  const [onLoginOAuth, oauthParams] = useRoute('/login/oauth/:provider')
   const [onLoginSync] = useRoute('/login/sync')
   const [onWelcome] = useRoute('/welcome')
 
@@ -72,6 +75,7 @@ export function App() {
   // Le parcours de compte est plein écran et vaut dans tous les états —
   // l'utilisateur local qui active la sync comme l'appareil vierge.
   if (onLoginLink) return <LoginLink />
+  if (onLoginOAuth) return <LoginOAuth provider={oauthParams.provider} />
   if (onLoginSync) return <FirstPull />
   if (onLogin) return <Login />
 
@@ -109,6 +113,12 @@ export function App() {
           </Route>
           <Route path="/log">
             <Log />
+          </Route>
+          <Route path="/friends">
+            <Friends />
+          </Route>
+          <Route path="/friends/:pseudo">
+            {(params) => <FriendsWithProfile pseudo={params.pseudo} />}
           </Route>
           <Route path="/stats">
             <Stats />

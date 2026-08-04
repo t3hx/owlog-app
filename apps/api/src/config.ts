@@ -53,6 +53,27 @@ export interface Config {
   readonly email:
     | { readonly apiUrl: string; readonly apiToken: string; readonly from: string }
     | undefined
+  /**
+   * Fournisseurs OAuth configurés, par nom.
+   *
+   * **Absents par défaut, et chacun en tout ou rien.** Un identifiant sans
+   * secret ne peut pas échanger un code : le fournisseur mènerait à un
+   * échec au dernier pas du parcours, après la redirection, quand
+   * l'utilisateur croit s'être déjà connecté. Le démarrage refuse donc la
+   * moitié d'un couple, et un fournisseur entièrement absent n'est
+   * simplement pas offert.
+   */
+  readonly oauth: OAuthConfig
+}
+
+export interface OAuthClient {
+  readonly clientId: string
+  readonly clientSecret: string
+}
+
+export interface OAuthConfig {
+  readonly google?: OAuthClient
+  readonly github?: OAuthClient
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -78,7 +99,43 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     databaseUrl: env.DATABASE_URL?.trim() || undefined,
     publicOrigin: env.OWLOG_PUBLIC_ORIGIN?.trim().replace(/\/+$/, '') || undefined,
     email: loadEmail(env),
+    oauth: loadOAuth(env),
   }
+}
+
+/**
+ * Les couples identifiant/secret des fournisseurs.
+ *
+ * Un couple incomplet **empêche le démarrage** plutôt que de désactiver
+ * silencieusement le fournisseur : la moitié d'une configuration est
+ * toujours une erreur de saisie, jamais une intention. La désactiver en
+ * silence rendrait le bouton absent sans que personne comprenne pourquoi —
+ * et on chercherait dans le code avant de regarder Doppler.
+ */
+function loadOAuth(env: NodeJS.ProcessEnv): OAuthConfig {
+  return {
+    ...client('google', env.GOOGLE_OAUTH_CLIENT_ID, env.GOOGLE_OAUTH_CLIENT_SECRET),
+    ...client('github', env.GITHUB_OAUTH_CLIENT_ID, env.GITHUB_OAUTH_CLIENT_SECRET),
+  }
+}
+
+function client(
+  name: 'google' | 'github',
+  rawId: string | undefined,
+  rawSecret: string | undefined,
+): OAuthConfig {
+  const clientId = rawId?.trim()
+  const clientSecret = rawSecret?.trim()
+
+  if (!clientId && !clientSecret) return {}
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      `${name.toUpperCase()}_OAUTH_CLIENT_ID and ${name.toUpperCase()}_OAUTH_CLIENT_SECRET ` +
+        'must be set together. Set both in Doppler, or neither.',
+    )
+  }
+
+  return { [name]: { clientId, clientSecret } }
 }
 
 /**

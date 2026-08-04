@@ -9,6 +9,7 @@ import type { Config } from './config.ts'
 import type { Db } from './db/db.ts'
 import { createConsoleMailer, type Mailer } from './mail/mailer.ts'
 import { createRateLimiter } from './rateLimit.ts'
+import { createSocialRoutes } from './social/routes.ts'
 import { createSyncRoutes } from './sync/routes.ts'
 import { createTmdbClient, UpstreamError, type TmdbClient } from './tmdb.ts'
 
@@ -36,6 +37,8 @@ export interface AppOptions {
   readonly db?: Pick<Db, 'status' | 'refresh' | 'pool'>
   /** Injectable pour les tests. Sans fournisseur configuré : la console. */
   readonly mailer?: Mailer
+  /** Injectable pour les tests : les appels sortants vers Google et GitHub. */
+  readonly oauthFetch?: typeof fetch
 }
 
 /** Langue par défaut si le client n'en demande pas. */
@@ -151,6 +154,7 @@ export function createApp(options: AppOptions) {
       pool: () => options.db!.pool,
       mailer: options.mailer ?? createConsoleMailer(),
       config,
+      ...(options.oauthFetch ? { oauthFetch: options.oauthFetch } : {}),
     }),
   )
 
@@ -158,6 +162,20 @@ export function createApp(options: AppOptions) {
   routes.route(
     '/sync',
     createSyncRoutes({
+      // Paresseux : `requireDb` a statué avant toute déréférence.
+      pool: () => options.db!.pool,
+    }),
+  )
+
+  /**
+   * `/social` partage le limiteur de `/sync` plutôt que celui de `/search` :
+   * ce sont les routes de session, et un profil consulté ne doit pas
+   * entamer le quota de recherche TMDB — ni l'inverse.
+   */
+  routes.use('/social/*', authenticate(config), requireDb, rateLimit(config, syncLimiter))
+  routes.route(
+    '/social',
+    createSocialRoutes({
       // Paresseux : `requireDb` a statué avant toute déréférence.
       pool: () => options.db!.pool,
     }),

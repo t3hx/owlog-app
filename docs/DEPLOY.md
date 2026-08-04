@@ -351,6 +351,88 @@ dépannage :
 | `OWLOG_EMAIL_API_URL` | endpoint du fournisseur (défaut : Resend) |
 | `OWLOG_EMAIL_FROM` | expéditeur, `Owlog <no-reply@…>` |
 
+## Connexion par fournisseur (Google, GitHub)
+
+Optionnelle : sans secrets, l'écran de connexion ne rend aucun bouton et la
+card se re-centre sur l'e-mail. Rien à faire pour mettre en ligne sans elle.
+
+**Ce qui se fait dans les consoles, une fois.** L'URI de redirection vise le
+**web**, jamais l'API : le callback est une navigation, il ne peut pas
+porter le jeton partagé qu'exige `/api/auth/*`.
+
+| Console | À créer | URI de redirection à déclarer |
+|---|---|---|
+| [Google Cloud](https://console.cloud.google.com/apis/credentials) → *Identifiants* → *ID client OAuth* → **Application Web** | un client OAuth | `https://owlog.nspace.link/login/oauth/google` |
+| [GitHub](https://github.com/settings/developers) → *OAuth Apps* → **New OAuth App** | une app OAuth | `https://owlog.nspace.link/login/oauth/github` |
+
+Chez Google, l'écran de consentement demande les portées `openid` et
+`email` — rien de plus : le produit ne lit que l'adresse, et une portée
+supplémentaire serait une permission demandée pour rien. Chez GitHub, les
+portées sont `read:user` et `user:email` ; la seconde est indispensable,
+c'est elle qui donne accès à `/user/emails`, **le seul endroit où GitHub
+atteste qu'une adresse est vérifiée** (le champ `email` du profil est
+public, modifiable et non vérifié).
+
+Les quatre valeurs vont ensuite dans Doppler, config `prd` :
+
+```bash
+doppler secrets set GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET \
+  GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET --config prd
+```
+
+Puis **redémarrer le conteneur** `owlog-api` — les secrets sont lus au
+démarrage. Aucune reconstruction d'image : rien de tout cela n'entre dans
+le bundle web, qui ne connaît que `/api/auth/oauth/*`.
+
+Vérification : `GET /api/auth/oauth/providers` doit lister les fournisseurs
+posés. Une liste vide après redémarrage veut dire que Doppler n'a pas servi
+les valeurs, pas que le code les ignore.
+
+### Tester la connexion par fournisseur en local
+
+Elle est testable sur `./scripts/local-prod.sh`, et il faut deux choses de
+plus — chacune a déjà fait croire à une panne :
+
+1. **Les secrets vont dans la config `dev`**, pas `prd`. Ce script lit `dev`
+   (comme pour le jeton TMDB) : des valeurs posées dans `prd` sont invisibles
+   ici, et redémarrer l'API n'y change rien.
+
+   ```bash
+   doppler secrets set GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET \
+     GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET --config dev
+   ```
+
+2. **L'URI de redirection locale doit exister côté fournisseur**, et les
+   deux consoles ne s'y prennent pas de la même façon — l'origine change,
+   donc l'URI change :
+
+   | Console | Comment |
+   |---|---|
+   | Google Cloud | **ajouter** `http://localhost:8080/login/oauth/google` aux *URI de redirection autorisés* du client existant |
+   | GitHub | **créer une seconde OAuth App**, callback `http://localhost:8080/login/oauth/github` |
+
+   La dissymétrie n'est pas un oubli. Un client Google porte une liste d'URI
+   de redirection ; une **OAuth App GitHub n'a qu'un seul champ**, et le
+   `redirect_uri` d'une requête doit partager
+   [le même hôte ET le même port](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps)
+   que lui — `localhost:8080` ne peut donc jamais correspondre au domaine de
+   production. (Les *GitHub Apps*, elles, acceptent dix URL ; ce n'est pas ce
+   qu'on utilise ici, et confondre les deux fait chercher un champ qui
+   n'existe pas.)
+
+   Deux apps GitHub, c'est aussi ce que la séparation des configs Doppler
+   suppose déjà : `dev` porte les identifiants de l'app locale, `prd` ceux de
+   l'app en ligne. Rien à intervertir au moment de mettre en ligne.
+
+`./scripts/local-prod.sh up` annonce alors les fournisseurs qu'il a trouvés,
+et `GET http://localhost:8080/api/auth/oauth/providers` doit les lister.
+
+À savoir : `/api/auth/oauth/*` vit sous la garde de base de données du
+groupe `/auth`. Sans base, ces routes répondent `503` et l'écran ne montre
+aucun bouton — ce qui est le bon comportement, puisque la connexion tout
+entière est alors indisponible : offrir un bouton qui échouerait au dernier
+pas, après un aller-retour chez Google, serait pire que ne pas l'offrir.
+
 ### Rotation du jeton
 
 À faire **au moindre doute** (jeton aperçu dans un log, un écran partagé,

@@ -11,6 +11,9 @@
  * recherche et de détail chez TMDB.
  */
 
+export * from './oauth.ts'
+export * from './pseudo.ts'
+export * from './social.ts'
 export * from './sync.ts'
 
 /** Type de média. TMDB renvoie aussi `person`, que le proxy filtre. */
@@ -139,11 +142,49 @@ export type ApiErrorCode =
    * décompte plus d'essais.
    */
   | 'auth-locked'
+  /**
+   * Pseudo déjà pris. Rendu par `/auth/profile` sur violation de l'index
+   * unique — **constatée**, jamais anticipée par un `SELECT` préalable, qui
+   * laisserait passer deux réservations simultanées.
+   *
+   * Le contrat du dépôt porte un champ unique où `error` **est** le code ;
+   * `social.md` annonçait `{ error, code: "pseudo_taken" }`, ce qui aurait
+   * créé une seconde forme d'erreur pour une seule route.
+   */
+  | 'pseudo-taken'
+  /**
+   * Geste social tenté sans identité sociale. Rendu par `/social/search` et
+   * `/social/requests` quand le compte n'a pas encore de pseudo.
+   *
+   * **Ce n'est pas une erreur de saisie, c'est une étape manquante** — d'où
+   * un code à part plutôt qu'un `bad-request` : l'écran ne montre pas un
+   * message d'erreur, il emmène à la rangée `pseudo` de Réglages
+   * (`social.md` §3). Un 400 générique n'aurait pas su où conduire.
+   */
+  | 'pseudo-required'
+  /**
+   * Connexion par fournisseur refusee : e-mail non verifie chez le
+   * fournisseur, ou fournisseur qui refuse la liaison.
+   *
+   * Distinct d'`auth-invalid` : ce n'est pas un secret faux mais une
+   * condition non remplie, et l'ecran doit dire QUOI FAIRE — « verifie ton
+   * e-mail chez GitHub puis reessaie » — la ou `auth-invalid` ne dit que
+   * « recommence ».
+   */
+  | 'oauth-unverified-email'
 
 /** Ce que le serveur sait d'un compte connecté. */
 export interface AuthUser {
   readonly email: string
   readonly firstName: string | null
+  /**
+   * Identité sociale. `null` tant qu'aucun geste social ne l'a réclamée.
+   *
+   * **Le prénom est privé, le pseudo est public.** C'est du pseudo que sort
+   * l'initiale de l'avatar, jamais du prénom : un seul système d'avatar, et
+   * il ne diffuse rien qui ne soit déjà destiné à circuler.
+   */
+  readonly pseudo: string | null
 }
 
 /** Réponse de `/auth/verify` et `/auth/verify-code` : la session est posée en cookie. */
