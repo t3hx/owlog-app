@@ -184,6 +184,12 @@ up() {
   wait_healthy
   echo
   echo "  http://localhost:$PORT"
+  # Le service worker survit au conteneur : un onglet deja ouvert continue de
+  # servir le bundle precedent jusqu'a ce qu'on accepte la banniere de mise a
+  # jour. C'est la strategie `prompt` voulue, et c'est aussi le piege qui fait
+  # croire qu'une fonctionnalite fraichement construite n'est pas la — le
+  # symptome est un ecran a jour cote reseau et perime a l'ecran.
+  echo "  (onglet deja ouvert : accepter la banniere de mise a jour, sinon l'ancien bundle reste servi)"
   echo
   docker ps --filter "name=owlog-" --format '  {{.Names}}\t{{.Status}}'
 }
