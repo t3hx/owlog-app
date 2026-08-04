@@ -8,6 +8,7 @@ import { Sidebar } from '@/ui/components/Sidebar'
 import { TabBar } from '@/ui/components/TabBar'
 import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useSetting } from '@/ui/hooks/useSetting'
+import { Friends, FriendsWithProfile } from '@/ui/screens/Friends'
 import { Home } from '@/ui/screens/Home'
 import { Landing } from '@/ui/screens/Landing'
 import { Library } from '@/ui/screens/Library'
@@ -109,6 +110,12 @@ export function App() {
           </Route>
           <Route path="/log">
             <Log />
+          </Route>
+          <Route path="/friends">
+            <Friends />
+          </Route>
+          <Route path="/friends/:pseudo">
+            {(params) => <FriendsWithProfile pseudo={params.pseudo} />}
           </Route>
           <Route path="/stats">
             <Stats />

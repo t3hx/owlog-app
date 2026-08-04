@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'wouter'
 
 import type { StatsPeriod, StatsRatings, StatsView } from '@owlog/domain'
 import { useDesktop } from '@/ui/hooks/useDesktop'
@@ -62,6 +63,8 @@ export function Stats() {
         </div>
       </div>
 
+      <OpenLog />
+
       {loading || view === null ? (
         <p className="py-8 font-mono text-[10px] text-subtle">{t('stats.loading')}</p>
       ) : view.counts.seen + view.counts.watching === 0 && view.totalMinutes === 0 ? (
@@ -77,6 +80,32 @@ export function Stats() {
         )
       )}
     </div>
+  )
+}
+
+/**
+ * L'entrée du LOG global, relogée ici.
+ *
+ * Le LOG a perdu sa case de tab bar au profit d'« amis » (décision D2.2) ;
+ * il n'a pas perdu sa route ni son sens. Cette rangée est son chemin, et
+ * elle vit sous l'en-tête des Stats parce que c'est l'écran qui parle déjà
+ * de ce que le journal contient — la mettre dans Réglages l'aurait rangée
+ * avec la plomberie.
+ *
+ * Codes de la rangée de réglage : filet, chevron, mono. Rien de nouveau à
+ * dessiner pour une entrée qui ne fait que mener ailleurs.
+ */
+function OpenLog() {
+  const { t } = useTranslation()
+
+  return (
+    <Link
+      href="/log"
+      className="mt-4 flex items-center justify-between rounded-card border border-border bg-surface-translucent px-4 py-3 font-mono text-[11px] text-muted transition-colors hover:border-border-active"
+    >
+      {t('stats.openLog')}
+      <span aria-hidden className="text-subtle">›</span>
+    </Link>
   )
 }
 

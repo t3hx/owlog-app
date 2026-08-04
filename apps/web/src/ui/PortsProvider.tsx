@@ -7,6 +7,7 @@ import type { LocalData } from '@/ports/LocalData'
 import type { MediaCatalog } from '@/ports/MediaCatalog'
 import type { PendingAdds } from '@/ports/PendingAdds'
 import type { SettingsStore } from '@/ports/SettingsStore'
+import type { SocialGateway } from '@/ports/SocialGateway'
 import type { SyncEngine } from '@/ports/Sync'
 
 /**
@@ -39,6 +40,11 @@ export interface Ports {
   readonly deviceId: string
   readonly sync: SyncEngine
   readonly auth: AuthGateway
+  /**
+   * Surfaces sociales. Distinct d'`auth` : l'un porte l'identité du
+   * compte, l'autre ce que les comptes sont les uns pour les autres.
+   */
+  readonly social: SocialGateway
   readonly local: LocalData
 }
 

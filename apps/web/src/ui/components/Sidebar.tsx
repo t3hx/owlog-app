@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useRoute } from 'wouter'
+import { Link, useLocation } from 'wouter'
 
 import { Logo } from '@/ui/components/Logo'
 import { useSetting } from '@/ui/hooks/useSetting'
 import { avatarInitial } from '@/ui/identity'
-import { TABS, type Tab } from '@/ui/navigation'
+import { isTabActive, TABS, type Tab } from '@/ui/navigation'
 import { useSession } from '@/ui/session/SessionProvider'
 
 /**
@@ -18,11 +18,10 @@ import { useSession } from '@/ui/session/SessionProvider'
  * masque au meme palier. Deux logos a l'ecran seraient une faute de design
  * system avant d'etre une faute de code.
  *
- * Les items sont ceux de `TABS` — la meme source que la tab bar. La
- * quatrieme case reste `log` : la decision D2.2 y installe « amis », mais
- * l'ecran Amis n'existe pas encore (T3H-64). Un onglet qui ouvre le vide est
- * pire qu'un onglet absent, c'est la regle inscrite dans `navigation.ts` — le
- * basculement se fera dans le lot qui livre l'ecran.
+ * Les items sont ceux de `TABS` — la meme source que la tab bar, formes
+ * d'icones comprises. La quatrieme case est « amis » depuis que l'ecran
+ * existe : la regle « pas d'onglet mort » de `navigation.ts` est ce qui a
+ * fait attendre la bascule, et elle est desormais satisfaite.
  */
 export function Sidebar() {
   const { t } = useTranslation()
@@ -53,7 +52,8 @@ export function Sidebar() {
 
 function SidebarLink({ tab }: { tab: Tab }) {
   const { t } = useTranslation()
-  const [active] = useRoute(tab.path)
+  const [location] = useLocation()
+  const active = isTabActive(tab, location)
 
   return (
     <Link
@@ -67,11 +67,9 @@ function SidebarLink({ tab }: { tab: Tab }) {
     >
       <span
         aria-hidden
-        className={
-          active
-            ? 'size-[18px] flex-none rounded-[5px] bg-gradient-action shadow-glow-sm'
-            : 'size-[18px] flex-none rounded-[5px] border-[1.5px] border-icon-dim'
-        }
+        className={`size-[18px] flex-none ${
+          tab.shape === 'round' ? 'rounded-full' : 'rounded-[5px]'
+        } ${active ? 'bg-gradient-action shadow-glow-sm' : 'border-[1.5px] border-icon-dim'}`}
       />
       <span
         className={

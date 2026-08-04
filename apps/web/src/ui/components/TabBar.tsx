@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Link, useRoute } from 'wouter'
+import { Link, useLocation } from 'wouter'
 
-import { TABS, type Tab } from '@/ui/navigation'
+import { isTabActive, TABS, type Tab } from '@/ui/navigation'
 
 /**
  * Barre de navigation basse.
@@ -13,8 +13,10 @@ import { TABS, type Tab } from '@/ui/navigation'
  *
  * La zone tactile fait 44px de haut même si le visuel en fait 22.
  *
- * Le prototype rend le quatrième onglet en cercle parce que c'était « amis »,
- * donc un avatar. Le quatrième onglet est ici « log » : il reste carré.
+ * Le quatrième onglet est « amis » (décision D2.2) et son icône est un
+ * cercle, comme dans le prototype : un avatar, pas un écran. La forme vient
+ * de `navigation.ts` — la déduire de la position se serait cassé au premier
+ * réordonnancement.
  *
  * `env(safe-area-inset-bottom)` : sur iPhone, la barre système mange le bas
  * de l'écran. Sans ça, le dernier onglet devient difficile à atteindre.
@@ -41,7 +43,8 @@ export function TabBar() {
 
 function TabLink({ tab }: { tab: Tab }) {
   const { t } = useTranslation()
-  const [active] = useRoute(tab.path)
+  const [location] = useLocation()
+  const active = isTabActive(tab, location)
 
   return (
     <Link
@@ -51,11 +54,9 @@ function TabLink({ tab }: { tab: Tab }) {
     >
       <span
         aria-hidden
-        className={
-          active
-            ? 'size-[22px] rounded-[6px] bg-gradient-action shadow-glow-sm'
-            : 'size-[22px] rounded-[6px] border-[1.5px] border-icon-dim'
-        }
+        className={`size-[22px] ${tab.shape === 'round' ? 'rounded-full' : 'rounded-[6px]'} ${
+          active ? 'bg-gradient-action shadow-glow-sm' : 'border-[1.5px] border-icon-dim'
+        }`}
       />
       <span
         className={
