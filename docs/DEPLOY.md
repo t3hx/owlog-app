@@ -388,6 +388,42 @@ Vérification : `GET /api/auth/oauth/providers` doit lister les fournisseurs
 posés. Une liste vide après redémarrage veut dire que Doppler n'a pas servi
 les valeurs, pas que le code les ignore.
 
+### Tester la connexion par fournisseur en local
+
+Elle est testable sur `./scripts/local-prod.sh`, et il faut deux choses de
+plus — chacune a déjà fait croire à une panne :
+
+1. **Les secrets vont dans la config `dev`**, pas `prd`. Ce script lit `dev`
+   (comme pour le jeton TMDB) : des valeurs posées dans `prd` sont invisibles
+   ici, et redémarrer l'API n'y change rien.
+
+   ```bash
+   doppler secrets set GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET \
+     GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET --config dev
+   ```
+
+2. **L'URI de redirection locale doit être déclarée dans les consoles**, à
+   côté de celle de production — l'origine change, donc l'URI change :
+
+   | Console | À ajouter |
+   |---|---|
+   | Google Cloud | `http://localhost:8080/login/oauth/google` |
+   | GitHub | `http://localhost:8080/login/oauth/github` |
+
+   Google accepte plusieurs URI de redirection par client ; GitHub en accepte
+   [jusqu'à dix par app](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/about-the-user-authorization-callback-url).
+   Aucun second client à créer, sauf si vous préférez séparer les
+   environnements — ce que rien n'impose ici.
+
+`./scripts/local-prod.sh up` annonce alors les fournisseurs qu'il a trouvés,
+et `GET http://localhost:8080/api/auth/oauth/providers` doit les lister.
+
+À savoir : `/api/auth/oauth/*` vit sous la garde de base de données du
+groupe `/auth`. Sans base, ces routes répondent `503` et l'écran ne montre
+aucun bouton — ce qui est le bon comportement, puisque la connexion tout
+entière est alors indisponible : offrir un bouton qui échouerait au dernier
+pas, après un aller-retour chez Google, serait pire que ne pas l'offrir.
+
 ### Rotation du jeton
 
 À faire **au moindre doute** (jeton aperçu dans un log, un écran partagé,
