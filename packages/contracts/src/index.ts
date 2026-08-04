@@ -11,6 +11,8 @@
  * recherche et de détail chez TMDB.
  */
 
+export * from './pseudo.ts'
+export * from './social.ts'
 export * from './sync.ts'
 
 /** Type de média. TMDB renvoie aussi `person`, que le proxy filtre. */
@@ -149,6 +151,16 @@ export type ApiErrorCode =
    * créé une seconde forme d'erreur pour une seule route.
    */
   | 'pseudo-taken'
+  /**
+   * Geste social tenté sans identité sociale. Rendu par `/social/search` et
+   * `/social/requests` quand le compte n'a pas encore de pseudo.
+   *
+   * **Ce n'est pas une erreur de saisie, c'est une étape manquante** — d'où
+   * un code à part plutôt qu'un `bad-request` : l'écran ne montre pas un
+   * message d'erreur, il emmène à la rangée `pseudo` de Réglages
+   * (`social.md` §3). Un 400 générique n'aurait pas su où conduire.
+   */
+  | 'pseudo-required'
 
 /** Ce que le serveur sait d'un compte connecté. */
 export interface AuthUser {
@@ -162,22 +174,6 @@ export interface AuthUser {
    * il ne diffuse rien qui ne soit déjà destiné à circuler.
    */
   readonly pseudo: string | null
-}
-
-/**
- * Format d'un pseudo : 3 à 20 caractères, minuscules, chiffres et `_`.
- *
- * **Unique domicile de la règle.** Le champ de Réglages force les
- * minuscules à la saisie, la route valide, et la base porte la même
- * expression en contrainte `CHECK` — les trois lisent cette constante ou la
- * recopient dans le seul dialecte qui ne la comprend pas, celui de
- * Postgres. Les minuscules étant imposées, l'unicité se compare octet à
- * octet : ni `citext`, ni index fonctionnel.
- */
-export const PSEUDO_PATTERN = /^[a-z0-9_]{3,20}$/
-
-export function isValidPseudo(value: string): boolean {
-  return PSEUDO_PATTERN.test(value)
 }
 
 /** Réponse de `/auth/verify` et `/auth/verify-code` : la session est posée en cookie. */
