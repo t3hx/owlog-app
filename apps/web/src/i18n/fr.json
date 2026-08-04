@@ -416,9 +416,6 @@
   },
   "loginOauth": {
     "pending": "connexion en cours…",
-    "failedTitle": "connexion impossible",
-    "failedBody": "le fournisseur a refusé la connexion. Réessaie, ou passe par ton e-mail.",
-    "unverified": "ton adresse n'est pas vérifiée chez ce fournisseur. Vérifie-la chez lui, puis réessaie — ou connecte-toi par e-mail.",
-    "back": "retour à la connexion"
+    "unverified": "ton adresse n'est pas vérifiée chez ce fournisseur. Vérifie-la chez lui, puis réessaie — ou connecte-toi par e-mail."
   }
 }

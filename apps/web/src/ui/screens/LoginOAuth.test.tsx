@@ -77,7 +77,10 @@ describe('retour du fournisseur', () => {
     expect(oauthComplete).toHaveBeenCalledWith('google', { code: 'abc', state: 'xyz' })
   })
 
-  it('dit quoi faire quand l’adresse n’est pas vérifiée', async () => {
+  it('renvoie en phase e-mail avec le motif, sans page de refus', async () => {
+    // `social.md` §5 : retour phase e-mail avec encart d'erreur système.
+    // Une page de refus dédiée offrirait un second endroit où lire la même
+    // erreur, avec un geste manuel de plus pour en sortir.
     withPorts(
       {
         oauthComplete: () =>
@@ -86,8 +89,11 @@ describe('retour du fournisseur', () => {
       <LoginOAuth provider="google" />,
     )
 
-    expect(await screen.findByText(/vérifie-la chez lui/i)).toBeTruthy()
-    expect(screen.getByText('retour à la connexion')).toBeTruthy()
+    await vi.waitFor(() =>
+      expect(window.location.pathname + window.location.search).toBe(
+        '/login?oauth=unverified',
+      ),
+    )
   })
 
   it('n’échange rien quand le fournisseur a refusé avant de rendre un code', async () => {
@@ -96,7 +102,7 @@ describe('retour du fournisseur', () => {
 
     withPorts({ oauthComplete }, <LoginOAuth provider="google" />)
 
-    expect(await screen.findByText('connexion impossible')).toBeTruthy()
+    await vi.waitFor(() => expect(window.location.search).toBe('?oauth=refused'))
     expect(oauthComplete).not.toHaveBeenCalled()
   })
 
@@ -105,7 +111,15 @@ describe('retour du fournisseur', () => {
 
     withPorts({ oauthComplete }, <LoginOAuth provider="myspace" />)
 
-    expect(await screen.findByText('connexion impossible')).toBeTruthy()
+    await vi.waitFor(() => expect(window.location.search).toBe('?oauth=refused'))
     expect(oauthComplete).not.toHaveBeenCalled()
+  })
+
+  it('rend l’encart d’erreur sur la card de connexion, message d’action compris', async () => {
+    window.history.replaceState(null, '', '/login?oauth=unverified')
+
+    withPorts({}, <Login />)
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/vérifie-la chez lui/i)
   })
 })

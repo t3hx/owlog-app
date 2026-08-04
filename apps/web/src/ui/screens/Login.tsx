@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'wouter'
+import { useLocation, useSearchParams } from 'wouter'
 
 import type { Language } from '@/i18n'
 import type { AuthFailure } from '@/ports/AuthGateway'
@@ -41,11 +41,19 @@ export function Login() {
   const session = useSession()
   const [, navigate] = useLocation()
 
+  const [params] = useSearchParams()
   const [phase, setPhase] = useState<'email' | 'code'>('email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
-  const [failure, setFailure] = useState<AuthFailure | null>(null)
+  const [failure, setFailure] = useState<AuthFailure | null>(
+    // Un retour de fournisseur refusé revient ICI, en phase e-mail, avec son
+    // encart — `social.md` §5. Le motif est porté par l'URL parce que
+    // `wouter` n'a pas d'état de route : c'est une navigation complète, et
+    // rien de sensible ne transite (le code d'autorisation, lui, n'a jamais
+    // quitté l'écran de retour).
+    oauthFailureOf(new URLSearchParams(window.location.search).get('oauth')),
+  )
   const [resendIn, setResendIn] = useState(0)
 
   // La microcopie « union assumée » ne s'affiche que si des données
@@ -54,6 +62,13 @@ export function Login() {
   const hasLocalData = firstName !== undefined
 
   const codeField = useRef<HTMLInputElement>(null)
+
+  // Le motif quitte l'URL une fois lu : recharger la page ne doit pas
+  // rejouer une erreur déjà comprise, et l'adresse doit rester partageable.
+  useEffect(() => {
+    if (params.get('oauth') === null) return
+    navigate('/login', { replace: true })
+  }, [navigate, params])
 
   useEffect(() => {
     if (resendIn <= 0) return
@@ -261,6 +276,20 @@ export function Login() {
  * Jamais de rouge — c'est la couleur du statut « abandonné », une couleur
  * de donnée, pas d'alarme.
  */
+/**
+ * Traduit le motif porté par l'URL en échec d'écran.
+ *
+ * Deux motifs seulement, et ils suffisent : l'adresse non vérifiée, qui a
+ * son message d'action, et tout le reste — refus du fournisseur, état
+ * anti-CSRF qui ne correspond pas, service muet. Détailler davantage
+ * apprendrait au visiteur ce qui a échoué côté serveur sans rien lui
+ * permettre de réparer.
+ */
+function oauthFailureOf(reason: string | null): AuthFailure | null {
+  if (reason === null) return null
+  return reason === 'unverified' ? { kind: 'oauth-unverified-email' } : { kind: 'unavailable' }
+}
+
 function FailureNote({ failure }: { failure: AuthFailure | null }) {
   const { t } = useTranslation()
   if (failure === null) return null
@@ -278,6 +307,13 @@ function FailureNote({ failure }: { failure: AuthFailure | null }) {
       case 'offline':
         return t('login.errorOffline')
       case 'unavailable':
+        return t('login.errorUnavailable')
+      case 'oauth-unverified-email':
+        // Le seul message de cet écran qui dit QUOI FAIRE plutôt que
+        // « recommence » : la condition manquante se répare chez le
+        // fournisseur, et personne ne le devine.
+        return t('loginOauth.unverified')
+      default:
         return t('login.errorUnavailable')
     }
   })()

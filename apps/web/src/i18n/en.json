@@ -416,9 +416,6 @@
   },
   "loginOauth": {
     "pending": "signing in…",
-    "failedTitle": "sign-in failed",
-    "failedBody": "the provider refused the sign-in. Try again, or use your e-mail.",
-    "unverified": "your address isn't verified with that provider. Verify it there and try again — or sign in by e-mail.",
-    "back": "back to sign-in"
+    "unverified": "your address isn't verified with that provider. Verify it there and try again — or sign in by e-mail."
   }
 }

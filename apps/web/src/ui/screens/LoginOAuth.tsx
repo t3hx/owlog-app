@@ -1,9 +1,8 @@
 import { isOAuthProvider } from '@owlog/contracts'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useSearchParams } from 'wouter'
 
-import type { AuthFailure } from '@/ports/AuthGateway'
 import { usePorts } from '@/ui/PortsProvider'
 import { useSession } from '@/ui/session/SessionProvider'
 
@@ -21,8 +20,11 @@ import { useSession } from '@/ui/session/SessionProvider'
  * unique — le second envoi échouerait, effaçant une connexion réussie par
  * un message d'erreur.
  *
- * Un refus ne laisse jamais bloqué : on revient à la card de connexion avec
- * un encart, et le message du cas « e-mail non vérifié » dit quoi faire.
+ * **Un refus ne s'affiche pas ici.** `social.md` §5 veut un retour à la
+ * phase e-mail avec un encart d'erreur système : cet écran n'est qu'un
+ * passage, et y installer une page de refus offrirait un second endroit où
+ * lire la même erreur — avec un geste manuel de plus pour en sortir. Le
+ * motif voyage donc par l'URL, et la card de connexion le rend.
  */
 export function LoginOAuth({ provider }: { readonly provider: string }) {
   const { t } = useTranslation()
@@ -30,7 +32,6 @@ export function LoginOAuth({ provider }: { readonly provider: string }) {
   const session = useSession()
   const [, navigate] = useLocation()
   const [params] = useSearchParams()
-  const [failure, setFailure] = useState<AuthFailure | null>(null)
   const started = useRef(false)
 
   const code = params.get('code')
@@ -44,13 +45,18 @@ export function LoginOAuth({ provider }: { readonly provider: string }) {
     // Le fournisseur peut refuser avant même de nous rendre un code —
     // l'utilisateur a cliqué « annuler » sur son écran de consentement.
     if (providerError || !isOAuthProvider(provider) || !code || !state) {
-      setFailure({ kind: 'invalid' })
+      navigate('/login?oauth=refused', { replace: true })
       return
     }
 
     void auth.oauthComplete(provider, { code, state }).then(async (result) => {
       if (!result.ok) {
-        setFailure(result.failure)
+        navigate(
+          result.failure.kind === 'oauth-unverified-email'
+            ? '/login?oauth=unverified'
+            : '/login?oauth=refused',
+          { replace: true },
+        )
         return
       }
       await session.establish(result.value)
@@ -58,33 +64,13 @@ export function LoginOAuth({ provider }: { readonly provider: string }) {
     })
   }, [auth, code, navigate, provider, providerError, session, state])
 
+  // Un passage, pas une page : le seul état visible est l'attente.
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
       <p className="font-mono text-[10px] tracking-wide text-accent">{t('loginLink.eyebrow')}</p>
-
-      {failure === null ? (
-        <p className="font-display text-[21px] font-semibold text-text">
-          {t('loginOauth.pending')}
-        </p>
-      ) : (
-        <>
-          <p className="font-display text-[21px] font-semibold text-text">
-            {t('loginOauth.failedTitle')}
-          </p>
-          <p className="max-w-sm text-sm text-muted">
-            {failure.kind === 'oauth-unverified-email'
-              ? t('loginOauth.unverified')
-              : t('loginOauth.failedBody')}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/login', { replace: true })}
-            className="rounded-action border border-border-active px-5 font-mono text-[11px] text-muted"
-          >
-            {t('loginOauth.back')}
-          </button>
-        </>
-      )}
+      <p className="font-display text-[21px] font-semibold text-text">
+        {t('loginOauth.pending')}
+      </p>
     </div>
   )
 }
