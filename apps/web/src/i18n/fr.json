@@ -7,9 +7,9 @@
   "nav": {
     "home": "accueil",
     "library": "bibliothèque",
-    "log": "log",
     "stats": "stats",
-    "ariaLabel": "Navigation principale"
+    "ariaLabel": "Navigation principale",
+    "friends": "amis"
   },
   "welcome": {
     "eyebrow": "// PREMIÈRE OUVERTURE",
@@ -107,7 +107,8 @@
     "otherTitle": "AUTRES INDICATEURS",
     "completionLine": "complétion {{percent}}% · vus vs abandonnés",
     "rewatchesLine": "revisionnages ×{{count}}",
-    "episodesLine": "épisodes vus {{count}}"
+    "episodesLine": "épisodes vus {{count}}",
+    "openLog": "voir le log complet"
   },
   "notFound": {
     "title": "Page introuvable",

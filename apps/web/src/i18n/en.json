@@ -7,9 +7,9 @@
   "nav": {
     "home": "home",
     "library": "library",
-    "log": "log",
     "stats": "stats",
-    "ariaLabel": "Main navigation"
+    "ariaLabel": "Main navigation",
+    "friends": "friends"
   },
   "welcome": {
     "eyebrow": "// FIRST LAUNCH",
@@ -107,7 +107,8 @@
     "otherTitle": "OTHER INDICATORS",
     "completionLine": "completion {{percent}}% · seen vs dropped",
     "rewatchesLine": "rewatches ×{{count}}",
-    "episodesLine": "episodes seen {{count}}"
+    "episodesLine": "episodes seen {{count}}",
+    "openLog": "open the full log"
   },
   "notFound": {
     "title": "Page not found",

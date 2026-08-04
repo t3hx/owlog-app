@@ -9,7 +9,9 @@ import { ActivityText } from '@/ui/components/social/ActivityText'
 import { isRecent } from '@/ui/components/social/Avatar'
 import { SocialRow } from '@/ui/components/social/SocialRow'
 import { useCircle } from '@/ui/hooks/useCircle'
+import { useDesktop } from '@/ui/hooks/useDesktop'
 import { usePorts } from '@/ui/PortsProvider'
+import { Profile } from '@/ui/screens/Profile'
 import { useSession } from '@/ui/session/SessionProvider'
 
 /**
@@ -78,11 +80,58 @@ export function Friends({ selected }: { readonly selected?: string } = {}) {
 /**
  * Le gabarit de l'écran.
  *
- * `max-w-md` comme les autres écrans : en desktop, c'est la colonne de
- * gauche du master-detail qui borne, pas ce conteneur.
+ * Même motif que les autres écrans : colonne centrée bornée en mobile, et
+ * en desktop la colonne remplit ce qu'on lui donne — c'est le master-detail
+ * qui borne alors, pas ce conteneur.
  */
 function Shell({ children }: { readonly children?: React.ReactNode }) {
-  return <div className="mx-auto flex max-w-md flex-col gap-4 px-5 pb-8 pt-8">{children}</div>
+  const desktop = useDesktop()
+
+  return (
+    <div
+      className={
+        desktop
+          ? 'flex flex-col gap-4'
+          : 'mx-auto flex max-w-md flex-col gap-4 px-5 pb-8 pt-8'
+      }
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
+ * L'écran Amis avec un profil ouvert.
+ *
+ * ```
+ *   < 1024px   /friends/:pseudo  ──▶  le profil, plein écran
+ *   ≥ 1024px   /friends/:pseudo  ──▶  la liste + le profil en panneau 430px
+ * ```
+ *
+ * **Une seule route pour les deux formats**, et c'est ce qui rend la
+ * continuité gratuite : traverser le palier en redimensionnant la fenêtre ne
+ * change que le rendu, pas l'URL — la sélection et le scroll survivent parce
+ * qu'il n'y a rien à retrouver. Deux routes auraient exigé de traduire l'une
+ * en l'autre à chaque bascule.
+ *
+ * Un deep-link à 1280px ouvre donc directement la vue master-detail avec le
+ * profil chargé, sans passage par la liste seule.
+ */
+export function FriendsWithProfile({ pseudo }: { readonly pseudo: string }) {
+  const desktop = useDesktop()
+
+  if (!desktop) return <Profile pseudo={pseudo} />
+
+  return (
+    <div className="flex gap-8">
+      <div className="min-w-0 flex-1">
+        <Friends selected={pseudo} />
+      </div>
+      <aside className="w-[430px] flex-none self-start rounded-card border border-border bg-surface-translucent p-7">
+        <Profile pseudo={pseudo} embedded />
+      </aside>
+    </div>
+  )
 }
 
 /** Sans compte : on explique, on ne barre pas la route. */

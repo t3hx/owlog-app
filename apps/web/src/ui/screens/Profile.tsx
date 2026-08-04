@@ -93,7 +93,7 @@ function Frame({
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 pb-8 pt-5">
+    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 pb-8 pt-5 lg:px-0 lg:pt-0">
       <Link
         href="/friends"
         aria-label={t('friends.back')}

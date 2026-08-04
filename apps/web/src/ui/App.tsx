@@ -8,13 +8,12 @@ import { Sidebar } from '@/ui/components/Sidebar'
 import { TabBar } from '@/ui/components/TabBar'
 import { useDesktop } from '@/ui/hooks/useDesktop'
 import { useSetting } from '@/ui/hooks/useSetting'
-import { Friends } from '@/ui/screens/Friends'
+import { Friends, FriendsWithProfile } from '@/ui/screens/Friends'
 import { Home } from '@/ui/screens/Home'
 import { Landing } from '@/ui/screens/Landing'
 import { Library } from '@/ui/screens/Library'
 import { Log } from '@/ui/screens/Log'
 import { Login } from '@/ui/screens/Login'
-import { Profile } from '@/ui/screens/Profile'
 import { LoginLink } from '@/ui/screens/LoginLink'
 import { FirstPull } from '@/ui/screens/FirstPull'
 import { Settings } from '@/ui/screens/Settings'
@@ -116,7 +115,7 @@ export function App() {
             <Friends />
           </Route>
           <Route path="/friends/:pseudo">
-            {(params) => <Profile pseudo={params.pseudo} />}
+            {(params) => <FriendsWithProfile pseudo={params.pseudo} />}
           </Route>
           <Route path="/stats">
             <Stats />
