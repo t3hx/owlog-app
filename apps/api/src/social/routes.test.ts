@@ -213,6 +213,13 @@ function circle(app: App, cookie: string) {
   return app.fetch(new Request('http://local/social/friends', { headers: headers({ cookie }) }))
 }
 
+/**
+ * La relation vue depuis un compte, lue par la recherche.
+ *
+ * Attention en l'appelant en boucle : la recherche est plafonnée à
+ * `PSEUDO_SEARCH_LIMIT` par compte et par fenêtre, et le 429 qui suivrait
+ * se lirait comme un défaut de logique alors qu'il serait le garde-fou.
+ */
 async function relationOf(app: App, cookie: string, pseudo: string): Promise<string> {
   const response = await search(app, cookie, pseudo)
   expect(response.status).toBe(200)
@@ -474,6 +481,24 @@ describe.skipIf(!adminUrl)('demandes d amitié', () => {
     const me = await member('me@b.c', 'nyx')
 
     expect((await ask(me.app, me.cookie, 'personne')).status).toBe(404)
+  })
+
+  it('rend la meme 404 sur un corps illisible', async () => {
+    // Le client n'a rien à apprendre de la différence entre « corps
+    // malformé » et « pseudo inconnu », et la distinguer rouvrirait
+    // l'oracle de format que la route ferme.
+    const me = await member('me@b.c', 'nyx')
+
+    const response = await me.app.fetch(
+      new Request('http://local/social/requests', {
+        method: 'POST',
+        headers: headers({ cookie: me.cookie }),
+        body: 'pas du json',
+      }),
+    )
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'not-found' })
   })
 
   it('scelle l amitie quand les deux demandes se croisent', async () => {
