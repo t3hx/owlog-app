@@ -63,9 +63,12 @@ describe.skipIf(!adminUrl)('runMigrations — schéma réel', () => {
       'auth_audit',
       'auth_tokens',
       'events',
+      'friend_requests',
+      'friendships',
       'media_cache',
       'schema_migrations',
       'sessions',
+      'social_audit',
       'users',
     ])
   })
