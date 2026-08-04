@@ -10,6 +10,7 @@ coverage/
 .vite/
 *.tsbuildinfo
 .gstack/
+/docs
 
 # Reglages locaux de Claude Code : propres a la machine, jamais partages.
 .claude/settings.local.json
