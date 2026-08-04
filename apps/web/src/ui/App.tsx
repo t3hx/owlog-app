@@ -14,6 +14,7 @@ import { Landing } from '@/ui/screens/Landing'
 import { Library } from '@/ui/screens/Library'
 import { Log } from '@/ui/screens/Log'
 import { Login } from '@/ui/screens/Login'
+import { Profile } from '@/ui/screens/Profile'
 import { LoginLink } from '@/ui/screens/LoginLink'
 import { FirstPull } from '@/ui/screens/FirstPull'
 import { Settings } from '@/ui/screens/Settings'
@@ -113,6 +114,9 @@ export function App() {
           </Route>
           <Route path="/friends">
             <Friends />
+          </Route>
+          <Route path="/friends/:pseudo">
+            {(params) => <Profile pseudo={params.pseudo} />}
           </Route>
           <Route path="/stats">
             <Stats />

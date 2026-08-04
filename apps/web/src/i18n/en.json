@@ -393,6 +393,19 @@
     "needPseudoCta": "set my handle ›",
     "offline": "offline — the list reloads when the network is back",
     "rateLimited": "too many lookups — try again in a few minutes",
-    "unavailable": "the server is not answering"
+    "unavailable": "the server is not answering",
+    "back": "back"
+  },
+  "profile": {
+    "seen": "✓ seen",
+    "favorites": "♥ favourites",
+    "compat": "compat with you",
+    "since_one": "member since {{date}} · {{count}} title logged",
+    "since_other": "member since {{date}} · {{count}} titles logged",
+    "favoritesSection": "▸ THEIR FAVOURITES",
+    "activitySection": "▸ ACTIVITY",
+    "activityEmpty": "nothing to tell yet",
+    "unknown": "user not found",
+    "backToFriends": "back to friends"
   }
 }
