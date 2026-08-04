@@ -6,6 +6,7 @@ import type { LiveQueries } from '@/ports/LiveQueries'
 import type { MediaCatalog } from '@/ports/MediaCatalog'
 import type { PendingAdd, PendingAdds } from '@/ports/PendingAdds'
 import type { SettingsStore } from '@/ports/SettingsStore'
+import type { SocialGateway } from '@/ports/SocialGateway'
 import type { Ports } from '@/ui/PortsProvider'
 
 /**
@@ -36,6 +37,12 @@ export function fakePorts(overrides: {
   onAppend?: (produced: readonly StoredEvent[]) => void
   /** Remplace `catalog.detail`, pour affirmer qu'un rafraîchissement part — ou pas. */
   detail?: MediaCatalog['detail']
+  /**
+   * Ce que les surfaces sociales rendent. Partiel : un test ne fournit que
+   * les appels que son écran fait, le reste reste hors-ligne — le défaut le
+   * plus honnête, celui où l'écran doit montrer un état et non un trou.
+   */
+  social?: Partial<SocialGateway>
 } = {}): Ports {
   const mediaStates = overrides.mediaStates ?? []
   const pendingAdds = overrides.pendingAdds ?? []
@@ -128,9 +135,30 @@ export function fakePorts(overrides: {
     logout: () => Promise.resolve({ ok: true, value: undefined }),
   }
 
+  const social: Ports['social'] = {
+    search: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    request: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    accept: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    decline: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    circle: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    profile: () => Promise.resolve({ ok: false, failure: { kind: 'offline' } }),
+    ...overrides.social,
+  }
+
   const local: Ports['local'] = {
     purgeAll: () => Promise.resolve(),
   }
 
-  return { settings, events, catalog, pending, live, deviceId: 'device-test', sync, auth, local }
+  return {
+    settings,
+    events,
+    catalog,
+    pending,
+    live,
+    deviceId: 'device-test',
+    sync,
+    auth,
+    social,
+    local,
+  }
 }

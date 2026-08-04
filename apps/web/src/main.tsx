@@ -11,6 +11,7 @@ import { outbox } from '@/adapters/dexie/outbox'
 import { pendingAdds } from '@/adapters/dexie/pendingAdds'
 import { settingsStore } from '@/adapters/dexie/settingsStore'
 import { createSyncEngine } from '@/adapters/sync/engine'
+import { createSocialGateway } from '@/adapters/social-http/socialGateway'
 import { createSyncGateway } from '@/adapters/sync-http/syncGateway'
 import { createMediaCatalog } from '@/adapters/tmdb-http/mediaCatalog'
 import '@/i18n'
@@ -146,6 +147,7 @@ async function boot(): Promise<void> {
           deviceId,
           sync,
           auth: createAuthGateway({ baseUrl, sharedToken }),
+          social: createSocialGateway({ baseUrl, sharedToken }),
           local: localData,
         }}>
         <QueryClientProvider client={queryClient}>
