@@ -364,5 +364,35 @@
   "session": {
     "expired": "session expired — sync is paused.",
     "reconnect": "reconnect"
+  },
+  "friends": {
+    "title": "Friends",
+    "eyebrow": "// COMMUNITY",
+    "count_one": "{{count}} friend",
+    "count_other": "{{count}} friends",
+    "addPlaceholder": "Add by handle… @",
+    "searching": "searching…",
+    "noAccount": "no account with that handle",
+    "requests_one": "▸ REQUESTS · {{count}}",
+    "requests_other": "▸ REQUESTS · {{count}}",
+    "section": "▸ FRIENDS",
+    "accept": "accept",
+    "decline": "decline",
+    "add": "+ ADD",
+    "requestSent": "request sent",
+    "requestReceived": "asked you",
+    "itsYou": "that's you",
+    "openProfile": "open ›",
+    "memberSince": "member since {{date}}",
+    "compat": "compat {{value}}%",
+    "compatUnknown": "compat —",
+    "hint": "tap a friend to open their profile",
+    "empty": "Your log is better with company.",
+    "needAccount": "Social needs an account: it's what links your log to other people's.",
+    "needPseudo": "Pick a handle first — that's how others will find you.",
+    "needPseudoCta": "set my handle ›",
+    "offline": "offline — the list reloads when the network is back",
+    "rateLimited": "too many lookups — try again in a few minutes",
+    "unavailable": "the server is not answering"
   }
 }

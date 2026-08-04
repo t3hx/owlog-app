@@ -364,5 +364,35 @@
   "session": {
     "expired": "session expirée — la sync est en pause.",
     "reconnect": "se reconnecter"
+  },
+  "friends": {
+    "title": "Amis",
+    "eyebrow": "// COMMUNAUTÉ",
+    "count_one": "{{count}} ami",
+    "count_other": "{{count}} amis",
+    "addPlaceholder": "Ajouter par pseudo… @",
+    "searching": "recherche…",
+    "noAccount": "aucun compte à ce pseudo",
+    "requests_one": "▸ DEMANDES · {{count}}",
+    "requests_other": "▸ DEMANDES · {{count}}",
+    "section": "▸ AMIS",
+    "accept": "accepter",
+    "decline": "refuser",
+    "add": "+ AJOUTER",
+    "requestSent": "demande envoyée",
+    "requestReceived": "t'a demandé",
+    "itsYou": "c'est toi",
+    "openProfile": "voir ›",
+    "memberSince": "membre depuis {{date}}",
+    "compat": "compat {{value}}%",
+    "compatUnknown": "compat —",
+    "hint": "tap sur un ami = son profil public",
+    "empty": "Ton log est meilleur à plusieurs.",
+    "needAccount": "Le social demande un compte : c'est lui qui relie ton journal à ceux des autres.",
+    "needPseudo": "Choisis d'abord un pseudo — c'est sous ce nom que les autres te trouveront.",
+    "needPseudoCta": "définir mon pseudo ›",
+    "offline": "hors-ligne — la liste se recharge au retour du réseau",
+    "rateLimited": "trop de recherches — réessaie dans quelques minutes",
+    "unavailable": "le serveur ne répond pas"
   }
 }
