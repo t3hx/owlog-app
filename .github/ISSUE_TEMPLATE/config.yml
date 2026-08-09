@@ -1,0 +1,3 @@
+# Les issues vierges restent autorisées : capturer une note en dix secondes vaut
+# mieux que renoncer à l'écrire. Passer à `false` pour imposer les gabarits.
+blank_issues_enabled: true
