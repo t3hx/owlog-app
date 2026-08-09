@@ -1,0 +1,20 @@
+name: Idée
+description: Une piste à explorer, pas encore décidée
+labels: ["type:idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: L'idée
+      description: En une ou deux phrases, sans se censurer.
+    validations: { required: true }
+  - type: textarea
+    id: why
+    attributes:
+      label: Pourquoi ça vaudrait le coup
+      description: L'effet sur l'utilisateur, ou sur toi qui construis.
+  - type: textarea
+    id: unknowns
+    attributes:
+      label: Ce qu'il faudrait vérifier
+      description: Les inconnues qui décideront si ça se fait ou pas.

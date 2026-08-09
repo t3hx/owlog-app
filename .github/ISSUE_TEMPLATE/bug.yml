@@ -1,0 +1,40 @@
+name: Bug
+description: Quelque chose ne fonctionne pas comme prévu
+title: "owlog-TK#/ "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptôme
+      description: Ce que tu observes, pas ce que tu supposes de la cause.
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      placeholder: |
+        1. Ouvrir …
+        2. Faire …
+        3. Observer …
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Paquet concerné
+      description: Laisser vide si l'origine n'est pas encore identifiée.
+      multiple: true
+      options:
+        - apps/web
+        - apps/api
+        - packages/domain
+        - packages/contracts
+        - infrastructure / CI
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexte
+      description: Navigateur ou client, environnement (local, production), données concernées, capture si utile.

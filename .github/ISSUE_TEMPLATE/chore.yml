@@ -1,0 +1,20 @@
+name: Chore
+description: Entretien, outillage, dette technique, documentation
+title: "owlog-TK#/ "
+labels: ["type:chore"]
+body:
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intention
+      description: Ce que ça débloque ou ce que ça arrête de coûter.
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      placeholder: "- [ ] ..."
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
