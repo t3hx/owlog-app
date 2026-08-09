@@ -3,6 +3,13 @@ description: Quelque chose ne fonctionne pas comme prévu
 title: "owlog-TK#/ "
 labels: ["type:bug"]
 body:
+  # Bloc d'affichage : n'apparaît pas dans le corps de l'issue créée.
+  - type: markdown
+    attributes:
+      value: |
+        **Après création : complète le `#` du titre avec le numéro attribué**
+        (`owlog-TK#42/ …`), puis renseigne `Priority` et `Size` dans le
+        Project — poser le label ne remplit pas ces champs.
   - type: textarea
     id: symptom
     attributes:
