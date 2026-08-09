@@ -1,37 +1,33 @@
-# CI — chaque PR, et chaque poussée sur le tronc.
+# CI — sur chaque PR, et sur chaque poussée du tronc `dev`.
 #
-# Décision du gate temps 2 (D3) : ce sprint a introduit le premier service à
-# état du projet. Les tests d'intégration de l'API tournent contre un VRAI
-# Postgres — le harnais Vitest démarre un conteneur jetable et chaque test
-# reçoit une base vierge, donc **les migrations sont rejouées depuis zéro à
-# chaque exécution** (`migrate.test.ts` les exerce aussi en concurrence, sous
-# advisory lock). C'est la classe de bug la plus coûteuse à découvrir sur le
-# VPS, attrapée ici.
+# CE FICHIER EST PRÉVU POUR ÊTRE COPIÉ TEL QUEL d'un projet à l'autre
+# (myPortfolio, owlog-app, odysong-app). Il tient grâce à un contrat simple :
 #
-# Docker est préinstallé sur ubuntu-latest : le globalSetup des tests API
-# fonctionne tel quel. S'il venait à manquer, la suite SAUTE les tests DB
-# avec un avertissement — le grep de l'étape de test transforme ce saut
-# silencieux en échec de CI : une couverture qui disparaît doit se voir.
+#   le workflow dit CE QUI tourne, le package.json dit COMMENT.
+#
+# Chaque étape passe par `pnpm run --if-present <script>` : un script absent
+# n'est pas une erreur, l'étape réussit en silence. Un projet sans linter ni
+# tests (myPortfolio aujourd'hui) et un monorepo qui fait `pnpm -r lint` et des
+# tests d'intégration Postgres (owlog-app) partagent donc le même fichier, sans
+# la moindre condition ici.
+#
+# Corollaire à respecter : toute particularité d'un projet vit dans SES
+# scripts, jamais dans ce fichier. Un garde-fou sur des tests sautés, une base
+# jetable à démarrer, un ordre de build : tout cela se met dans le script
+# `test` ou `build` du dépôt concerné.
+#
+# `main` est délibérément absent des déclencheurs `push` : le workflow de
+# déploiement appelle cette CI via `workflow_call`, et l'ajouter ici la ferait
+# tourner deux fois à chaque fusion.
 name: ci
 
-# Trois déclencheurs, et l'absence de `main` est délibérée.
-#
-# `pull_request`  toute PR, vers `dev` comme vers `main`
-# `push: [dev]`   le tronc d'intégration, où l'on fusionne au fil de l'eau
-# `workflow_call` **appelé par `deploy.yml`** avant de construire quoi que ce
-#                 soit. C'est ce qui rend le déploiement impossible sur une
-#                 CI rouge — auparavant les deux couraient en parallèle et
-#                 l'image partait en ligne pendant que les tests tournaient.
-#
-# `main` n'est pas dans `push` : `deploy.yml` appelle ce workflow, donc l'y
-# ajouter ferait tourner la CI deux fois sur chaque fusion.
 on:
   pull_request:
   push:
     branches: [dev]
   workflow_call:
 
-# Une nouvelle poussée sur la même réf annule le run précédent encore en vol.
+# Une nouvelle poussée sur la même référence annule le run précédent encore en vol.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -41,12 +37,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      # pnpm d'abord : setup-node lit `packageManager` mais son cache a besoin
-      # du binaire déjà présent.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      # pnpm d'abord : setup-node lit le champ `packageManager` du package.json,
+      # mais son cache a besoin du binaire déjà présent.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -55,21 +51,16 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm -r lint
+        run: pnpm run --if-present lint
 
-      # `build` EST le typecheck du projet : web fait `tsc -b && vite build`,
-      # api et domain font `tsc --noEmit`. Il n'existe pas de script
-      # `typecheck` séparé, et il n'en faut pas un.
-      - name: Typecheck et build de production
-        run: pnpm -r build
+      # Étape distincte du build : `vite build` ne fait que transpiler, il ne
+      # vérifie pas les types. Les projets dont le `build` typa déjà (owlog)
+      # n'ont simplement pas de script `type-check`, et l'étape se saute.
+      - name: Typage
+        run: pnpm run --if-present type-check
 
-      - name: Tests (Postgres jetable, migrations sur base vierge)
-        run: |
-          pnpm -r test 2>&1 | tee test-output.log
-          # Le harnais saute les tests DB sans Docker, avec un avertissement
-          # bruyant. En CI, ce saut serait une perte de couverture invisible :
-          # on le promeut en échec.
-          if grep -q "tests d'intégration DB ignorés" test-output.log; then
-            echo "::error::Les tests d'intégration DB ont été sautés — Postgres indisponible."
-            exit 1
-          fi
+      - name: Build de production
+        run: pnpm run --if-present build
+
+      - name: Tests
+        run: pnpm run --if-present test

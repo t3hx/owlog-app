@@ -1,4 +1,17 @@
+# Synchronisation avec le GitHub Project — chaque issue et chaque PR ouverte
+# rejoint automatiquement le tableau de suivi.
+#
+# Prérequis : un secret `ADD_TO_PROJECT_PAT` (jeton personnel avec la portée
+# `project`), le `GITHUB_TOKEN` par défaut n'ayant pas accès aux Projects.
+# Tant que ce secret n'existe pas, le job s'arrête proprement avec un message
+# plutôt que d'échouer : une CI rouge sur chaque PR pour une raison de
+# configuration ne rend service à personne.
+#
+# Aucun filtre par label n'est appliqué : tout ce qui s'ouvre rejoint le
+# tableau. Ajouter `labeled:` + `label-operator:` le jour où les labels
+# `type:*` existent, si l'on veut ne synchroniser qu'une partie.
 name: project-sync
+
 on:
   issues:
     types: [opened, reopened]
@@ -8,11 +21,22 @@ on:
 jobs:
   add-to-project:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/add-to-project@v1.0.2
+      - name: Vérifier que le jeton est configuré
+        id: guard
+        env:
+          PAT: ${{ secrets.ADD_TO_PROJECT_PAT }}
+        run: |
+          if [ -z "$PAT" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Secret ADD_TO_PROJECT_PAT absent — synchronisation du projet ignorée."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.guard.outputs.configured == 'true'
+        uses: actions/add-to-project@v2
         with:
           project-url: https://github.com/users/t3hx/projects/4
           github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
-          # Optionnel : n'ajouter que certains labels
-          labeled: type:bug, type:feat, type:fix
-          label-operator: OR
