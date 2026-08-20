@@ -439,6 +439,48 @@ Pour chaque web-app publique :
 
 ---
 
+### 5.6 ⚠️ Les images viennent de GHCR — le VPS ne construit JAMAIS
+
+> **Le piège le plus coûteux du montage, parce qu'il ne se voit pas.**
+
+Une application Dokploy créée avec le provider **`Github`** clone le dépôt et
+**construit l'image sur le serveur**. C'est le montage que proposent la plupart
+des tutoriels, et il annule tout l'intérêt d'une chaîne CI : le VPS de
+production compile, avec ses 4 vCPU, à chaque mise en ligne.
+
+**La règle : `Source Type` sur `Docker`**, image `ghcr.io/<owner>/<app>:latest`.
+GitHub Actions construit et pousse ; Dokploy tire.
+
+Pour tirer un paquet GHCR privé, il faut un identifiant de registre :
+`Settings → Registry → Add Registry` — `Registry URL` = `ghcr.io` (le nom
+d'hôte seul), `Username` = le compte GitHub, `Password` = un PAT **classique**
+avec le scope `read:packages`, `Image Prefix` = le compte.
+
+**Comment la dérive passe inaperçue.** `application.deploy` répond `200` que
+Dokploy tire ou qu'il construise. Un `deploy.yml` peut donc être vert de bout en
+bout — build, poussée sur GHCR, appel de déploiement — pendant que le serveur
+reconstruit à partir des sources et que les images poussées ne servent à
+personne. Constaté sur owlog le 2026-08-20, après trois semaines.
+
+Pire que le gaspillage : les deux chemins **divergent**. GitHub construit avec
+les `build-args` du workflow (secrets lus dans Doppler, adresses d'API) ; le
+build du VPS ne les a pas. L'image en ligne n'est alors pas celle que la CI a
+validée.
+
+**Le seul critère qui fait foi est le journal de déploiement Dokploy :**
+
+| On doit y lire | On ne doit JAMAIS y lire |
+| --- | --- |
+| `Pulling from <owner>/<app>` | `Receiving objects:` (git clone) |
+| `Status: Downloaded newer image for …` | `Building <app>-xxxxx` |
+| `✅ Pulling image completed.` | `#5 [build 1/14] FROM …` |
+
+**Et ça se teste.** Après l'appel de déploiement, le workflow interroge
+`GET /api/application.one?applicationId=…` (en-tête `x-api-key`) et échoue si
+`sourceType` n'est pas `docker` ou si `dockerImage` n'est pas l'image qu'il
+vient de pousser. Implémentation de référence : `t3hx/myPortfolio`,
+`.github/workflows/deploy.yml`.
+
 ## Phase 6 — Services admin (Tailscale uniquement)
 
 Trois options, de la plus simple à la plus propre.
